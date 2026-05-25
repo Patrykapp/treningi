@@ -7,8 +7,24 @@ import { Toast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import Papa from 'papaparse';
 
+function useDarkMode() {
+  const [dark, setDark] = useState(false);
+  useEffect(() => {
+    setDark(localStorage.getItem('darkMode') === 'true');
+  }, []);
+  const toggle = () => {
+    const next = !dark;
+    setDark(next);
+    localStorage.setItem('darkMode', String(next));
+    if (next) document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
+  };
+  return { dark, toggle };
+}
+
 export default function UstawieniaPage() {
   const router = useRouter();
+  const { dark, toggle: toggleDark } = useDarkMode();
   const [users, setUsers] = useState<User[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [newUserName, setNewUserName] = useState('');
@@ -328,6 +344,20 @@ export default function UstawieniaPage() {
             className="w-full bg-orange-500 text-white py-3 rounded-xl font-medium disabled:opacity-60"
           >
             {importing ? 'Importuję...' : 'Wybierz plik CSV'}
+          </button>
+        </section>
+
+        {/* Wygląd – Dark mode */}
+        <section className="bg-white rounded-2xl p-4 shadow-sm">
+          <h2 className="font-bold text-gray-900 mb-1">🌙 Wygląd</h2>
+          <p className="text-sm text-gray-600 mb-3">Przełącz między jasnym a ciemnym motywem.</p>
+          <button
+            onClick={toggleDark}
+            className={`w-full py-3 rounded-xl font-medium transition-colors ${
+              dark ? 'bg-slate-800 text-white' : 'bg-gray-100 text-gray-900'
+            }`}
+          >
+            {dark ? '☀️ Włącz jasny motyw' : '🌙 Włącz ciemny motyw'}
           </button>
         </section>
 

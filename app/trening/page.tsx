@@ -5,10 +5,17 @@ import { useRouter } from 'next/navigation';
 import { Exercise, User, NewEntryForm, SetData } from '@/types';
 import { formatDateInput } from '@/lib/utils';
 import { Toast } from '@/components/ui/Toast';
+import { ExerciseSearch } from '@/components/ui/ExerciseSearch';
 
 interface EntryRow extends NewEntryForm {
   key: string;
-  customSets: boolean; // tryb różnych serii
+  customSets: boolean;
+}
+
+interface Template {
+  id: string;
+  name: string;
+  entries: { exerciseId: string; sets: number; reps: number; weight: number }[];
 }
 
 export default function TreningPage() {
@@ -27,13 +34,22 @@ export default function TreningPage() {
   const [showNewEx, setShowNewEx] = useState(false);
   const [editingSession, setEditingSession] = useState<string | null>(null);
 
+  // Templates
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+
   const loadData = useCallback(async () => {
-    const [usersRes, exRes] = await Promise.all([
+    const [usersRes, exRes, tplRes] = await Promise.all([
       fetch('/api/users').then(r => r.json()),
       fetch('/api/exercises').then(r => r.json()),
+      fetch('/api/templates').then(r => r.json()),
     ]);
     setUsers(usersRes);
     setExercises(exRes);
+    setTemplates(tplRes);
     const saved = localStorage.getItem('selectedUserId');
     if (saved) setUserId(saved);
     else if (usersRes.length > 0) setUserId(usersRes[0].id);
@@ -68,6 +84,81 @@ export default function TreningPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // Kopiuj ostatni trening
+  const copyLastWorkout = async () => {
+    if (!userId) return;
+    const sessions = await fetch(`/api/sessions?userId=${userId}&limit=1`).then(r => r.json());
+    if (!sessions.length) {
+      setToast({ message: 'Brak poprzednich treningów', type: 'error' });
+      return;
+    }
+    const last = sessions[0];
+    setEntries(last.entries.map((e: {
+      exerciseId: string; sets: number; reps: number; weight: number;
+      rpe?: number | null; comment?: string | null; setsData?: SetData[]
+    }, i: number) => {
+      const sd: SetData[] = Array.isArray(e.setsData) && e.setsData.length > 0 ? e.setsData : [];
+      return {
+        key: String(Date.now() + i),
+        exerciseId: e.exerciseId,
+        sets: e.sets,
+        reps: e.reps,
+        weight: e.weight,
+        rpe: e.rpe || undefined,
+        comment: e.comment || undefined,
+        setsData: sd,
+        customSets: sd.length > 0,
+      };
+    }));
+    setToast({ message: `Skopiowano trening z ${new Date(last.date).toLocaleDateString('pl-PL')} 📋`, type: 'success' });
+  };
+
+  // Załaduj szablon
+  const loadTemplate = (tpl: Template) => {
+    setEntries(tpl.entries.map((e, i) => ({
+      key: String(Date.now() + i),
+      exerciseId: e.exerciseId,
+      sets: e.sets,
+      reps: e.reps,
+      weight: e.weight,
+      customSets: false,
+      setsData: [],
+    })));
+    setShowTemplates(false);
+    setToast({ message: `Załadowano szablon „${tpl.name}" 📋`, type: 'success' });
+  };
+
+  // Zapisz szablon
+  const saveTemplate = async () => {
+    if (!templateName.trim()) return;
+    setSavingTemplate(true);
+    const tplEntries = entries.map(e => ({
+      exerciseId: e.exerciseId,
+      sets: e.customSets ? (e.setsData?.length || e.sets) : e.sets,
+      reps: e.reps,
+      weight: e.weight,
+    })).filter(e => e.exerciseId);
+    const res = await fetch('/api/templates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: templateName.trim(), entries: tplEntries }),
+    });
+    if (res.ok) {
+      const tpl = await res.json();
+      setTemplates(prev => [tpl, ...prev]);
+      setToast({ message: `Szablon „${tpl.name}" zapisany!`, type: 'success' });
+      setTemplateName('');
+      setShowSaveTemplate(false);
+    }
+    setSavingTemplate(false);
+  };
+
+  // Usuń szablon
+  const deleteTemplate = async (id: string) => {
+    await fetch(`/api/templates/${id}`, { method: 'DELETE' });
+    setTemplates(prev => prev.filter(t => t.id !== id));
+  };
+
   const addEntry = () => {
     setEntries(prev => [...prev, {
       key: String(Date.now()), exerciseId: '', sets: 3, reps: 10, weight: 0, customSets: false, setsData: []
@@ -86,7 +177,6 @@ export default function TreningPage() {
     setEntries(prev => prev.map(e => {
       if (e.key !== key) return e;
       if (custom && (!e.setsData || e.setsData.length === 0)) {
-        // Wypełnij setsData na podstawie aktualnych wartości
         const sd: SetData[] = Array.from({ length: e.sets }, () => ({ reps: e.reps, weight: e.weight }));
         return { ...e, customSets: true, setsData: sd };
       }
@@ -170,6 +260,8 @@ export default function TreningPage() {
     }
   };
 
+  const hasEntries = entries.some(e => e.exerciseId);
+
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
@@ -220,6 +312,58 @@ export default function TreningPage() {
           </div>
         </div>
 
+        {/* Szybkie akcje – kopiuj ostatni + szablony */}
+        {!editingSession && (
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={copyLastWorkout}
+              className="flex-1 bg-white border border-gray-200 rounded-xl py-3 text-sm font-medium text-gray-700 flex items-center justify-center gap-1.5"
+            >
+              📋 Kopiuj ostatni
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowTemplates(o => !o)}
+              className={`flex-1 rounded-xl py-3 text-sm font-medium flex items-center justify-center gap-1.5 ${
+                showTemplates ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-700'
+              }`}
+            >
+              ⚡ Szablony {templates.length > 0 && `(${templates.length})`}
+            </button>
+          </div>
+        )}
+
+        {/* Lista szablonów */}
+        {showTemplates && (
+          <div className="bg-white rounded-2xl p-4 shadow-sm space-y-2">
+            <h3 className="font-semibold text-gray-900 text-sm">Załaduj szablon</h3>
+            {templates.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-2">Brak szablonów. Zapisz trening jako szablon.</p>
+            ) : (
+              templates.map(tpl => (
+                <div key={tpl.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                  <button
+                    type="button"
+                    onClick={() => loadTemplate(tpl)}
+                    className="flex-1 text-left text-sm font-medium text-gray-900"
+                  >
+                    {tpl.name}
+                    <span className="ml-2 text-xs text-gray-500">({tpl.entries.length} ćw.)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteTemplate(tpl.id)}
+                    className="text-red-400 text-xs px-2 py-1 ml-2"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
         {/* Entries */}
         <div className="space-y-3">
           {entries.map((entry, idx) => (
@@ -231,18 +375,12 @@ export default function TreningPage() {
                 )}
               </div>
 
-              {/* Exercise select */}
-              <select
+              {/* Searchable exercise picker */}
+              <ExerciseSearch
+                exercises={exercises}
                 value={entry.exerciseId}
-                onChange={e => updateEntry(entry.key, 'exerciseId', e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base bg-white text-gray-900"
-                required
-              >
-                <option value="">Wybierz ćwiczenie...</option>
-                {exercises.map(ex => (
-                  <option key={ex.id} value={ex.id}>{ex.name}</option>
-                ))}
-              </select>
+                onChange={id => updateEntry(entry.key, 'exerciseId', id)}
+              />
 
               {/* Toggle trybu serii */}
               <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
@@ -404,6 +542,41 @@ export default function TreningPage() {
             </button>
           )}
         </div>
+
+        {/* Zapisz jako szablon */}
+        {hasEntries && !editingSession && (
+          <div>
+            {showSaveTemplate ? (
+              <div className="bg-white rounded-2xl p-4 flex gap-2">
+                <input
+                  type="text"
+                  value={templateName}
+                  onChange={e => setTemplateName(e.target.value)}
+                  placeholder="Nazwa szablonu (np. Klatka + Triceps)"
+                  className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-gray-900 text-sm"
+                  onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), saveTemplate())}
+                />
+                <button
+                  type="button"
+                  onClick={saveTemplate}
+                  disabled={savingTemplate}
+                  className="bg-blue-600 text-white px-4 rounded-xl text-sm font-medium disabled:opacity-60"
+                >
+                  Zapisz
+                </button>
+                <button type="button" onClick={() => setShowSaveTemplate(false)} className="text-gray-600 px-3">✕</button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowSaveTemplate(true)}
+                className="w-full text-center text-sm text-gray-700 py-2"
+              >
+                ⚡ Zapisz jako szablon →
+              </button>
+            )}
+          </div>
+        )}
 
         <button
           type="submit"

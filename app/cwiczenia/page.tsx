@@ -7,25 +7,59 @@ import { Exercise } from '@/types';
 export default function CwiczeniaPage() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [search, setSearch] = useState('');
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     fetch('/api/exercises').then(r => r.json()).then(setExercises);
+    const saved = localStorage.getItem('favoriteExercises');
+    if (saved) setFavorites(JSON.parse(saved));
   }, []);
 
-  const filtered = exercises.filter(ex =>
+  const toggleFavorite = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFavorites(prev => {
+      const next = prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id];
+      localStorage.setItem('favoriteExercises', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const baseFiltered = exercises.filter(ex =>
     ex.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  const filtered = showOnlyFavorites
+    ? baseFiltered.filter(ex => favorites.includes(ex.id))
+    : baseFiltered;
+
+  // Ulubione na górze (w trybie "wszystkie")
+  const sorted = showOnlyFavorites
+    ? filtered
+    : [...filtered].sort((a, b) => {
+        const af = favorites.includes(a.id) ? 0 : 1;
+        const bf = favorites.includes(b.id) ? 0 : 1;
+        if (af !== bf) return af - bf;
+        return a.name.localeCompare(b.name, 'pl');
+      });
+
   // Grupuj po prefiksie "Grupa - Nazwa"
-  const groups = filtered.reduce((acc, ex) => {
-    const prefix = ex.name.includes(' - ') ? ex.name.split(' - ')[0] : (ex.muscleGroup || 'Inne');
+  const groups = sorted.reduce((acc, ex) => {
+    let prefix: string;
+    if (showOnlyFavorites) {
+      prefix = '⭐ Ulubione';
+    } else if (favorites.includes(ex.id)) {
+      prefix = '⭐ Ulubione';
+    } else {
+      prefix = ex.name.includes(' - ') ? ex.name.split(' - ')[0] : (ex.muscleGroup || 'Inne');
+    }
     if (!acc[prefix]) acc[prefix] = [];
     acc[prefix].push(ex);
     return acc;
   }, {} as Record<string, Exercise[]>);
 
-  const groupOrder = ['Barki', 'Biceps', 'Brzuch', 'Extra', 'Kalenistyka', 'Klata', 'Nogi', 'Plecy', 'Przedramię', 'Triceps', 'Inne'];
+  const groupOrder = ['⭐ Ulubione', 'Barki', 'Biceps', 'Brzuch', 'Extra', 'Kalenistyka', 'Klata', 'Nogi', 'Plecy', 'Przedramię', 'Triceps', 'Inne'];
 
   const sortedGroups = Object.entries(groups).sort(([a], [b]) => {
     const ai = groupOrder.indexOf(a);
@@ -39,7 +73,17 @@ export default function CwiczeniaPage() {
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       <div className="bg-white border-b px-4 pt-4 pb-3 sticky top-0 z-10">
-        <h1 className="text-xl font-bold text-gray-900 mb-3">Ćwiczenia</h1>
+        <div className="flex items-center justify-between mb-3">
+          <h1 className="text-xl font-bold text-gray-900">Ćwiczenia</h1>
+          <button
+            onClick={() => setShowOnlyFavorites(o => !o)}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              showOnlyFavorites ? 'bg-yellow-400 text-yellow-900' : 'bg-gray-100 text-gray-700'
+            }`}
+          >
+            ⭐ Ulubione {favorites.length > 0 && `(${favorites.length})`}
+          </button>
+        </div>
         <input
           type="text"
           value={search}
@@ -56,13 +100,20 @@ export default function CwiczeniaPage() {
             <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
               {exs.map((ex, i) => {
                 const shortName = ex.name.includes(' - ') ? ex.name.split(' - ').slice(1).join(' - ') : ex.name;
+                const isFav = favorites.includes(ex.id);
                 return (
                   <button
                     key={ex.id}
                     onClick={() => router.push(`/cwiczenie/${ex.id}`)}
                     className={`w-full flex items-center justify-between px-4 py-3.5 text-left active:bg-gray-50 ${i > 0 ? 'border-t border-gray-100' : ''}`}
                   >
-                    <span className="font-medium text-gray-900 text-sm">{shortName}</span>
+                    <span className="font-medium text-gray-900 text-sm flex-1">{shortName}</span>
+                    <button
+                      onClick={(e) => toggleFavorite(ex.id, e)}
+                      className={`text-xl mr-2 transition-transform active:scale-125 ${isFav ? 'opacity-100' : 'opacity-30'}`}
+                    >
+                      ⭐
+                    </button>
                     <span className="text-gray-400 text-lg leading-none">›</span>
                   </button>
                 );
@@ -70,10 +121,10 @@ export default function CwiczeniaPage() {
             </div>
           </div>
         ))}
-        {filtered.length === 0 && (
+        {sorted.length === 0 && (
           <div className="text-center py-12 text-gray-500">
-            <p className="text-3xl mb-2">🔍</p>
-            <p>Brak wyników dla „{search}"</p>
+            <p className="text-3xl mb-2">{showOnlyFavorites ? '⭐' : '🔍'}</p>
+            <p>{showOnlyFavorites ? 'Brak ulubionych. Dodaj przez gwiazdkę!' : `Brak wyników dla „${search}"`}</p>
           </div>
         )}
       </div>

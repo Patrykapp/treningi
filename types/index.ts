@@ -53,3 +53,21 @@ export interface NewEntryForm {
   comment?: string;
   setsData?: SetData[];
 }
+
+export interface BodyWeightEntry {
+  id: string;
+  userId: string;
+  user: User;
+  date: string;
+  weight: number;
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface WorkoutTemplate {
+  id: string;
+  name: string;
+  entries: NewEntryForm[];
+  createdAt: string;
+  updatedAt: string;
+}

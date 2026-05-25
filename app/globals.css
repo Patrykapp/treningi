@@ -35,3 +35,65 @@
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 16px);
 }
+
+/* === DARK MODE === */
+.dark {
+  --background: #0f172a;
+  --foreground: #e2e8f0;
+}
+
+.dark body {
+  background: #0f172a !important;
+  color: #e2e8f0 !important;
+}
+
+.dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+  color: #f1f5f9 !important;
+}
+
+.dark label {
+  color: #cbd5e1 !important;
+}
+
+/* Backgrounds */
+.dark .bg-white { background-color: #1e293b !important; }
+.dark .bg-gray-50 { background-color: #0f172a !important; }
+.dark .bg-gray-100 { background-color: #1e293b !important; }
+.dark .bg-gray-200 { background-color: #334155 !important; }
+
+/* Text overrides in dark mode */
+.dark .text-gray-900 { color: #f1f5f9 !important; }
+.dark .text-gray-800 { color: #e2e8f0 !important; }
+.dark .text-gray-700 { color: #cbd5e1 !important; }
+.dark .text-gray-600 { color: #94a3b8 !important; }
+.dark .text-gray-500 { color: #64748b !important; }
+.dark .text-gray-400 { color: #475569 !important; }
+
+/* Borders */
+.dark .border-gray-100 { border-color: #334155 !important; }
+.dark .border-gray-200 { border-color: #334155 !important; }
+.dark .border-t { border-top-color: #334155 !important; }
+.dark .border-b { border-bottom-color: #334155 !important; }
+
+/* Inputs */
+.dark input, .dark select, .dark textarea {
+  background-color: #0f172a !important;
+  color: #f1f5f9 !important;
+  border-color: #334155 !important;
+}
+
+.dark input::placeholder, .dark textarea::placeholder {
+  color: #64748b !important;
+}
+
+/* Nav */
+.dark nav.fixed { background-color: #1e293b !important; border-top-color: #334155 !important; }
+
+/* Sticky headers */
+.dark .sticky { background-color: #1e293b !important; border-bottom-color: #334155 !important; }
+
+/* Shadows look bad in dark mode */
+.dark .shadow-sm { box-shadow: none !important; }
+.dark .shadow-lg { box-shadow: 0 4px 24px rgba(0,0,0,0.5) !important; }
+.dark .shadow-xl { box-shadow: 0 4px 32px rgba(0,0,0,0.6) !important; }
+.dark .shadow-2xl { box-shadow: 0 8px 48px rgba(0,0,0,0.7) !important; }

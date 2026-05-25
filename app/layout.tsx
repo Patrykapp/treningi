@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Navigation } from "@/components/layout/Navigation";
+import { DarkModeInit } from "@/components/DarkModeInit";
 
 export const metadata: Metadata = {
   title: "Dziennik Treningów",
@@ -21,6 +22,7 @@ export default function RootLayout({
   return (
     <html lang="pl">
       <body className="bg-gray-50 min-h-screen">
+        <DarkModeInit />
         <div className="max-w-2xl mx-auto">
           {children}
         </div>

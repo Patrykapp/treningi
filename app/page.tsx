@@ -6,11 +6,42 @@ import { WorkoutSession } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 
+function calcStreak(sessions: WorkoutSession[]): number {
+  if (!sessions.length) return 0;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dates = [...new Set(sessions.map(s => {
+    const d = new Date(s.date);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }))].sort((a, b) => b - a);
+
+  let streak = 0;
+  let expected = today.getTime();
+  for (const d of dates) {
+    if (d === expected || d === expected - 86400000) {
+      streak++;
+      expected = d - 86400000;
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+function calcWeeklyCount(sessions: WorkoutSession[]): number {
+  const now = new Date();
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  return sessions.filter(s => new Date(s.date) >= weekAgo).length;
+}
+
 export default function DashboardPage() {
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
+  const [allSessions, setAllSessions] = useState<WorkoutSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
+  const { isLoggedIn } = useAuth();
 
   useEffect(() => {
     const saved = localStorage.getItem('selectedUserId');
@@ -28,9 +59,12 @@ export default function DashboardPage() {
     if (!selectedUser) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/sessions?userId=${selectedUser}&limit=5`);
-      const data = await res.json();
-      setSessions(data);
+      const [recent, all] = await Promise.all([
+        fetch(`/api/sessions?userId=${selectedUser}&limit=5`).then(r => r.json()),
+        fetch(`/api/sessions?userId=${selectedUser}&limit=100`).then(r => r.json()),
+      ]);
+      setSessions(recent);
+      setAllSessions(all);
     } finally {
       setLoading(false);
     }
@@ -44,7 +78,9 @@ export default function DashboardPage() {
   }, [selectedUser, loadSessions]);
 
   const currentUser = users.find(u => u.id === selectedUser);
-  const { isLoggedIn } = useAuth();
+  const streak = calcStreak(allSessions);
+  const weeklyCount = calcWeeklyCount(allSessions);
+  const totalCount = allSessions.length;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -85,6 +121,26 @@ export default function DashboardPage() {
           </Link>
         )}
 
+        {/* Statystyki */}
+        {!loading && (
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
+              <div className="text-2xl font-bold text-blue-600">{totalCount}</div>
+              <div className="text-xs text-gray-600 font-medium mt-0.5">Treningów</div>
+            </div>
+            <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
+              <div className="text-2xl font-bold text-orange-500">{weeklyCount}</div>
+              <div className="text-xs text-gray-600 font-medium mt-0.5">Ten tydzień</div>
+            </div>
+            <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
+              <div className="text-2xl font-bold text-green-600">{streak}</div>
+              <div className="text-xs text-gray-600 font-medium mt-0.5">
+                {streak === 1 ? 'Dzień z rzędu' : 'Dni z rzędu'}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Recent sessions */}
         <div>
           <h2 className="text-base font-semibold text-gray-900 mb-3">Ostatnie treningi</h2>
@@ -110,7 +166,10 @@ export default function DashboardPage() {
                         href={`/cwiczenie/${entry.exerciseId}`}
                         className="text-sm bg-gray-100 rounded-lg px-2 py-1 text-gray-700"
                       >
-                        {entry.exercise.name}: {entry.sets}×{entry.reps} @ {entry.weight}kg
+                        {entry.exercise.name.includes(' - ')
+                          ? entry.exercise.name.split(' - ').slice(1).join(' - ')
+                          : entry.exercise.name
+                        }: {entry.sets}×{entry.reps} @ {entry.weight}kg
                       </Link>
                     ))}
                   </div>
@@ -124,14 +183,18 @@ export default function DashboardPage() {
         </div>
 
         {/* Shortcuts */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <Link href="/historia" className="bg-white rounded-2xl p-4 shadow-sm text-center">
             <div className="text-3xl mb-1">📋</div>
             <div className="text-sm font-medium text-gray-800">Historia</div>
           </Link>
-          <Link href="/ustawienia" className="bg-white rounded-2xl p-4 shadow-sm text-center">
-            <div className="text-3xl mb-1">⚙️</div>
-            <div className="text-sm font-medium text-gray-800">Ustawienia</div>
+          <Link href="/cwiczenia" className="bg-white rounded-2xl p-4 shadow-sm text-center">
+            <div className="text-3xl mb-1">🏋️</div>
+            <div className="text-sm font-medium text-gray-800">Ćwiczenia</div>
+          </Link>
+          <Link href="/waga" className="bg-white rounded-2xl p-4 shadow-sm text-center">
+            <div className="text-3xl mb-1">⚖️</div>
+            <div className="text-sm font-medium text-gray-800">Waga</div>
           </Link>
         </div>
       </div>

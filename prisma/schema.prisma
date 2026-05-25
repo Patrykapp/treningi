@@ -12,11 +12,12 @@ datasource db {
 }
 
 model User {
-  id        String           @id @default(cuid())
-  name      String
-  sessions  WorkoutSession[]
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+  id           String           @id @default(cuid())
+  name         String
+  sessions     WorkoutSession[]
+  bodyWeights  BodyWeight[]
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
 }
 
 model Exercise {
@@ -53,4 +54,22 @@ model WorkoutEntry {
   setsData   Json     @default("[]")
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
+}
+
+model BodyWeight {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  date      DateTime
+  weight    Float
+  notes     String?
+  createdAt DateTime @default(now())
+}
+
+model WorkoutTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  entries   Json     @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

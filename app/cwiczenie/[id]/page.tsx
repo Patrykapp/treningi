@@ -2,7 +2,10 @@
 
 import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import {
+  LineChart, Line, BarChart, Bar,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from 'recharts';
 import { Exercise, User, SetData } from '@/types';
 import { formatDate, formatDateInput } from '@/lib/utils';
 import { Toast } from '@/components/ui/Toast';
@@ -30,6 +33,26 @@ interface ChartPoint {
   [key: string]: string | number | undefined;
 }
 
+function calcVolume(entry: EntryWithSession): number {
+  if (entry.setsData && entry.setsData.length > 0) {
+    return entry.setsData.reduce((sum, s) => sum + s.reps * s.weight, 0);
+  }
+  return entry.sets * entry.reps * entry.weight;
+}
+
+function calcEntryMax(entry: EntryWithSession): number {
+  if (entry.setsData && entry.setsData.length > 0) {
+    return Math.max(...entry.setsData.map(s => s.weight));
+  }
+  return entry.weight;
+}
+
+// Epley formula: 1RM = weight * (1 + reps/30)
+function calc1RM(weight: number, reps: number): number {
+  if (reps === 1) return weight;
+  return Math.round(weight * (1 + reps / 30));
+}
+
 export default function CwiczeniePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [exercise, setExercise] = useState<Exercise | null>(null);
@@ -38,6 +61,12 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
   const [filterUserId, setFilterUserId] = useState('');
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [prBanner, setPrBanner] = useState(false);
+
+  // Kalkulator 1RM
+  const [showCalc, setShowCalc] = useState(false);
+  const [calcWeight, setCalcWeight] = useState(100);
+  const [calcReps, setCalcReps] = useState(5);
 
   // Formularz "Dodaj wynik"
   const [showForm, setShowForm] = useState(false);
@@ -53,6 +82,8 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
   const [saving, setSaving] = useState(false);
   const { isLoggedIn } = useAuth();
 
+  const [chartType, setChartType] = useState<'weight' | 'volume'>('weight');
+
   const loadData = async () => {
     const [exRes, usersRes, entriesRes] = await Promise.all([
       fetch('/api/exercises').then(r => r.json()),
@@ -65,7 +96,6 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
     setEntries(entriesRes);
     setLoading(false);
 
-    // Domyślny użytkownik
     const saved = localStorage.getItem('selectedUserId');
     if (saved) setFormUserId(saved);
     else if (usersRes.length > 0) setFormUserId(usersRes[0].id);
@@ -77,12 +107,10 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
     ? entries.filter(e => e.session.user.id === filterUserId)
     : entries;
 
-  const bestWeight = filtered.length ? Math.max(...filtered.map(e =>
-    e.setsData && e.setsData.length > 0 ? Math.max(...e.setsData.map(s => s.weight)) : e.weight
-  )) : 0;
+  const bestWeight = filtered.length ? Math.max(...filtered.map(calcEntryMax)) : 0;
   const lastEntry = filtered[0];
 
-  // Dane wykresu
+  // Dane wykresów
   const usersInData = [...new Set(entries.map(e => e.session.user.name))];
   const byDate = new Map<string, ChartPoint>();
   for (const entry of [...entries].reverse()) {
@@ -90,12 +118,13 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
     if (!byDate.has(dateKey)) byDate.set(dateKey, { date: formatDate(entry.session.date) });
     const point = byDate.get(dateKey)!;
     const userName = entry.session.user.name;
-    const entryMax = entry.setsData && entry.setsData.length > 0
-      ? Math.max(...entry.setsData.map(s => s.weight))
-      : entry.weight;
+    const entryMax = calcEntryMax(entry);
     if (!point[userName] || (point[userName] as number) < entryMax) {
       point[userName] = entryMax;
     }
+    // volume
+    const volKey = `${userName}_vol`;
+    point[volKey] = ((point[volKey] as number) || 0) + calcVolume(entry);
   }
   const chartData: ChartPoint[] = [];
   byDate.forEach(v => chartData.push(v));
@@ -104,13 +133,13 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
     ? chartData.map(p => {
         const userName = users.find(u => u.id === filterUserId)?.name;
         if (!userName) return p;
-        return { date: p.date, [userName]: p[userName] };
+        return { date: p.date, [userName]: p[userName], [`${userName}_vol`]: p[`${userName}_vol`] };
       })
     : chartData;
 
   const colors = ['#3b82f6', '#f97316'];
 
-  // Formularz: obsługa serii
+  // Formularz serii
   const initCustomSets = () => {
     setFormSetsData(Array.from({ length: formSets }, () => ({ reps: formReps, weight: formWeight })));
     setFormCustomSets(true);
@@ -128,6 +157,14 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
     if (!formUserId) { setToast({ message: 'Wybierz osobę', type: 'error' }); return; }
     if (formCustomSets && formSetsData.length === 0) { setToast({ message: 'Dodaj serie', type: 'error' }); return; }
     if (!formCustomSets && !formWeight) { setToast({ message: 'Podaj ciężar', type: 'error' }); return; }
+
+    // Sprawdź PR przed zapisem
+    const userPrevEntries = entries.filter(e => e.session.user.id === formUserId);
+    const prevBest = userPrevEntries.length ? Math.max(...userPrevEntries.map(calcEntryMax)) : 0;
+    const newMax = formCustomSets
+      ? Math.max(...formSetsData.map(s => s.weight))
+      : formWeight;
+    const isPR = newMax > prevBest;
 
     setSaving(true);
     try {
@@ -147,13 +184,18 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
         body: JSON.stringify({ date: formDate, userId: formUserId, notes: '', entries: [entry] }),
       });
       if (res.ok) {
-        setToast({ message: 'Wynik zapisany! 💪', type: 'success' });
+        if (isPR && prevBest > 0) {
+          setPrBanner(true);
+          setTimeout(() => setPrBanner(false), 4000);
+          setToast({ message: `🏆 Nowy rekord osobisty! ${newMax}kg`, type: 'success' });
+        } else {
+          setToast({ message: 'Wynik zapisany! 💪', type: 'success' });
+        }
         setShowForm(false);
         setFormComment('');
         setFormRpe('');
         setFormSetsData([]);
         setFormCustomSets(false);
-        // Odśwież dane i wykres
         const newEntries = await fetch(`/api/entries?exerciseId=${id}`).then(r => r.json());
         setEntries(newEntries);
       } else {
@@ -171,6 +213,16 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+      {/* PR Banner */}
+      {prBanner && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+          <div className="bg-yellow-400 text-yellow-900 px-8 py-5 rounded-3xl shadow-2xl text-center animate-bounce">
+            <div className="text-4xl mb-1">🏆</div>
+            <div className="font-bold text-lg">Nowy rekord osobisty!</div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white border-b px-4 py-4 sticky top-0 z-10">
         <div className="flex items-center gap-3">
@@ -214,7 +266,6 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                 <button onClick={() => setShowForm(false)} className="text-gray-500 text-lg px-2">✕</button>
               </div>
 
-              {/* Data */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Data</label>
                 <input
@@ -225,7 +276,6 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                 />
               </div>
 
-              {/* Kto */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Kto</label>
                 <div className="flex gap-2">
@@ -242,7 +292,6 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                 </div>
               </div>
 
-              {/* Toggle trybu */}
               <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
                 <button
                   type="button"
@@ -260,7 +309,6 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                 </button>
               </div>
 
-              {/* Jednakowe serie */}
               {!formCustomSets && (
                 <div className="grid grid-cols-3 gap-2">
                   <div>
@@ -287,7 +335,6 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                 </div>
               )}
 
-              {/* Różne serie */}
               {formCustomSets && (
                 <div className="space-y-2">
                   <div className="grid grid-cols-12 gap-1 text-xs font-medium text-gray-700 px-1">
@@ -318,7 +365,6 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                 </div>
               )}
 
-              {/* RPE + komentarz */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">RPE (1-10)</label>
@@ -369,13 +415,11 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-white rounded-2xl p-4 text-center shadow-sm">
               <div className="text-2xl font-bold text-blue-600">{bestWeight}kg</div>
-              <div className="text-xs text-gray-700 font-medium mt-1">Najlepszy wynik</div>
+              <div className="text-xs text-gray-700 font-medium mt-1">🏆 Rekord</div>
             </div>
             <div className="bg-white rounded-2xl p-4 text-center shadow-sm">
               <div className="text-2xl font-bold text-gray-900">
-                {lastEntry ? (lastEntry.setsData && lastEntry.setsData.length > 0
-                  ? Math.max(...lastEntry.setsData.map(s => s.weight))
-                  : lastEntry.weight) : 0}kg
+                {lastEntry ? calcEntryMax(lastEntry) : 0}kg
               </div>
               <div className="text-xs text-gray-700 font-medium mt-1">Ostatni wynik</div>
               {lastEntry && <div className="text-xs text-gray-600 mt-0.5">{formatDate(lastEntry.session.date)}</div>}
@@ -385,10 +429,28 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
           {/* Wykres */}
           {chartData.length > 0 && (
             <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <h3 className="font-semibold text-gray-900 mb-3">Progres ciężaru</h3>
+              {/* Toggle wykres */}
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-gray-900">Wykres</h3>
+                <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
+                  <button
+                    onClick={() => setChartType('weight')}
+                    className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${chartType === 'weight' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'}`}
+                  >
+                    Ciężar
+                  </button>
+                  <button
+                    onClick={() => setChartType('volume')}
+                    className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${chartType === 'volume' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'}`}
+                  >
+                    Wolumen
+                  </button>
+                </div>
+              </div>
+
               {chartData.length < 2 ? (
                 <p className="text-sm text-gray-600 text-center py-4">Dodaj więcej wyników, żeby zobaczyć wykres.</p>
-              ) : (
+              ) : chartType === 'weight' ? (
                 <ResponsiveContainer width="100%" height={200}>
                   <LineChart data={filteredChartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -403,9 +465,74 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                     ))}
                   </LineChart>
                 </ResponsiveContainer>
+              ) : (
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={filteredChartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11 }} tickLine={false} unit="kg" />
+                    <Tooltip formatter={(v) => [`${Math.round(Number(v))} kg`]} />
+                    <Legend />
+                    {usersInData.map((name, i) => (
+                      <Bar key={name} dataKey={`${name}_vol`} name={name}
+                        fill={colors[i % colors.length]} radius={[4, 4, 0, 0]}
+                      />
+                    ))}
+                  </BarChart>
+                </ResponsiveContainer>
               )}
             </div>
           )}
+
+          {/* Kalkulator 1RM */}
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <button
+              onClick={() => setShowCalc(o => !o)}
+              className="w-full flex items-center justify-between px-4 py-3.5 text-left"
+            >
+              <span className="font-semibold text-gray-900 text-sm">🧮 Kalkulator 1RM (Epley)</span>
+              <span className="text-gray-400 text-lg">{showCalc ? '▴' : '▾'}</span>
+            </button>
+            {showCalc && (
+              <div className="px-4 pb-4 space-y-3 border-t border-gray-100">
+                <p className="text-xs text-gray-500 mt-2">Oszacowanie maksymalnego ciężaru na 1 powtórzenie</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Ciężar (kg)</label>
+                    <input
+                      type="number" min="0" step="0.5" value={calcWeight}
+                      onChange={e => setCalcWeight(parseFloat(e.target.value) || 0)}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-3 text-center text-gray-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Powtórzenia</label>
+                    <input
+                      type="number" min="1" max="30" value={calcReps}
+                      onChange={e => setCalcReps(parseInt(e.target.value) || 1)}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-3 text-center text-gray-900"
+                    />
+                  </div>
+                </div>
+                <div className="bg-blue-50 rounded-xl p-3 text-center">
+                  <span className="text-xs text-blue-700 font-medium">Szacowany 1RM: </span>
+                  <span className="text-2xl font-bold text-blue-700">{calc1RM(calcWeight, calcReps)} kg</span>
+                </div>
+                {/* Tabela % 1RM */}
+                <div className="grid grid-cols-3 gap-1 text-xs">
+                  {[100, 95, 90, 85, 80, 75].map(pct => {
+                    const oneRM = calc1RM(calcWeight, calcReps);
+                    return (
+                      <div key={pct} className="bg-gray-50 rounded-lg p-2 text-center">
+                        <div className="font-bold text-gray-900">{Math.round(oneRM * pct / 100)}kg</div>
+                        <div className="text-gray-500">{pct}%</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Historia */}
           <div className="space-y-2">
@@ -413,33 +540,37 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
             {filtered.length === 0 ? (
               <p className="text-gray-600 text-center py-4">Brak wyników — dodaj pierwszy!</p>
             ) : (
-              filtered.map(entry => (
-                <div key={entry.id} className="bg-white rounded-2xl p-4 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="font-medium text-gray-900">{formatDate(entry.session.date)}</span>
-                      <span className="ml-2 text-sm text-blue-600">{entry.session.user.name}</span>
+              filtered.map(entry => {
+                const isPersonalBest = calcEntryMax(entry) === bestWeight && bestWeight > 0;
+                return (
+                  <div key={entry.id} className={`bg-white rounded-2xl p-4 shadow-sm ${isPersonalBest ? 'border-l-4 border-yellow-400' : ''}`}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="font-medium text-gray-900">{formatDate(entry.session.date)}</span>
+                        <span className="ml-2 text-sm text-blue-600">{entry.session.user.name}</span>
+                        {isPersonalBest && <span className="ml-1 text-yellow-500 text-xs font-bold">🏆 PR</span>}
+                      </div>
+                      <div className="text-right text-sm">
+                        {entry.setsData && entry.setsData.length > 0 ? (
+                          <div className="text-gray-800">
+                            {entry.setsData.map((s, i) => (
+                              <span key={i}>{i > 0 && <span className="text-gray-400 mx-0.5">·</span>}{s.reps}×<strong>{s.weight}kg</strong></span>
+                            ))}
+                          </div>
+                        ) : (
+                          <div><span className="font-bold text-gray-900">{entry.weight}kg</span><span className="text-gray-700 ml-1">{entry.sets}×{entry.reps}</span></div>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-right text-sm">
-                      {entry.setsData && entry.setsData.length > 0 ? (
-                        <div className="text-gray-800">
-                          {entry.setsData.map((s, i) => (
-                            <span key={i}>{i > 0 && <span className="text-gray-400 mx-0.5">·</span>}{s.reps}×<strong>{s.weight}kg</strong></span>
-                          ))}
-                        </div>
-                      ) : (
-                        <div><span className="font-bold text-gray-900">{entry.weight}kg</span><span className="text-gray-700 ml-1">{entry.sets}×{entry.reps}</span></div>
-                      )}
-                    </div>
+                    {(entry.rpe || entry.comment) && (
+                      <div className="mt-1 text-sm text-gray-700">
+                        {entry.rpe && <span>RPE {entry.rpe} </span>}
+                        {entry.comment && <span className="italic">{entry.comment}</span>}
+                      </div>
+                    )}
                   </div>
-                  {(entry.rpe || entry.comment) && (
-                    <div className="mt-1 text-sm text-gray-700">
-                      {entry.rpe && <span>RPE {entry.rpe} </span>}
-                      {entry.comment && <span className="italic">{entry.comment}</span>}
-                    </div>
-                  )}
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
