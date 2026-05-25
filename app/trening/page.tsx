@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Exercise, User, NewEntryForm, SetData } from '@/types';
 import { formatDateInput } from '@/lib/utils';
 import { Toast } from '@/components/ui/Toast';
 import { ExerciseSearch } from '@/components/ui/ExerciseSearch';
+import { workoutDraft } from '@/hooks/useWorkoutDraft';
 
 interface EntryRow extends NewEntryForm {
   key: string;
@@ -18,8 +19,9 @@ interface Template {
   entries: { exerciseId: string; sets: number; reps: number; weight: number }[];
 }
 
-export default function TreningPage() {
+function TreningPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [users, setUsers] = useState<User[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [userId, setUserId] = useState('');
@@ -54,6 +56,28 @@ export default function TreningPage() {
     if (saved) setUserId(saved);
     else if (usersRes.length > 0) setUserId(usersRes[0].id);
 
+    // Załaduj z draftu jeśli ?fromDraft=1
+    const fromDraft = searchParams.get('fromDraft');
+    if (fromDraft) {
+      const draft = workoutDraft.get();
+      if (draft && draft.entries.length > 0) {
+        setDate(draft.date || formatDateInput(new Date()));
+        setUserId(draft.userId || saved || (usersRes[0]?.id ?? ''));
+        setEntries(draft.entries.map((e, i) => ({
+          key: String(i),
+          exerciseId: e.exerciseId,
+          sets: e.sets,
+          reps: e.reps,
+          weight: e.weight,
+          rpe: e.rpe,
+          comment: e.comment,
+          setsData: e.setsData || [],
+          customSets: (e.setsData || []).length > 0,
+        })));
+        return; // skip editSessionId handling
+      }
+    }
+
     const editId = sessionStorage.getItem('editSessionId');
     if (editId) {
       setEditingSession(editId);
@@ -80,7 +104,7 @@ export default function TreningPage() {
       }));
       sessionStorage.removeItem('editSessionId');
     }
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -249,6 +273,8 @@ export default function TreningPage() {
         body: JSON.stringify({ date, userId, notes, entries }),
       });
       if (res.ok) {
+        workoutDraft.clear();
+        window.dispatchEvent(new Event('draftChanged'));
         setToast({ message: editingSession ? 'Trening zaktualizowany!' : 'Trening zapisany! 💪', type: 'success' });
         setTimeout(() => router.push('/'), 1500);
       } else {
@@ -587,5 +613,13 @@ export default function TreningPage() {
         </button>
       </form>
     </div>
+  );
+}
+
+export default function TreningPageWrapper() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-600">Ładowanie...</div>}>
+      <TreningPage />
+    </Suspense>
   );
 }

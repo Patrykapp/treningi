@@ -10,6 +10,7 @@ import { Exercise, User, SetData } from '@/types';
 import { formatDate, formatDateInput } from '@/lib/utils';
 import { Toast } from '@/components/ui/Toast';
 import { useAuth } from '@/hooks/useAuth';
+import { workoutDraft } from '@/hooks/useWorkoutDraft';
 
 interface EntryWithSession {
   id: string;
@@ -153,49 +154,86 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
     setFormSetsData(prev => prev.map((s, idx) => idx === i ? { ...s, [field]: val } : s));
   };
 
-  const handleSave = async () => {
+  const buildEntry = () => {
+    const sd = formCustomSets ? formSetsData : [];
+    return {
+      exerciseId: id,
+      exerciseName: exercise?.name || '',
+      sets: formCustomSets ? sd.length : formSets,
+      reps: formCustomSets ? Math.max(...sd.map(s => s.reps)) : formReps,
+      weight: formCustomSets ? Math.max(...sd.map(s => s.weight)) : formWeight,
+      rpe: formRpe ? Number(formRpe) : undefined,
+      comment: formComment || undefined,
+      setsData: sd,
+    };
+  };
+
+  const checkPR = (newMax: number): boolean => {
+    const userPrevEntries = entries.filter(e => e.session.user.id === formUserId);
+    const prevBest = userPrevEntries.length ? Math.max(...userPrevEntries.map(calcEntryMax)) : 0;
+    return newMax > prevBest && prevBest > 0;
+  };
+
+  const resetForm = () => {
+    setShowForm(false);
+    setFormComment('');
+    setFormRpe('');
+    setFormSetsData([]);
+    setFormCustomSets(false);
+  };
+
+  // Dodaj do bieżącego treningu (draft)
+  const handleAddToDraft = () => {
     if (!formUserId) { setToast({ message: 'Wybierz osobę', type: 'error' }); return; }
     if (formCustomSets && formSetsData.length === 0) { setToast({ message: 'Dodaj serie', type: 'error' }); return; }
     if (!formCustomSets && !formWeight) { setToast({ message: 'Podaj ciężar', type: 'error' }); return; }
 
-    // Sprawdź PR przed zapisem
-    const userPrevEntries = entries.filter(e => e.session.user.id === formUserId);
-    const prevBest = userPrevEntries.length ? Math.max(...userPrevEntries.map(calcEntryMax)) : 0;
-    const newMax = formCustomSets
-      ? Math.max(...formSetsData.map(s => s.weight))
-      : formWeight;
-    const isPR = newMax > prevBest;
+    const entry = buildEntry();
+    const newMax = formCustomSets ? Math.max(...formSetsData.map(s => s.weight)) : formWeight;
+    const isPR = checkPR(newMax);
+
+    workoutDraft.add(entry, formDate, formUserId);
+    window.dispatchEvent(new Event('draftChanged'));
+
+    if (isPR) {
+      setPrBanner(true);
+      setTimeout(() => setPrBanner(false), 4000);
+      setToast({ message: `🏆 PR! ${newMax}kg dodane do treningu`, type: 'success' });
+    } else {
+      const exShort = exercise?.name?.includes(' - ')
+        ? exercise.name.split(' - ').slice(1).join(' - ')
+        : exercise?.name;
+      setToast({ message: `${exShort} dodane do treningu 💪`, type: 'success' });
+    }
+    resetForm();
+  };
+
+  // Zapisz od razu jako osobny wynik
+  const handleSaveAlone = async () => {
+    if (!formUserId) { setToast({ message: 'Wybierz osobę', type: 'error' }); return; }
+    if (formCustomSets && formSetsData.length === 0) { setToast({ message: 'Dodaj serie', type: 'error' }); return; }
+    if (!formCustomSets && !formWeight) { setToast({ message: 'Podaj ciężar', type: 'error' }); return; }
+
+    const entry = buildEntry();
+    const newMax = formCustomSets ? Math.max(...formSetsData.map(s => s.weight)) : formWeight;
+    const isPR = checkPR(newMax);
 
     setSaving(true);
     try {
-      const sd = formCustomSets ? formSetsData : [];
-      const entry = {
-        exerciseId: id,
-        sets: formCustomSets ? sd.length : formSets,
-        reps: formCustomSets ? Math.max(...sd.map(s => s.reps)) : formReps,
-        weight: formCustomSets ? Math.max(...sd.map(s => s.weight)) : formWeight,
-        rpe: formRpe ? Number(formRpe) : undefined,
-        comment: formComment || undefined,
-        setsData: sd,
-      };
       const res = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date: formDate, userId: formUserId, notes: '', entries: [entry] }),
       });
       if (res.ok) {
-        if (isPR && prevBest > 0) {
+        if (isPR) {
           setPrBanner(true);
           setTimeout(() => setPrBanner(false), 4000);
           setToast({ message: `🏆 Nowy rekord osobisty! ${newMax}kg`, type: 'success' });
         } else {
           setToast({ message: 'Wynik zapisany! 💪', type: 'success' });
         }
-        setShowForm(false);
-        setFormComment('');
-        setFormRpe('');
-        setFormSetsData([]);
-        setFormCustomSets(false);
+        resetForm();
         const newEntries = await fetch(`/api/entries?exerciseId=${id}`).then(r => r.json());
         setEntries(newEntries);
       } else {
@@ -384,12 +422,20 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                 </div>
               </div>
 
+              {/* Główna akcja: dodaj do bieżącego treningu */}
               <button
-                onClick={handleSave}
-                disabled={saving}
-                className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-base disabled:opacity-60"
+                onClick={handleAddToDraft}
+                className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-base"
               >
-                {saving ? 'Zapisuję...' : 'Zapisz wynik'}
+                + Dodaj do treningu
+              </button>
+              {/* Opcjonalnie: zapisz sam od razu */}
+              <button
+                onClick={handleSaveAlone}
+                disabled={saving}
+                className="w-full bg-gray-100 text-gray-700 py-2.5 rounded-xl text-sm font-medium disabled:opacity-60"
+              >
+                {saving ? 'Zapisuję...' : 'Zapisz jako osobny wynik'}
               </button>
             </div>
           )}

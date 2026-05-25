@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Navigation } from "@/components/layout/Navigation";
 import { DarkModeInit } from "@/components/DarkModeInit";
+import { WorkoutDraftBar } from "@/components/ui/WorkoutDraftBar";
 
 export const metadata: Metadata = {
   title: "Dziennik Treningów",
@@ -26,6 +27,7 @@ export default function RootLayout({
         <div className="max-w-2xl mx-auto">
           {children}
         </div>
+        <WorkoutDraftBar />
         <Navigation />
         <div className="h-16" />
       </body>
