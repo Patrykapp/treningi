@@ -1,17 +1,20 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getAuthUserId } from '@/lib/auth';
 
 export async function GET(request: Request) {
   try {
+    const userId = await getAuthUserId();
+    if (!userId) return NextResponse.json({ error: 'Nieautoryzowany' }, { status: 401 });
+
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
     const from = searchParams.get('from');
     const to = searchParams.get('to');
     const limit = parseInt(searchParams.get('limit') || '50');
 
     const sessions = await prisma.workoutSession.findMany({
       where: {
-        ...(userId ? { userId } : {}),
+        userId,
         ...(from || to ? {
           date: {
             ...(from ? { gte: new Date(from) } : {}),
@@ -34,9 +37,12 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { date, userId, notes, entries } = await request.json();
-    if (!date || !userId) {
-      return NextResponse.json({ error: 'Data i użytkownik są wymagani' }, { status: 400 });
+    const userId = await getAuthUserId();
+    if (!userId) return NextResponse.json({ error: 'Nieautoryzowany' }, { status: 401 });
+
+    const { date, notes, entries } = await request.json();
+    if (!date) {
+      return NextResponse.json({ error: 'Data jest wymagana' }, { status: 400 });
     }
     if (!entries?.length) {
       return NextResponse.json({ error: 'Dodaj co najmniej jedno ćwiczenie' }, { status: 400 });

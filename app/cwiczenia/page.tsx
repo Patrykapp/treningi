@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Exercise } from '@/types';
 
@@ -11,19 +11,39 @@ export default function CwiczeniaPage() {
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    fetch('/api/exercises').then(r => r.json()).then(setExercises);
-    const saved = localStorage.getItem('favoriteExercises');
-    if (saved) setFavorites(JSON.parse(saved));
+  const loadFavorites = useCallback(async () => {
+    try {
+      const res = await fetch('/api/favorites');
+      if (res.ok) {
+        const data = await res.json();
+        setFavorites(data);
+      }
+    } catch {
+      // fallback — zostaw pustą listę
+    }
   }, []);
 
-  const toggleFavorite = (id: string, e: React.MouseEvent) => {
+  useEffect(() => {
+    fetch('/api/exercises').then(r => r.json()).then(setExercises);
+    loadFavorites();
+  }, [loadFavorites]);
+
+  const toggleFavorite = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setFavorites(prev => {
-      const next = prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id];
-      localStorage.setItem('favoriteExercises', JSON.stringify(next));
-      return next;
-    });
+    const isFav = favorites.includes(id);
+    // Optymistyczna aktualizacja UI
+    setFavorites(prev => isFav ? prev.filter(f => f !== id) : [...prev, id]);
+
+    try {
+      await fetch('/api/favorites', {
+        method: isFav ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ exerciseId: id }),
+      });
+    } catch {
+      // cofnij optymistyczną aktualizację przy błędzie
+      setFavorites(prev => isFav ? [...prev, id] : prev.filter(f => f !== id));
+    }
   };
 
   const baseFiltered = exercises.filter(ex =>

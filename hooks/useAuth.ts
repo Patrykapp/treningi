@@ -1,14 +1,34 @@
 import { useState, useEffect } from 'react';
 
-export function useAuth() {
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+interface AuthState {
+  isLoggedIn: boolean | null;
+  userId: string | null;
+  name: string | null;
+  email: string | null;
+  loading: boolean;
+}
+
+export function useAuth(): AuthState {
+  const [state, setState] = useState<AuthState>({
+    isLoggedIn: null,
+    userId: null,
+    name: null,
+    email: null,
+    loading: true,
+  });
 
   useEffect(() => {
     fetch('/api/auth')
       .then(r => r.json())
-      .then(data => setIsLoggedIn(data.authenticated))
-      .catch(() => setIsLoggedIn(false));
+      .then(data => setState({
+        isLoggedIn: data.authenticated,
+        userId: data.userId ?? null,
+        name: data.name ?? null,
+        email: data.email ?? null,
+        loading: false,
+      }))
+      .catch(() => setState({ isLoggedIn: false, userId: null, name: null, email: null, loading: false }));
   }, []);
 
-  return { isLoggedIn, loading: isLoggedIn === null };
+  return state;
 }

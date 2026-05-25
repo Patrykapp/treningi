@@ -12,12 +12,16 @@ datasource db {
 }
 
 model User {
-  id           String           @id @default(cuid())
+  id           String            @id @default(cuid())
   name         String
+  email        String?           @unique
+  passwordHash String?
   sessions     WorkoutSession[]
   bodyWeights  BodyWeight[]
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  favorites    UserFavorite[]
+  templates    WorkoutTemplate[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
 }
 
 model Exercise {
@@ -25,6 +29,7 @@ model Exercise {
   name        String         @unique
   muscleGroup String?
   entries     WorkoutEntry[]
+  favorites   UserFavorite[]
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 }
@@ -51,7 +56,7 @@ model WorkoutEntry {
   weight     Float
   rpe        Float?
   comment    String?
-  setsData   Json     @default("[]")
+  setsData   Json           @default("[]")
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
 }
@@ -66,8 +71,21 @@ model BodyWeight {
   createdAt DateTime @default(now())
 }
 
+model UserFavorite {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exerciseId String
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, exerciseId])
+}
+
 model WorkoutTemplate {
   id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   name      String
   entries   Json     @default("[]")
   createdAt DateTime @default(now())

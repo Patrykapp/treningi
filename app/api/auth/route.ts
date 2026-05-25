@@ -1,42 +1,52 @@
 import { NextResponse } from 'next/server';
-import { SignJWT, jwtVerify } from 'jose';
-import { cookies } from 'next/headers';
+import { SignJWT } from 'jose';
+import { prisma } from '@/lib/prisma';
+import { getAuthUser } from '@/lib/auth';
+import bcrypt from 'bcryptjs';
 
-// GET /api/auth — sprawdź czy zalogowany
+const secret = () => new TextEncoder().encode(process.env.AUTH_SECRET!);
+
+// GET /api/auth — sprawdź czy zalogowany, zwróć info o użytkowniku
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('workout_token')?.value;
-    if (!token) return NextResponse.json({ authenticated: false });
-    const secret = new TextEncoder().encode(process.env.AUTH_SECRET!);
-    await jwtVerify(token, secret);
-    return NextResponse.json({ authenticated: true });
+    const user = await getAuthUser();
+    if (!user) return NextResponse.json({ authenticated: false });
+    return NextResponse.json({ authenticated: true, userId: user.userId, email: user.email, name: user.name });
   } catch {
     return NextResponse.json({ authenticated: false });
   }
 }
 
-// POST /api/auth — logowanie
+// POST /api/auth — logowanie emailem i hasłem
 export async function POST(request: Request) {
   try {
-    const { password } = await request.json();
+    const { email, password } = await request.json();
 
-    if (!password || password !== process.env.APP_PASSWORD) {
-      return NextResponse.json({ error: 'Nieprawidłowy kod dostępu' }, { status: 401 });
+    if (!email || !password) {
+      return NextResponse.json({ error: 'Podaj email i hasło' }, { status: 400 });
     }
 
-    const secret = new TextEncoder().encode(process.env.AUTH_SECRET!);
-    const token = await new SignJWT({ ok: true })
+    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+    if (!user || !user.passwordHash) {
+      return NextResponse.json({ error: 'Nieprawidłowy email lub hasło' }, { status: 401 });
+    }
+
+    const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid) {
+      return NextResponse.json({ error: 'Nieprawidłowy email lub hasło' }, { status: 401 });
+    }
+
+    const token = await new SignJWT({ userId: user.id, email: user.email, name: user.name })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
       .setExpirationTime('30d')
-      .sign(secret);
+      .sign(secret());
 
-    const res = NextResponse.json({ success: true });
+    const res = NextResponse.json({ success: true, userId: user.id, name: user.name });
     res.cookies.set('workout_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 24 * 30, // 30 dni
+      maxAge: 60 * 60 * 24 * 30,
       path: '/',
       sameSite: 'lax',
     });

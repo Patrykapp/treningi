@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getAuthUserId } from '@/lib/auth';
 
-export async function GET(req: Request) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId');
+    const userId = await getAuthUserId();
+    if (!userId) return NextResponse.json({ error: 'Nieautoryzowany' }, { status: 401 });
+
     const entries = await prisma.bodyWeight.findMany({
-      where: userId ? { userId } : {},
+      where: { userId },
       include: { user: true },
       orderBy: { date: 'desc' },
       take: 200,
@@ -19,8 +21,11 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { userId, date, weight, notes } = await req.json();
-    if (!userId || !date || !weight) {
+    const userId = await getAuthUserId();
+    if (!userId) return NextResponse.json({ error: 'Nieautoryzowany' }, { status: 401 });
+
+    const { date, weight, notes } = await req.json();
+    if (!date || !weight) {
       return NextResponse.json({ error: 'Brakuje pól' }, { status: 400 });
     }
     const entry = await prisma.bodyWeight.create({
