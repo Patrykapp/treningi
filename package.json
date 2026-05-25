@@ -12,7 +12,8 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "npx ts-node --project tsconfig.scripts.json prisma/seed.ts",
     "db:studio": "prisma studio",
-    "db:exercises": "npx ts-node --project tsconfig.scripts.json prisma/add-exercises.ts"
+    "db:exercises": "npx ts-node --project tsconfig.scripts.json prisma/add-exercises.ts",
+    "db:rename": "npx ts-node --project tsconfig.scripts.json prisma/rename-exercises.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.0.0",
