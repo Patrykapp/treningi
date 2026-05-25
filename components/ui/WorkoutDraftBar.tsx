@@ -2,43 +2,92 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { workoutDraft, WorkoutDraft } from '@/hooks/useWorkoutDraft';
+import { activeSession } from '@/hooks/useActiveSession';
 import { useAuth } from '@/hooks/useAuth';
 
+interface SessionEntry {
+  id: string;
+  exercise: { name: string };
+  sets: number;
+  reps: number;
+  weight: number;
+}
+
+interface LiveSession {
+  id: string;
+  entries: SessionEntry[];
+  date: string;
+}
+
 export function WorkoutDraftBar() {
-  const [draft, setDraft] = useState<WorkoutDraft | null>(null);
+  const [session, setSession] = useState<LiveSession | null>(null);
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const { isLoggedIn } = useAuth();
 
-  const refresh = useCallback(() => {
-    setDraft(workoutDraft.get());
+  const refresh = useCallback(async () => {
+    const id = activeSession.getId();
+    if (!id) { setSession(null); return; }
+    try {
+      const res = await fetch(`/api/sessions/${id}`);
+      if (!res.ok) { activeSession.clear(); setSession(null); return; }
+      const data = await res.json();
+      setSession(data);
+    } catch {
+      setSession(null);
+    }
   }, []);
 
-  // Odczytaj draft przy każdym montowaniu i przy zmianie ścieżki
-  useEffect(() => {
-    refresh();
-  }, [pathname, refresh]);
+  // Odśwież przy każdej nawigacji i przy zdarzeniu
+  useEffect(() => { refresh(); }, [pathname, refresh]);
 
-  // Słuchaj na zdarzenie 'draftChanged' emitowane po dodaniu ćwiczenia
   useEffect(() => {
-    window.addEventListener('draftChanged', refresh);
-    return () => window.removeEventListener('draftChanged', refresh);
+    window.addEventListener('activeSessionChanged', refresh);
+    // Gdy użytkownik wraca do zakładki
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') refresh();
+    });
+    return () => window.removeEventListener('activeSessionChanged', refresh);
   }, [refresh]);
 
-  if (!isLoggedIn || !draft || draft.entries.length === 0) return null;
+  if (!isLoggedIn || !session || session.entries.length === 0) return null;
   if (pathname === '/login' || pathname === '/trening') return null;
 
   const handleFinish = () => {
-    router.push('/trening?fromDraft=1');
+    router.push(`/trening?sessionId=${session.id}`);
   };
 
   const handleDiscard = () => {
-    if (confirm(`Anulować trening? Stracisz ${draft.entries.length} dodane ćwiczenia.`)) {
-      workoutDraft.clear();
-      setDraft(null);
+    if (confirm(`Anulować trening? Usunie ${session.entries.length} zapisanych ćwiczeń.`)) {
+      fetch(`/api/sessions/${session.id}`, { method: 'DELETE' });
+      activeSession.clear();
+      setSession(null);
     }
+  };
+
+  const handleRemoveEntry = async (entryId: string) => {
+    // Usuń wpis z bazy przez sessions endpoint – pobierz sesję i zapisz bez tego wpisu
+    const updated = session.entries.filter(e => e.id !== entryId);
+    if (updated.length === 0) {
+      handleDiscard();
+      return;
+    }
+    await fetch(`/api/sessions/${session.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        date: session.date,
+        userId: (session as { userId?: string }).userId,
+        entries: updated.map(e => ({
+          exerciseId: e.exercise ? (e as { exerciseId?: string }).exerciseId || '' : '',
+          sets: e.sets,
+          reps: e.reps,
+          weight: e.weight,
+        })),
+      }),
+    });
+    refresh();
   };
 
   return (
@@ -53,7 +102,8 @@ export function WorkoutDraftBar() {
             <div className="flex items-center gap-2">
               <span className="text-white text-lg">💪</span>
               <span className="text-white font-semibold text-sm">
-                Trening w toku · {draft.entries.length} {draft.entries.length === 1 ? 'ćwiczenie' : draft.entries.length < 5 ? 'ćwiczenia' : 'ćwiczeń'}
+                Trening w toku · {session.entries.length}{' '}
+                {session.entries.length === 1 ? 'ćwiczenie' : session.entries.length < 5 ? 'ćwiczenia' : 'ćwiczeń'}
               </span>
             </div>
             <span className="text-blue-200 text-xs">{open ? '▴' : '▾'}</span>
@@ -62,31 +112,20 @@ export function WorkoutDraftBar() {
           {/* Lista ćwiczeń */}
           {open && (
             <div className="bg-blue-700 px-4 pb-3 space-y-1.5 max-h-48 overflow-y-auto">
-              {draft.entries.map((entry, i) => (
-                <div key={entry.id} className="flex items-center justify-between">
-                  <span className="text-blue-100 text-xs">
-                    {i + 1}. {entry.exerciseName.includes(' - ')
-                      ? entry.exerciseName.split(' - ').slice(1).join(' - ')
-                      : entry.exerciseName}
-                    {' '}
-                    <span className="text-blue-300">
-                      {entry.setsData.length > 0
-                        ? `${entry.setsData.length} serie`
-                        : `${entry.sets}×${entry.reps} @ ${entry.weight}kg`}
+              {session.entries.map((entry, i) => {
+                const name = entry.exercise?.name || '—';
+                const short = name.includes(' - ') ? name.split(' - ').slice(1).join(' - ') : name;
+                return (
+                  <div key={entry.id} className="flex items-center justify-between">
+                    <span className="text-blue-100 text-xs">
+                      {i + 1}. {short}
+                      <span className="text-blue-300 ml-1">
+                        {entry.sets}×{entry.reps} @ {entry.weight}kg
+                      </span>
                     </span>
-                  </span>
-                  <button
-                    onClick={() => {
-                      workoutDraft.remove(entry.id);
-                      refresh();
-                      window.dispatchEvent(new Event('draftChanged'));
-                    }}
-                    className="text-blue-300 text-sm px-2 py-0.5 hover:text-white"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           )}
 

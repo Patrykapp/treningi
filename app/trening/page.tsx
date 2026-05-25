@@ -6,7 +6,7 @@ import { Exercise, User, NewEntryForm, SetData } from '@/types';
 import { formatDateInput } from '@/lib/utils';
 import { Toast } from '@/components/ui/Toast';
 import { ExerciseSearch } from '@/components/ui/ExerciseSearch';
-import { workoutDraft } from '@/hooks/useWorkoutDraft';
+import { activeSession } from '@/hooks/useActiveSession';
 
 interface EntryRow extends NewEntryForm {
   key: string;
@@ -56,25 +56,33 @@ function TreningPage() {
     if (saved) setUserId(saved);
     else if (usersRes.length > 0) setUserId(usersRes[0].id);
 
-    // Załaduj z draftu jeśli ?fromDraft=1
-    const fromDraft = searchParams.get('fromDraft');
-    if (fromDraft) {
-      const draft = workoutDraft.get();
-      if (draft && draft.entries.length > 0) {
-        setDate(draft.date || formatDateInput(new Date()));
-        setUserId(draft.userId || saved || (usersRes[0]?.id ?? ''));
-        setEntries(draft.entries.map((e, i) => ({
-          key: String(i),
-          exerciseId: e.exerciseId,
-          sets: e.sets,
-          reps: e.reps,
-          weight: e.weight,
-          rpe: e.rpe,
-          comment: e.comment,
-          setsData: e.setsData || [],
-          customSets: (e.setsData || []).length > 0,
-        })));
-        return; // skip editSessionId handling
+    // Załaduj z aktywnej sesji jeśli ?sessionId=...
+    const sessionIdParam = searchParams.get('sessionId');
+    if (sessionIdParam) {
+      setEditingSession(sessionIdParam);
+      const session = await fetch(`/api/sessions/${sessionIdParam}`).then(r => r.json());
+      if (session && !session.error) {
+        setDate(formatDateInput(session.date));
+        setUserId(session.userId);
+        setNotes(session.notes || '');
+        setEntries(session.entries.map((e: {
+          exerciseId: string; sets: number; reps: number; weight: number;
+          rpe?: number | null; comment?: string | null; setsData?: SetData[]
+        }, i: number) => {
+          const sd: SetData[] = Array.isArray(e.setsData) && e.setsData.length > 0 ? e.setsData : [];
+          return {
+            key: String(i),
+            exerciseId: e.exerciseId,
+            sets: e.sets,
+            reps: e.reps,
+            weight: e.weight,
+            rpe: e.rpe || undefined,
+            comment: e.comment || undefined,
+            setsData: sd,
+            customSets: sd.length > 0,
+          };
+        }));
+        return;
       }
     }
 
@@ -273,8 +281,7 @@ function TreningPage() {
         body: JSON.stringify({ date, userId, notes, entries }),
       });
       if (res.ok) {
-        workoutDraft.clear();
-        window.dispatchEvent(new Event('draftChanged'));
+        activeSession.clear();
         setToast({ message: editingSession ? 'Trening zaktualizowany!' : 'Trening zapisany! 💪', type: 'success' });
         setTimeout(() => router.push('/'), 1500);
       } else {

@@ -50,6 +50,32 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   }
 }
 
+// PATCH – dodaj jedno ćwiczenie do istniejącej sesji
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const { entry } = await request.json();
+    if (!entry) return NextResponse.json({ error: 'Brak ćwiczenia' }, { status: 400 });
+    const sd = entry.setsData && entry.setsData.length > 0 ? entry.setsData : [];
+    const created = await prisma.workoutEntry.create({
+      data: {
+        sessionId: id,
+        exerciseId: entry.exerciseId,
+        sets: sd.length > 0 ? sd.length : Number(entry.sets),
+        reps: sd.length > 0 ? Math.max(...sd.map((s: { reps: number }) => s.reps)) : Number(entry.reps),
+        weight: sd.length > 0 ? Math.max(...sd.map((s: { weight: number }) => s.weight)) : Number(entry.weight),
+        rpe: entry.rpe ? Number(entry.rpe) : null,
+        comment: entry.comment || null,
+        setsData: sd,
+      },
+      include: { exercise: true },
+    });
+    return NextResponse.json(created);
+  } catch {
+    return NextResponse.json({ error: 'Błąd serwera' }, { status: 500 });
+  }
+}
+
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;

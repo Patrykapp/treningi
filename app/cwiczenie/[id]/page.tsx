@@ -10,7 +10,7 @@ import { Exercise, User, SetData } from '@/types';
 import { formatDate, formatDateInput } from '@/lib/utils';
 import { Toast } from '@/components/ui/Toast';
 import { useAuth } from '@/hooks/useAuth';
-import { workoutDraft } from '@/hooks/useWorkoutDraft';
+import { activeSession } from '@/hooks/useActiveSession';
 
 interface EntryWithSession {
   id: string;
@@ -182,30 +182,71 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
     setFormCustomSets(false);
   };
 
-  // Dodaj do bieżącego treningu (draft)
-  const handleAddToDraft = () => {
+  // Dodaj do bieżącego treningu – zapisuje od razu do bazy
+  const handleAddToDraft = async () => {
     if (!formUserId) { setToast({ message: 'Wybierz osobę', type: 'error' }); return; }
     if (formCustomSets && formSetsData.length === 0) { setToast({ message: 'Dodaj serie', type: 'error' }); return; }
     if (!formCustomSets && !formWeight) { setToast({ message: 'Podaj ciężar', type: 'error' }); return; }
 
-    const entry = buildEntry();
-    const newMax = formCustomSets ? Math.max(...formSetsData.map(s => s.weight)) : formWeight;
-    const isPR = checkPR(newMax);
+    setSaving(true);
+    try {
+      const entry = buildEntry();
+      const newMax = formCustomSets ? Math.max(...formSetsData.map(s => s.weight)) : formWeight;
+      const isPR = checkPR(newMax);
 
-    workoutDraft.add(entry, formDate, formUserId);
-    window.dispatchEvent(new Event('draftChanged'));
+      const existingId = activeSession.getId();
 
-    if (isPR) {
-      setPrBanner(true);
-      setTimeout(() => setPrBanner(false), 4000);
-      setToast({ message: `🏆 PR! ${newMax}kg dodane do treningu`, type: 'success' });
-    } else {
-      const exShort = exercise?.name?.includes(' - ')
-        ? exercise.name.split(' - ').slice(1).join(' - ')
-        : exercise?.name;
-      setToast({ message: `${exShort} dodane do treningu 💪`, type: 'success' });
+      if (existingId) {
+        // Dołącz ćwiczenie do istniejącej sesji
+        const res = await fetch(`/api/sessions/${existingId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ entry }),
+        });
+        if (!res.ok) {
+          // Sesja mogła zostać usunięta – stwórz nową
+          activeSession.clear();
+          const newRes = await fetch('/api/sessions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ date: formDate, userId: formUserId, notes: '', entries: [entry] }),
+          });
+          if (newRes.ok) {
+            const newSession = await newRes.json();
+            activeSession.setId(newSession.id);
+          }
+        }
+      } else {
+        // Pierwsza sesja – utwórz nową
+        const res = await fetch('/api/sessions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date: formDate, userId: formUserId, notes: '', entries: [entry] }),
+        });
+        if (res.ok) {
+          const newSession = await res.json();
+          activeSession.setId(newSession.id);
+        }
+      }
+
+      if (isPR) {
+        setPrBanner(true);
+        setTimeout(() => setPrBanner(false), 4000);
+        setToast({ message: `🏆 PR! ${newMax}kg dodane do treningu`, type: 'success' });
+      } else {
+        const exShort = exercise?.name?.includes(' - ')
+          ? exercise.name.split(' - ').slice(1).join(' - ')
+          : exercise?.name;
+        setToast({ message: `${exShort} dodane do treningu 💪`, type: 'success' });
+      }
+
+      // Odśwież listę wpisów na tej stronie
+      const newEntries = await fetch(`/api/entries?exerciseId=${id}`).then(r => r.json());
+      setEntries(newEntries);
+      resetForm();
+    } finally {
+      setSaving(false);
     }
-    resetForm();
   };
 
   // Zapisz od razu jako osobny wynik
