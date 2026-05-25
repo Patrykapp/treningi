@@ -16,6 +16,7 @@ export default function UstawieniaPage() {
   const [confirmDelete, setConfirmDelete] = useState<{ type: 'user' | 'exercise'; id: string } | null>(null);
   const [importing, setImporting] = useState(false);
   const [exportUserId, setExportUserId] = useState('');
+  const [editingEx, setEditingEx] = useState<{ id: string; name: string; muscleGroup: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -85,6 +86,23 @@ export default function UstawieniaPage() {
       showToast('Błąd usuwania', 'error');
     }
     setConfirmDelete(null);
+  };
+
+  const saveEditExercise = async () => {
+    if (!editingEx || !editingEx.name.trim()) return;
+    const res = await fetch(`/api/exercises/${editingEx.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: editingEx.name.trim(), muscleGroup: editingEx.muscleGroup.trim() || null }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setExercises(prev => prev.map(e => e.id === updated.id ? updated : e).sort((a, b) => a.name.localeCompare(b.name)));
+      setEditingEx(null);
+      showToast('Ćwiczenie zaktualizowane');
+    } else {
+      showToast('Błąd zapisu', 'error');
+    }
   };
 
   // CSV Export
@@ -175,19 +193,52 @@ export default function UstawieniaPage() {
         {/* Exercises */}
         <section className="bg-white rounded-2xl p-4 shadow-sm">
           <h2 className="font-bold text-gray-800 mb-3">🏋️ Ćwiczenia ({exercises.length})</h2>
-          <div className="space-y-1 mb-3 max-h-60 overflow-y-auto">
+          <div className="space-y-1 mb-3 max-h-72 overflow-y-auto">
             {exercises.map(ex => (
-              <div key={ex.id} className="flex items-center justify-between py-2 border-b border-gray-50">
-                <div>
-                  <span className="font-medium text-sm">{ex.name}</span>
-                  {ex.muscleGroup && <span className="ml-2 text-xs text-gray-400">{ex.muscleGroup}</span>}
-                </div>
-                <button
-                  onClick={() => setConfirmDelete({ type: 'exercise', id: ex.id })}
-                  className="text-red-400 text-sm px-2"
-                >
-                  Usuń
-                </button>
+              <div key={ex.id} className="border-b border-gray-100 py-2">
+                {editingEx?.id === ex.id ? (
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={editingEx.name}
+                      onChange={e => setEditingEx({ ...editingEx, name: e.target.value })}
+                      className="w-full border border-blue-300 rounded-lg px-3 py-2 text-sm text-gray-900"
+                      autoFocus
+                    />
+                    <input
+                      type="text"
+                      value={editingEx.muscleGroup}
+                      onChange={e => setEditingEx({ ...editingEx, muscleGroup: e.target.value })}
+                      placeholder="Grupa mięśniowa"
+                      className="w-full border border-blue-300 rounded-lg px-3 py-2 text-sm text-gray-900"
+                    />
+                    <div className="flex gap-2">
+                      <button onClick={saveEditExercise} className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium">Zapisz</button>
+                      <button onClick={() => setEditingEx(null)} className="flex-1 bg-gray-100 text-gray-700 rounded-lg py-2 text-sm">Anuluj</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="font-medium text-sm text-gray-900">{ex.name}</span>
+                      {ex.muscleGroup && <span className="ml-2 text-xs text-gray-500 font-normal">{ex.muscleGroup}</span>}
+                    </div>
+                    <div className="flex gap-1 shrink-0 ml-2">
+                      <button
+                        onClick={() => setEditingEx({ id: ex.id, name: ex.name, muscleGroup: ex.muscleGroup || '' })}
+                        className="text-blue-500 text-sm px-2 py-1"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={() => setConfirmDelete({ type: 'exercise', id: ex.id })}
+                        className="text-red-400 text-sm px-2 py-1"
+                      >
+                        Usuń
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
