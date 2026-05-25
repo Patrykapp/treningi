@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 
 // Tylko te ścieżki wymagają logowania
-const PROTECTED = ['/trening', '/ustawienia'];
+const PROTECTED = ['/trening', '/ustawienia', '/cwiczenia', '/cwiczenie', '/waga', '/historia'];
 
 async function isAuthenticated(request: NextRequest): Promise<boolean> {
   const token = request.cookies.get('workout_token')?.value;
@@ -28,7 +28,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Chroń tylko strony zapisu
+  // Chroń strony aplikacji
   if (PROTECTED.some(p => pathname.startsWith(p))) {
     if (!await isAuthenticated(request)) {
       return NextResponse.redirect(new URL('/login', request.url));
