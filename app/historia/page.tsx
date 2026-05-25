@@ -82,7 +82,7 @@ export default function HistoriaPage() {
       )}
 
       <div className="bg-white border-b px-4 py-4 sticky top-0 z-10">
-        <h1 className="text-xl font-bold">Historia treningów</h1>
+        <h1 className="text-xl font-bold text-gray-900">Historia treningów</h1>
       </div>
 
       {/* Filters */}

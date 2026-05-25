@@ -157,7 +157,7 @@ export default function UstawieniaPage() {
       )}
 
       <div className="bg-white border-b px-4 py-4 sticky top-0 z-10">
-        <h1 className="text-xl font-bold">Ustawienia</h1>
+        <h1 className="text-xl font-bold text-gray-900">Ustawienia</h1>
       </div>
 
       <div className="px-4 py-4 space-y-6">
@@ -167,7 +167,7 @@ export default function UstawieniaPage() {
           <div className="space-y-2 mb-3">
             {users.map(u => (
               <div key={u.id} className="flex items-center justify-between py-2 border-b border-gray-50">
-                <span className="font-medium">{u.name}</span>
+                <span className="font-medium text-gray-900">{u.name}</span>
                 <button
                   onClick={() => setConfirmDelete({ type: 'user', id: u.id })}
                   className="text-red-400 text-sm px-2"

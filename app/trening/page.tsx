@@ -117,14 +117,14 @@ export default function TreningPage() {
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       <div className="bg-white border-b px-4 py-4 sticky top-0 z-10">
-        <h1 className="text-xl font-bold">{editingSession ? 'Edytuj trening' : 'Nowy trening'}</h1>
+        <h1 className="text-xl font-bold text-gray-900">{editingSession ? 'Edytuj trening' : 'Nowy trening'}</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="px-4 py-4 space-y-4">
         {/* Date & User */}
         <div className="bg-white rounded-2xl p-4 space-y-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Data</label>
+            <label className="block text-sm font-medium text-gray-900 mb-1">Data</label>
             <input
               type="date"
               value={date}
@@ -134,7 +134,7 @@ export default function TreningPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Kto trenuje</label>
+            <label className="block text-sm font-medium text-gray-900 mb-1">Kto trenuje</label>
             <div className="flex gap-2">
               {users.map(u => (
                 <button
@@ -151,7 +151,7 @@ export default function TreningPage() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Notatki (opcjonalne)</label>
+            <label className="block text-sm font-medium text-gray-900 mb-1">Notatki (opcjonalne)</label>
             <input
               type="text"
               value={notes}
