@@ -3,7 +3,7 @@
 import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Exercise, User } from '@/types';
+import { Exercise, User, SetData } from '@/types';
 import { formatDate, formatDateInput } from '@/lib/utils';
 
 interface EntryWithSession {
@@ -13,6 +13,7 @@ interface EntryWithSession {
   weight: number;
   rpe?: number | null;
   comment?: string | null;
+  setsData?: SetData[];
   exercise: Exercise;
   session: {
     id: string;

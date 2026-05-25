@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { WorkoutSession, User, Exercise } from '@/types';
+import { WorkoutSession, User, Exercise, SetData } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { Toast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
