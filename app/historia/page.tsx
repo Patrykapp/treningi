@@ -172,7 +172,13 @@ export default function HistoriaPage() {
                         {entry.exercise.name}
                       </Link>
                       <div className="text-sm text-gray-700 text-right">
-                        {entry.sets}×{entry.reps} @ <strong>{entry.weight}kg</strong>
+                        {entry.setsData && entry.setsData.length > 0 ? (
+                          <span>{entry.setsData.map((s, i) => (
+                            <span key={i}>{i > 0 && <span className="text-gray-400 mx-0.5">·</span>}{s.reps}×<strong>{s.weight}kg</strong></span>
+                          ))}</span>
+                        ) : (
+                          <span>{entry.sets}×{entry.reps} @ <strong>{entry.weight}kg</strong></span>
+                        )}
                         {entry.rpe && <span className="ml-1 text-gray-600">RPE {entry.rpe}</span>}
                       </div>
                     </div>

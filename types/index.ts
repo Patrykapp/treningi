@@ -24,6 +24,11 @@ export interface WorkoutSession {
   updatedAt: string;
 }
 
+export interface SetData {
+  reps: number;
+  weight: number;
+}
+
 export interface WorkoutEntry {
   id: string;
   sessionId: string;
@@ -34,6 +39,7 @@ export interface WorkoutEntry {
   weight: number;
   rpe?: number | null;
   comment?: string | null;
+  setsData?: SetData[];
   createdAt: string;
   updatedAt: string;
 }
@@ -45,4 +51,5 @@ export interface NewEntryForm {
   weight: number;
   rpe?: number;
   comment?: string;
+  setsData?: SetData[];
 }

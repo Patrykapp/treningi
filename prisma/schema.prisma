@@ -50,6 +50,7 @@ model WorkoutEntry {
   weight     Float
   rpe        Float?
   comment    String?
+  setsData   Json     @default("[]")
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
 }

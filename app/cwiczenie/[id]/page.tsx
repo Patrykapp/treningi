@@ -180,9 +180,16 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                       <span className="font-medium text-gray-900">{formatDate(entry.session.date)}</span>
                       <span className="ml-2 text-sm text-blue-600">{entry.session.user.name}</span>
                     </div>
-                    <div className="text-right">
-                      <span className="font-bold text-gray-900">{entry.weight}kg</span>
-                      <span className="text-sm text-gray-700 ml-1">{entry.sets}×{entry.reps}</span>
+                    <div className="text-right text-sm">
+                      {entry.setsData && entry.setsData.length > 0 ? (
+                        <div className="text-gray-800">
+                          {entry.setsData.map((s, i) => (
+                            <span key={i}>{i > 0 && <span className="text-gray-400 mx-0.5">·</span>}{s.reps}×<strong>{s.weight}kg</strong></span>
+                          ))}
+                        </div>
+                      ) : (
+                        <div><span className="font-bold text-gray-900">{entry.weight}kg</span><span className="text-gray-700 ml-1">{entry.sets}×{entry.reps}</span></div>
+                      )}
                     </div>
                   </div>
                   {(entry.rpe || entry.comment) && (

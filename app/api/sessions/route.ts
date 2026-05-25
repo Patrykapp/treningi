@@ -47,14 +47,18 @@ export async function POST(request: Request) {
         userId,
         notes: notes || null,
         entries: {
-          create: entries.map((e: { exerciseId: string; sets: number; reps: number; weight: number; rpe?: number; comment?: string }) => ({
-            exerciseId: e.exerciseId,
-            sets: Number(e.sets),
-            reps: Number(e.reps),
-            weight: Number(e.weight),
-            rpe: e.rpe ? Number(e.rpe) : null,
-            comment: e.comment || null,
-          })),
+          create: entries.map((e: { exerciseId: string; sets: number; reps: number; weight: number; rpe?: number; comment?: string; setsData?: { reps: number; weight: number }[] }) => {
+            const sd = e.setsData && e.setsData.length > 0 ? e.setsData : [];
+            return {
+              exerciseId: e.exerciseId,
+              sets: sd.length > 0 ? sd.length : Number(e.sets),
+              reps: sd.length > 0 ? Math.max(...sd.map(s => s.reps)) : Number(e.reps),
+              weight: sd.length > 0 ? Math.max(...sd.map(s => s.weight)) : Number(e.weight),
+              rpe: e.rpe ? Number(e.rpe) : null,
+              comment: e.comment || null,
+              setsData: sd,
+            };
+          }),
         },
       },
       include: {
