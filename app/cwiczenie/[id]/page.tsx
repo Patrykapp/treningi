@@ -6,6 +6,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { Exercise, User, SetData } from '@/types';
 import { formatDate, formatDateInput } from '@/lib/utils';
 import { Toast } from '@/components/ui/Toast';
+import { useAuth } from '@/hooks/useAuth';
 
 interface EntryWithSession {
   id: string;
@@ -50,6 +51,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
   const [formComment, setFormComment] = useState('');
   const [formSetsData, setFormSetsData] = useState<SetData[]>([]);
   const [saving, setSaving] = useState(false);
+  const { isLoggedIn } = useAuth();
 
   const loadData = async () => {
     const [exRes, usersRes, entriesRes] = await Promise.all([
@@ -185,14 +187,23 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
       ) : (
         <div className="px-4 py-4 space-y-4">
 
-          {/* Przycisk Dodaj wynik */}
+          {/* Przycisk Dodaj wynik / Zaloguj */}
           {!showForm && (
-            <button
-              onClick={() => setShowForm(true)}
-              className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-base"
-            >
-              + Dodaj wynik
-            </button>
+            isLoggedIn ? (
+              <button
+                onClick={() => setShowForm(true)}
+                className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-base"
+              >
+                + Dodaj wynik
+              </button>
+            ) : (
+              <Link
+                href="/login"
+                className="block w-full bg-gray-100 text-gray-700 text-center py-4 rounded-2xl font-medium text-base"
+              >
+                🔒 Zaloguj się aby dodać wynik
+              </Link>
+            )
           )}
 
           {/* Formularz dodawania wyniku */}

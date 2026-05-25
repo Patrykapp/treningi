@@ -2,42 +2,40 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 
-const PUBLIC = ['/login', '/api/auth'];
+// Tylko te ścieżki wymagają logowania
+const PROTECTED = ['/trening', '/ustawienia'];
+
+async function isAuthenticated(request: NextRequest): Promise<boolean> {
+  const token = request.cookies.get('workout_token')?.value;
+  if (!token) return false;
+  try {
+    const secret = new TextEncoder().encode(process.env.AUTH_SECRET!);
+    await jwtVerify(token, secret);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Przepuść publiczne ścieżki
-  if (PUBLIC.some(p => pathname.startsWith(p))) {
-    // Jeśli zalogowany i idzie na /login — przekieruj na start
-    if (pathname.startsWith('/login')) {
-      const token = request.cookies.get('workout_token')?.value;
-      if (token) {
-        try {
-          const secret = new TextEncoder().encode(process.env.AUTH_SECRET!);
-          await jwtVerify(token, secret);
-          return NextResponse.redirect(new URL('/', request.url));
-        } catch { /* token nieważny */ }
-      }
+  // Jeśli zalogowany i idzie na /login — przekieruj na start
+  if (pathname.startsWith('/login')) {
+    if (await isAuthenticated(request)) {
+      return NextResponse.redirect(new URL('/', request.url));
     }
     return NextResponse.next();
   }
 
-  // Sprawdź token
-  const token = request.cookies.get('workout_token')?.value;
-  if (!token) {
-    return NextResponse.redirect(new URL('/login', request.url));
+  // Chroń tylko strony zapisu
+  if (PROTECTED.some(p => pathname.startsWith(p))) {
+    if (!await isAuthenticated(request)) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
   }
 
-  try {
-    const secret = new TextEncoder().encode(process.env.AUTH_SECRET!);
-    await jwtVerify(token, secret);
-    return NextResponse.next();
-  } catch {
-    const res = NextResponse.redirect(new URL('/login', request.url));
-    res.cookies.delete('workout_token');
-    return res;
-  }
+  return NextResponse.next();
 }
 
 export const config = {

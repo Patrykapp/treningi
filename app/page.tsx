@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { WorkoutSession } from '@/types';
 import { formatDate } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function DashboardPage() {
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
@@ -43,6 +44,7 @@ export default function DashboardPage() {
   }, [selectedUser, loadSessions]);
 
   const currentUser = users.find(u => u.id === selectedUser);
+  const { isLoggedIn } = useAuth();
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -73,12 +75,15 @@ export default function DashboardPage() {
 
       <div className="px-4 py-4 space-y-4">
         {/* Quick add button */}
-        <Link
-          href="/trening"
-          className="block w-full bg-blue-600 text-white text-center py-4 rounded-2xl font-semibold text-lg shadow-sm"
-        >
-          + Dodaj trening
-        </Link>
+        {isLoggedIn ? (
+          <Link href="/trening" className="block w-full bg-blue-600 text-white text-center py-4 rounded-2xl font-semibold text-lg shadow-sm">
+            + Dodaj trening
+          </Link>
+        ) : (
+          <Link href="/login" className="block w-full bg-gray-100 text-gray-700 text-center py-4 rounded-2xl font-medium text-base">
+            🔒 Zaloguj się aby dodawać treningi
+          </Link>
+        )}
 
         {/* Recent sessions */}
         <div>

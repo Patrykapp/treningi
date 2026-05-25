@@ -1,5 +1,20 @@
 import { NextResponse } from 'next/server';
-import { SignJWT } from 'jose';
+import { SignJWT, jwtVerify } from 'jose';
+import { cookies } from 'next/headers';
+
+// GET /api/auth — sprawdź czy zalogowany
+export async function GET() {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('workout_token')?.value;
+    if (!token) return NextResponse.json({ authenticated: false });
+    const secret = new TextEncoder().encode(process.env.AUTH_SECRET!);
+    await jwtVerify(token, secret);
+    return NextResponse.json({ authenticated: true });
+  } catch {
+    return NextResponse.json({ authenticated: false });
+  }
+}
 
 // POST /api/auth — logowanie
 export async function POST(request: Request) {

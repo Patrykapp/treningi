@@ -7,9 +7,11 @@ import { WorkoutSession, User, Exercise, SetData } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { Toast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function HistoriaPage() {
   const router = useRouter();
+  const { isLoggedIn } = useAuth();
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -144,20 +146,12 @@ export default function HistoriaPage() {
                     <span className="font-bold text-gray-900">{formatDate(session.date)}</span>
                     <span className="ml-2 text-sm text-blue-600 font-medium">{session.user.name}</span>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleEdit(session.id)}
-                      className="text-sm text-gray-500 px-2 py-1"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      onClick={() => setConfirmDelete(session.id)}
-                      className="text-sm text-red-400 px-2 py-1"
-                    >
-                      🗑️
-                    </button>
-                  </div>
+                  {isLoggedIn && (
+                    <div className="flex gap-2">
+                      <button onClick={() => handleEdit(session.id)} className="text-sm text-gray-500 px-2 py-1">✏️</button>
+                      <button onClick={() => setConfirmDelete(session.id)} className="text-sm text-red-400 px-2 py-1">🗑️</button>
+                    </div>
+                  )}
                 </div>
                 {session.notes && (
                   <p className="text-sm text-gray-700 italic mb-2">{session.notes}</p>
