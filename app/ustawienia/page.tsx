@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { User, Exercise } from '@/types';
 import { Toast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import Papa from 'papaparse';
 
 export default function UstawieniaPage() {
+  const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [newUserName, setNewUserName] = useState('');
@@ -326,6 +328,23 @@ export default function UstawieniaPage() {
             className="w-full bg-orange-500 text-white py-3 rounded-xl font-medium disabled:opacity-60"
           >
             {importing ? 'Importuję...' : 'Wybierz plik CSV'}
+          </button>
+        </section>
+
+        {/* Wyloguj */}
+        <section className="bg-white rounded-2xl p-4 shadow-sm">
+          <h2 className="font-bold text-gray-900 mb-1">🔐 Dostęp</h2>
+          <p className="text-sm text-gray-600 mb-3">
+            Kod dostępu ustawiasz w zmiennych środowiskowych Vercel (<code className="bg-gray-100 px-1 rounded text-xs">APP_PASSWORD</code>).
+          </p>
+          <button
+            onClick={async () => {
+              await fetch('/api/auth', { method: 'DELETE' });
+              router.push('/login');
+            }}
+            className="w-full bg-gray-100 text-gray-900 py-3 rounded-xl font-medium"
+          >
+            Wyloguj się
           </button>
         </section>
       </div>
