@@ -2,21 +2,26 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --foreground: #111111;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
+
+/* Nadpisanie zbyt jasnych kolorów Tailwind v4 */
+.text-gray-400 { color: #6b7280 !important; }
+.text-gray-500 { color: #4b5563 !important; }
+.text-gray-600 { color: #374151 !important; }
+.text-gray-700 { color: #1f2937 !important; }
+.text-gray-800 { color: #111827 !important; }
+.text-gray-900 { color: #030712 !important; }
+
+label { color: #1f2937; }
+h1, h2, h3 { color: #111827; }
 
 /* Safe area for mobile */
 .pb-safe {
