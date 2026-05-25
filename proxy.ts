@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 
-// Tylko te ścieżki wymagają logowania
 const PROTECTED = ['/trening', '/ustawienia', '/cwiczenia', '/cwiczenie', '/waga', '/historia'];
 
 async function isAuthenticated(request: NextRequest): Promise<boolean> {
@@ -17,10 +16,9 @@ async function isAuthenticated(request: NextRequest): Promise<boolean> {
   }
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Jeśli zalogowany i idzie na /login — przekieruj na start
   if (pathname.startsWith('/login')) {
     if (await isAuthenticated(request)) {
       return NextResponse.redirect(new URL('/', request.url));
@@ -28,7 +26,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Chroń strony aplikacji
   if (PROTECTED.some(p => pathname.startsWith(p))) {
     if (!await isAuthenticated(request)) {
       return NextResponse.redirect(new URL('/login', request.url));
