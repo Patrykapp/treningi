@@ -2,16 +2,15 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { User, Exercise } from '@/types';
+import { Exercise } from '@/types';
 import { Toast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useAuth } from '@/hooks/useAuth';
 import Papa from 'papaparse';
 
 function useDarkMode() {
   const [dark, setDark] = useState(false);
-  useEffect(() => {
-    setDark(localStorage.getItem('darkMode') === 'true');
-  }, []);
+  useEffect(() => { setDark(localStorage.getItem('darkMode') === 'true'); }, []);
   const toggle = () => {
     const next = !dark;
     setDark(next);
@@ -25,73 +24,38 @@ function useDarkMode() {
 export default function UstawieniaPage() {
   const router = useRouter();
   const { dark, toggle: toggleDark } = useDarkMode();
-  const [users, setUsers] = useState<User[]>([]);
+  const { name: authName, email: authEmail } = useAuth();
   const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [newUserName, setNewUserName] = useState('');
   const [newExName, setNewExName] = useState('');
   const [newExGroup, setNewExGroup] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<{ type: 'user' | 'exercise'; id: string } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ type: 'exercise'; id: string } | null>(null);
   const [importing, setImporting] = useState(false);
-  const [exportUserId, setExportUserId] = useState('');
   const [editingEx, setEditingEx] = useState<{ id: string; name: string; muscleGroup: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetch('/api/users').then(r => r.json()).then(setUsers);
-    fetch('/api/exercises').then(r => r.json()).then(setExercises);
+    fetch('/api/exercises').then(r => r.json()).then(data => {
+      if (Array.isArray(data)) setExercises(data);
+    });
   }, []);
 
-  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
-    setToast({ message, type });
-  };
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => setToast({ message, type });
 
-  // Users
-  const addUser = async () => {
-    if (!newUserName.trim()) return;
-    const res = await fetch('/api/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: newUserName.trim() }),
-    });
-    if (res.ok) {
-      const user = await res.json();
-      setUsers(prev => [...prev, user]);
-      setNewUserName('');
-      showToast('Użytkownik dodany');
-    } else {
-      showToast('Błąd dodawania', 'error');
-    }
-  };
-
-  const deleteUser = async (id: string) => {
-    const res = await fetch(`/api/users/${id}`, { method: 'DELETE' });
-    if (res.ok) {
-      setUsers(prev => prev.filter(u => u.id !== id));
-      showToast('Użytkownik usunięty');
-    } else {
-      showToast('Błąd usuwania', 'error');
-    }
-    setConfirmDelete(null);
-  };
-
-  // Exercises
   const addExercise = async () => {
     if (!newExName.trim()) return;
     const res = await fetch('/api/exercises', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: newExName.trim(), muscleGroup: newExGroup.trim() || null }),
     });
     if (res.ok) {
       const ex = await res.json();
       setExercises(prev => [...prev, ex].sort((a, b) => a.name.localeCompare(b.name)));
-      setNewExName('');
-      setNewExGroup('');
-      showToast('Ćwiczenie dodane');
+      setNewExName(''); setNewExGroup('');
+      showToast('Cwiczenie dodane');
     } else {
       const err = await res.json();
-      showToast(err.error || 'Błąd', 'error');
+      showToast(err.error || 'Blad', 'error');
     }
   };
 
@@ -99,9 +63,9 @@ export default function UstawieniaPage() {
     const res = await fetch(`/api/exercises/${id}`, { method: 'DELETE' });
     if (res.ok) {
       setExercises(prev => prev.filter(e => e.id !== id));
-      showToast('Ćwiczenie usunięte');
+      showToast('Cwiczenie usuniete');
     } else {
-      showToast('Błąd usuwania', 'error');
+      showToast('Blad usuwania', 'error');
     }
     setConfirmDelete(null);
   };
@@ -109,27 +73,21 @@ export default function UstawieniaPage() {
   const saveEditExercise = async () => {
     if (!editingEx || !editingEx.name.trim()) return;
     const res = await fetch(`/api/exercises/${editingEx.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: editingEx.name.trim(), muscleGroup: editingEx.muscleGroup.trim() || null }),
     });
     if (res.ok) {
       const updated = await res.json();
       setExercises(prev => prev.map(e => e.id === updated.id ? updated : e).sort((a, b) => a.name.localeCompare(b.name)));
       setEditingEx(null);
-      showToast('Ćwiczenie zaktualizowane');
+      showToast('Cwiczenie zaktualizowane');
     } else {
-      showToast('Błąd zapisu', 'error');
+      showToast('Blad zapisu', 'error');
     }
   };
 
-  // CSV Export
-  const handleExport = () => {
-    const url = exportUserId ? `/api/export?userId=${exportUserId}` : '/api/export';
-    window.open(url, '_blank');
-  };
+  const handleExport = () => window.open('/api/export', '_blank');
 
-  // CSV Import
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -140,26 +98,25 @@ export default function UstawieniaPage() {
       complete: async (results) => {
         try {
           const res = await fetch('/api/import', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ rows: results.data }),
           });
           const data = await res.json();
-          if (res.ok) {
-            showToast(`Zaimportowano ${data.imported} wpisów${data.skipped ? `, pominięto ${data.skipped}` : ''}`);
-          } else {
-            showToast(data.error || 'Błąd importu', 'error');
-          }
+          if (res.ok) showToast(`Zaimportowano ${data.imported} wpisow`);
+          else showToast(data.error || 'Blad importu', 'error');
         } finally {
           setImporting(false);
           if (fileInputRef.current) fileInputRef.current.value = '';
         }
       },
-      error: () => {
-        showToast('Błąd parsowania CSV', 'error');
-        setImporting(false);
-      },
+      error: () => { showToast('Blad parsowania CSV', 'error'); setImporting(false); },
     });
+  };
+
+  const handleLogout = async () => {
+    await fetch('/api/auth', { method: 'DELETE' });
+    router.push('/login');
+    router.refresh();
   };
 
   return (
@@ -168,8 +125,8 @@ export default function UstawieniaPage() {
       {confirmDelete && (
         <ConfirmDialog
           isOpen={true}
-          message={confirmDelete.type === 'user' ? 'Usunąć użytkownika? Spowoduje to usunięcie wszystkich jego treningów.' : 'Usunąć ćwiczenie?'}
-          onConfirm={() => confirmDelete.type === 'user' ? deleteUser(confirmDelete.id) : deleteExercise(confirmDelete.id)}
+          message="Usunac cwiczenie?"
+          onConfirm={() => deleteExercise(confirmDelete.id)}
           onCancel={() => setConfirmDelete(null)}
         />
       )}
@@ -179,57 +136,42 @@ export default function UstawieniaPage() {
       </div>
 
       <div className="px-4 py-4 space-y-6">
-        {/* Users */}
+        {/* Account info */}
         <section className="bg-white rounded-2xl p-4 shadow-sm">
-          <h2 className="font-bold text-gray-800 mb-3">👤 Użytkownicy</h2>
-          <div className="space-y-2 mb-3">
-            {users.map(u => (
-              <div key={u.id} className="flex items-center justify-between py-2 border-b border-gray-50">
-                <span className="font-medium text-gray-900">{u.name}</span>
-                <button
-                  onClick={() => setConfirmDelete({ type: 'user', id: u.id })}
-                  className="text-red-400 text-sm px-2"
-                >
-                  Usuń
-                </button>
-              </div>
-            ))}
+          <h2 className="font-bold text-gray-800 mb-3">Konto</h2>
+          <div className="space-y-1 mb-4">
+            <p className="text-sm text-gray-700"><span className="font-medium">Imie:</span> {authName || '...'}</p>
+            <p className="text-sm text-gray-700"><span className="font-medium">Email:</span> {authEmail || '...'}</p>
           </div>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={newUserName}
-              onChange={e => setNewUserName(e.target.value)}
-              placeholder="Imię nowego użytkownika"
-              className="flex-1 border border-gray-200 rounded-xl px-4 py-3"
-              onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addUser())}
-            />
-            <button onClick={addUser} className="bg-blue-600 text-white px-4 rounded-xl font-medium">Dodaj</button>
+          <button onClick={handleLogout} className="w-full bg-red-50 text-red-600 py-3 rounded-xl font-medium text-sm">
+            Wyloguj sie
+          </button>
+        </section>
+
+        {/* Dark mode */}
+        <section className="bg-white rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <h2 className="font-bold text-gray-800">Wyglad</h2>
+            <button onClick={toggleDark}
+              className={`relative inline-flex h-6 w-12 items-center rounded-full transition-colors ${dark ? 'bg-blue-600' : 'bg-gray-200'}`}>
+              <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${dark ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
           </div>
+          <p className="text-sm text-gray-500 mt-1">{dark ? 'Ciemny motyw' : 'Jasny motyw'}</p>
         </section>
 
         {/* Exercises */}
         <section className="bg-white rounded-2xl p-4 shadow-sm">
-          <h2 className="font-bold text-gray-800 mb-3">🏋️ Ćwiczenia ({exercises.length})</h2>
+          <h2 className="font-bold text-gray-800 mb-3">Cwiczenia ({exercises.length})</h2>
           <div className="space-y-1 mb-3 max-h-72 overflow-y-auto">
             {exercises.map(ex => (
               <div key={ex.id} className="border-b border-gray-100 py-2">
                 {editingEx?.id === ex.id ? (
                   <div className="space-y-2">
-                    <input
-                      type="text"
-                      value={editingEx.name}
-                      onChange={e => setEditingEx({ ...editingEx, name: e.target.value })}
-                      className="w-full border border-blue-300 rounded-lg px-3 py-2 text-sm text-gray-900"
-                      autoFocus
-                    />
-                    <input
-                      type="text"
-                      value={editingEx.muscleGroup}
-                      onChange={e => setEditingEx({ ...editingEx, muscleGroup: e.target.value })}
-                      placeholder="Grupa mięśniowa"
-                      className="w-full border border-blue-300 rounded-lg px-3 py-2 text-sm text-gray-900"
-                    />
+                    <input type="text" value={editingEx.name} onChange={e => setEditingEx({ ...editingEx, name: e.target.value })}
+                      className="w-full border border-blue-300 rounded-lg px-3 py-2 text-sm" autoFocus />
+                    <input type="text" value={editingEx.muscleGroup} onChange={e => setEditingEx({ ...editingEx, muscleGroup: e.target.value })}
+                      placeholder="Grupa miesniowa" className="w-full border border-blue-300 rounded-lg px-3 py-2 text-sm" />
                     <div className="flex gap-2">
                       <button onClick={saveEditExercise} className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium">Zapisz</button>
                       <button onClick={() => setEditingEx(null)} className="flex-1 bg-gray-100 text-gray-700 rounded-lg py-2 text-sm">Anuluj</button>
@@ -239,21 +181,13 @@ export default function UstawieniaPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="font-medium text-sm text-gray-900">{ex.name}</span>
-                      {ex.muscleGroup && <span className="ml-2 text-xs text-gray-500 font-normal">{ex.muscleGroup}</span>}
+                      {ex.muscleGroup && <span className="ml-2 text-xs text-gray-500">{ex.muscleGroup}</span>}
                     </div>
                     <div className="flex gap-1 shrink-0 ml-2">
-                      <button
-                        onClick={() => setEditingEx({ id: ex.id, name: ex.name, muscleGroup: ex.muscleGroup || '' })}
-                        className="text-blue-500 text-sm px-2 py-1"
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        onClick={() => setConfirmDelete({ type: 'exercise', id: ex.id })}
-                        className="text-red-400 text-sm px-2 py-1"
-                      >
-                        Usuń
-                      </button>
+                      <button onClick={() => setEditingEx({ id: ex.id, name: ex.name, muscleGroup: ex.muscleGroup || '' })}
+                        className="text-blue-500 text-sm px-2 py-1">Edit</button>
+                      <button onClick={() => setConfirmDelete({ type: 'exercise', id: ex.id })}
+                        className="text-red-400 text-sm px-2 py-1">Del</button>
                     </div>
                   </div>
                 )}
@@ -261,121 +195,29 @@ export default function UstawieniaPage() {
             ))}
           </div>
           <div className="space-y-2">
-            <input
-              type="text"
-              value={newExName}
-              onChange={e => setNewExName(e.target.value)}
-              placeholder="Nazwa ćwiczenia"
-              className="w-full border border-gray-200 rounded-xl px-4 py-3"
-            />
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newExGroup}
-                onChange={e => setNewExGroup(e.target.value)}
-                placeholder="Grupa mięśniowa (opcjonalne)"
-                className="flex-1 border border-gray-200 rounded-xl px-4 py-3"
-                onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addExercise())}
-              />
-              <button onClick={addExercise} className="bg-blue-600 text-white px-4 rounded-xl font-medium">Dodaj</button>
-            </div>
+            <input type="text" value={newExName} onChange={e => setNewExName(e.target.value)} placeholder="Nazwa cwiczenia"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm"
+              onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addExercise())} />
+            <input type="text" value={newExGroup} onChange={e => setNewExGroup(e.target.value)} placeholder="Grupa miesniowa (opcjonalnie)"
+              className="w-full border border-gray-200 rounded-xl px-4 py-2 text-sm" />
+            <button onClick={addExercise} className="w-full bg-blue-600 text-white py-2.5 rounded-xl font-medium text-sm">
+              Dodaj cwiczenie
+            </button>
           </div>
         </section>
 
-        {/* Baza danych */}
-        <section className="bg-white rounded-2xl p-4 shadow-sm">
-          <h2 className="font-bold text-gray-900 mb-1">🗄️ Baza danych</h2>
-          <p className="text-sm text-gray-600 mb-3">Edytuj wpisy bezpośrednio w Supabase — działa też na telefonie.</p>
-          <a
-            href="https://supabase.com/dashboard/project/fjhvexqbkasxrffcwlfg/editor"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block w-full bg-gray-900 text-white text-center py-3 rounded-xl font-medium"
-          >
-            Otwórz bazę danych →
-          </a>
-          <p className="text-xs text-gray-500 mt-2 text-center">Zaloguj się na supabase.com, jeśli poprosi</p>
-        </section>
-
-        {/* Export */}
-        <section className="bg-white rounded-2xl p-4 shadow-sm">
-          <h2 className="font-bold text-gray-800 mb-3">📤 Eksport CSV</h2>
-          <p className="text-sm text-gray-500 mb-3">Pobierz wszystkie treningi jako plik CSV.</p>
-          <div className="flex gap-2 mb-3">
-            <select
-              value={exportUserId}
-              onChange={e => setExportUserId(e.target.value)}
-              className="flex-1 border border-gray-200 rounded-xl px-3 py-3 bg-white"
-            >
-              <option value="">Wszyscy użytkownicy</option>
-              {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-            </select>
+        {/* Export / Import */}
+        <section className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+          <h2 className="font-bold text-gray-800">Dane</h2>
+          <button onClick={handleExport} className="w-full bg-gray-100 text-gray-700 py-3 rounded-xl text-sm font-medium">
+            Eksportuj dane (CSV)
+          </button>
+          <div>
+            <input ref={fileInputRef} type="file" accept=".csv" onChange={handleImport} className="hidden" id="csv-import" />
+            <label htmlFor="csv-import" className={`block w-full text-center bg-gray-100 text-gray-700 py-3 rounded-xl text-sm font-medium cursor-pointer ${importing ? 'opacity-50' : ''}`}>
+              {importing ? 'Importuje...' : 'Importuj dane (CSV)'}
+            </label>
           </div>
-          <button
-            onClick={handleExport}
-            className="w-full bg-green-600 text-white py-3 rounded-xl font-medium"
-          >
-            Pobierz CSV
-          </button>
-        </section>
-
-        {/* Import */}
-        <section className="bg-white rounded-2xl p-4 shadow-sm">
-          <h2 className="font-bold text-gray-800 mb-3">📥 Import CSV</h2>
-          <p className="text-sm text-gray-500 mb-2">
-            Format pliku CSV (nagłówki):
-          </p>
-          <code className="block text-xs bg-gray-100 p-2 rounded-lg mb-3 text-gray-700 overflow-x-auto">
-            data,uzytkownik,cwiczenie,grupa_miesniowa,serie,powt,ciezar_kg,rpe,komentarz,id_sesji
-          </code>
-          <p className="text-xs text-gray-400 mb-3">
-            Przykład: 2025-01-15,Patryk,Wyciskanie sztangi,Klatka,4,8,80,7,,
-          </p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv"
-            onChange={handleImport}
-            className="hidden"
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={importing}
-            className="w-full bg-orange-500 text-white py-3 rounded-xl font-medium disabled:opacity-60"
-          >
-            {importing ? 'Importuję...' : 'Wybierz plik CSV'}
-          </button>
-        </section>
-
-        {/* Wygląd – Dark mode */}
-        <section className="bg-white rounded-2xl p-4 shadow-sm">
-          <h2 className="font-bold text-gray-900 mb-1">🌙 Wygląd</h2>
-          <p className="text-sm text-gray-600 mb-3">Przełącz między jasnym a ciemnym motywem.</p>
-          <button
-            onClick={toggleDark}
-            className={`w-full py-3 rounded-xl font-medium transition-colors ${
-              dark ? 'bg-slate-800 text-white' : 'bg-gray-100 text-gray-900'
-            }`}
-          >
-            {dark ? '☀️ Włącz jasny motyw' : '🌙 Włącz ciemny motyw'}
-          </button>
-        </section>
-
-        {/* Wyloguj */}
-        <section className="bg-white rounded-2xl p-4 shadow-sm">
-          <h2 className="font-bold text-gray-900 mb-1">🔐 Dostęp</h2>
-          <p className="text-sm text-gray-600 mb-3">
-            Kod dostępu ustawiasz w zmiennych środowiskowych Vercel (<code className="bg-gray-100 px-1 rounded text-xs">APP_PASSWORD</code>).
-          </p>
-          <button
-            onClick={async () => {
-              await fetch('/api/auth', { method: 'DELETE' });
-              router.push('/login');
-            }}
-            className="w-full bg-gray-100 text-gray-900 py-3 rounded-xl font-medium"
-          >
-            Wyloguj się
-          </button>
         </section>
       </div>
     </div>

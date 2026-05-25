@@ -6,32 +6,22 @@ export async function GET(request: Request) {
   try {
     const userId = await getAuthUserId();
     if (!userId) return NextResponse.json({ error: 'Nieautoryzowany' }, { status: 401 });
-
     const { searchParams } = new URL(request.url);
     const from = searchParams.get('from');
     const to = searchParams.get('to');
     const limit = parseInt(searchParams.get('limit') || '50');
-
     const sessions = await prisma.workoutSession.findMany({
       where: {
         userId,
-        ...(from || to ? {
-          date: {
-            ...(from ? { gte: new Date(from) } : {}),
-            ...(to ? { lte: new Date(to) } : {}),
-          },
-        } : {}),
+        ...(from || to ? { date: { ...(from ? { gte: new Date(from) } : {}), ...(to ? { lte: new Date(to) } : {}) } } : {}),
       },
-      include: {
-        user: true,
-        entries: { include: { exercise: true } },
-      },
+      include: { user: true, entries: { include: { exercise: true } } },
       orderBy: { date: 'desc' },
       take: limit,
     });
     return NextResponse.json(sessions);
   } catch {
-    return NextResponse.json({ error: 'Błąd serwera' }, { status: 500 });
+    return NextResponse.json({ error: 'Blad serwera' }, { status: 500 });
   }
 }
 
@@ -39,14 +29,9 @@ export async function POST(request: Request) {
   try {
     const userId = await getAuthUserId();
     if (!userId) return NextResponse.json({ error: 'Nieautoryzowany' }, { status: 401 });
-
     const { date, notes, entries } = await request.json();
-    if (!date) {
-      return NextResponse.json({ error: 'Data jest wymagana' }, { status: 400 });
-    }
-    if (!entries?.length) {
-      return NextResponse.json({ error: 'Dodaj co najmniej jedno ćwiczenie' }, { status: 400 });
-    }
+    if (!date) return NextResponse.json({ error: 'Data jest wymagana' }, { status: 400 });
+    if (!entries?.length) return NextResponse.json({ error: 'Dodaj co najmniej jedno cwiczenie' }, { status: 400 });
     const session = await prisma.workoutSession.create({
       data: {
         date: new Date(date),
@@ -67,13 +52,10 @@ export async function POST(request: Request) {
           }),
         },
       },
-      include: {
-        user: true,
-        entries: { include: { exercise: true } },
-      },
+      include: { user: true, entries: { include: { exercise: true } } },
     });
     return NextResponse.json(session, { status: 201 });
   } catch {
-    return NextResponse.json({ error: 'Błąd serwera' }, { status: 500 });
+    return NextResponse.json({ error: 'Blad serwera' }, { status: 500 });
   }
 }

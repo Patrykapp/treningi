@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     });
 
     const headers = ['data', 'uzytkownik', 'cwiczenie', 'grupa_miesniowa', 'serie', 'powt', 'ciezar_kg', 'rpe', 'komentarz', 'id_sesji'];
-    const rows = entries.map(e => [
+    const rows = entries.map((e: { sets: number; reps: number; weight: number; rpe: number | null; comment: string | null; session: { date: Date; user: { name: string }; id: string }; exercise: { name: string; muscleGroup: string | null } }) => [
       format(e.session.date, 'yyyy-MM-dd'),
       e.session.user.name,
       e.exercise.name,

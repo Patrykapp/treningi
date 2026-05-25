@@ -14,19 +14,17 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
-
     const res = await fetch('/api/auth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
-
     if (res.ok) {
       router.push('/');
       router.refresh();
     } else {
       const data = await res.json();
-      setError(data.error || 'Nieprawidłowy email lub hasło.');
+      setError(data.error || 'Nieprawidlowy email lub haslo.');
       setPassword('');
     }
     setLoading(false);
@@ -37,15 +35,12 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="text-6xl mb-4">🏋️</div>
-          <h1 className="text-2xl font-bold text-gray-900">Dziennik Treningów</h1>
-          <p className="text-gray-600 mt-2 text-sm">Zaloguj się aby kontynuować</p>
+          <h1 className="text-2xl font-bold text-gray-900">Dziennik Treningow</h1>
+          <p className="text-gray-600 mt-2 text-sm">Zaloguj sie aby kontynuowac</p>
         </div>
-
         <form onSubmit={handleLogin} className="bg-white rounded-2xl p-6 shadow-sm space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">
-              Email
-            </label>
+            <label className="block text-sm font-medium text-gray-900 mb-2">Email</label>
             <input
               type="email"
               value={email}
@@ -56,11 +51,8 @@ export default function LoginPage() {
               autoComplete="email"
             />
           </div>
-
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">
-              Hasło
-            </label>
+            <label className="block text-sm font-medium text-gray-900 mb-2">Haslo</label>
             <input
               type="password"
               value={password}
@@ -70,19 +62,17 @@ export default function LoginPage() {
               autoComplete="current-password"
             />
           </div>
-
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
               <p className="text-red-600 text-sm">{error}</p>
             </div>
           )}
-
           <button
             type="submit"
             disabled={loading || !email || !password}
             className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-base disabled:opacity-50"
           >
-            {loading ? 'Loguję...' : 'Zaloguj się →'}
+            {loading ? 'Loguje...' : 'Zaloguj sie'}
           </button>
         </form>
       </div>

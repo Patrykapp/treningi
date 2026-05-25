@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Exercise, User, NewEntryForm, SetData } from '@/types';
+import { Exercise, NewEntryForm, SetData } from '@/types';
 import { formatDateInput } from '@/lib/utils';
 import { Toast } from '@/components/ui/Toast';
 import { ExerciseSearch } from '@/components/ui/ExerciseSearch';
 import { activeSession } from '@/hooks/useActiveSession';
+import { useAuth } from '@/hooks/useAuth';
 
 interface EntryRow extends NewEntryForm {
   key: string;
@@ -22,9 +23,8 @@ interface Template {
 function TreningPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [users, setUsers] = useState<User[]>([]);
+  const { userId: authUserId, name: authName } = useAuth();
   const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [userId, setUserId] = useState('');
   const [date, setDate] = useState(formatDateInput(new Date()));
   const [notes, setNotes] = useState('');
   const [entries, setEntries] = useState<EntryRow[]>([{
@@ -35,8 +35,6 @@ function TreningPage() {
   const [newExName, setNewExName] = useState('');
   const [showNewEx, setShowNewEx] = useState(false);
   const [editingSession, setEditingSession] = useState<string | null>(null);
-
-  // Templates
   const [templates, setTemplates] = useState<Template[]>([]);
   const [showTemplates, setShowTemplates] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
@@ -44,43 +42,27 @@ function TreningPage() {
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
 
   const loadData = useCallback(async () => {
-    const [usersRes, exRes, tplRes] = await Promise.all([
-      fetch('/api/users').then(r => r.json()),
+    const [exRes, tplRes] = await Promise.all([
       fetch('/api/exercises').then(r => r.json()),
       fetch('/api/templates').then(r => r.json()),
     ]);
-    setUsers(usersRes);
-    setExercises(exRes);
-    setTemplates(tplRes);
-    const saved = localStorage.getItem('selectedUserId');
-    if (saved) setUserId(saved);
-    else if (usersRes.length > 0) setUserId(usersRes[0].id);
+    setExercises(Array.isArray(exRes) ? exRes : []);
+    setTemplates(Array.isArray(tplRes) ? tplRes : []);
 
-    // Załaduj z aktywnej sesji jeśli ?sessionId=...
     const sessionIdParam = searchParams.get('sessionId');
     if (sessionIdParam) {
       setEditingSession(sessionIdParam);
       const session = await fetch(`/api/sessions/${sessionIdParam}`).then(r => r.json());
       if (session && !session.error) {
         setDate(formatDateInput(session.date));
-        setUserId(session.userId);
         setNotes(session.notes || '');
         setEntries(session.entries.map((e: {
           exerciseId: string; sets: number; reps: number; weight: number;
           rpe?: number | null; comment?: string | null; setsData?: SetData[]
         }, i: number) => {
           const sd: SetData[] = Array.isArray(e.setsData) && e.setsData.length > 0 ? e.setsData : [];
-          return {
-            key: String(i),
-            exerciseId: e.exerciseId,
-            sets: e.sets,
-            reps: e.reps,
-            weight: e.weight,
-            rpe: e.rpe || undefined,
-            comment: e.comment || undefined,
-            setsData: sd,
-            customSets: sd.length > 0,
-          };
+          return { key: String(i), exerciseId: e.exerciseId, sets: e.sets, reps: e.reps, weight: e.weight,
+            rpe: e.rpe || undefined, comment: e.comment || undefined, setsData: sd, customSets: sd.length > 0 };
         }));
         return;
       }
@@ -90,39 +72,28 @@ function TreningPage() {
     if (editId) {
       setEditingSession(editId);
       const session = await fetch(`/api/sessions/${editId}`).then(r => r.json());
-      setDate(formatDateInput(session.date));
-      setUserId(session.userId);
-      setNotes(session.notes || '');
-      setEntries(session.entries.map((e: {
-        exerciseId: string; sets: number; reps: number; weight: number;
-        rpe?: number | null; comment?: string | null; setsData?: SetData[]
-      }, i: number) => {
-        const sd: SetData[] = Array.isArray(e.setsData) && e.setsData.length > 0 ? e.setsData : [];
-        return {
-          key: String(i),
-          exerciseId: e.exerciseId,
-          sets: e.sets,
-          reps: e.reps,
-          weight: e.weight,
-          rpe: e.rpe || undefined,
-          comment: e.comment || undefined,
-          setsData: sd,
-          customSets: sd.length > 0,
-        };
-      }));
+      if (session && !session.error) {
+        setDate(formatDateInput(session.date));
+        setNotes(session.notes || '');
+        setEntries(session.entries.map((e: {
+          exerciseId: string; sets: number; reps: number; weight: number;
+          rpe?: number | null; comment?: string | null; setsData?: SetData[]
+        }, i: number) => {
+          const sd: SetData[] = Array.isArray(e.setsData) && e.setsData.length > 0 ? e.setsData : [];
+          return { key: String(i), exerciseId: e.exerciseId, sets: e.sets, reps: e.reps, weight: e.weight,
+            rpe: e.rpe || undefined, comment: e.comment || undefined, setsData: sd, customSets: sd.length > 0 };
+        }));
+      }
       sessionStorage.removeItem('editSessionId');
     }
   }, [searchParams]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Kopiuj ostatni trening
   const copyLastWorkout = async () => {
-    if (!userId) return;
-    const sessions = await fetch(`/api/sessions?userId=${userId}&limit=1`).then(r => r.json());
-    if (!sessions.length) {
-      setToast({ message: 'Brak poprzednich treningów', type: 'error' });
-      return;
+    const sessions = await fetch('/api/sessions?limit=1').then(r => r.json());
+    if (!Array.isArray(sessions) || !sessions.length) {
+      setToast({ message: 'Brak poprzednich treningow', type: 'error' }); return;
     }
     const last = sessions[0];
     setEntries(last.entries.map((e: {
@@ -130,46 +101,28 @@ function TreningPage() {
       rpe?: number | null; comment?: string | null; setsData?: SetData[]
     }, i: number) => {
       const sd: SetData[] = Array.isArray(e.setsData) && e.setsData.length > 0 ? e.setsData : [];
-      return {
-        key: String(Date.now() + i),
-        exerciseId: e.exerciseId,
-        sets: e.sets,
-        reps: e.reps,
-        weight: e.weight,
-        rpe: e.rpe || undefined,
-        comment: e.comment || undefined,
-        setsData: sd,
-        customSets: sd.length > 0,
-      };
+      return { key: String(Date.now() + i), exerciseId: e.exerciseId, sets: e.sets, reps: e.reps,
+        weight: e.weight, rpe: e.rpe || undefined, comment: e.comment || undefined, setsData: sd, customSets: sd.length > 0 };
     }));
-    setToast({ message: `Skopiowano trening z ${new Date(last.date).toLocaleDateString('pl-PL')} 📋`, type: 'success' });
+    setToast({ message: 'Skopiowano ostatni trening', type: 'success' });
   };
 
-  // Załaduj szablon
   const loadTemplate = (tpl: Template) => {
     setEntries(tpl.entries.map((e, i) => ({
-      key: String(Date.now() + i),
-      exerciseId: e.exerciseId,
-      sets: e.sets,
-      reps: e.reps,
-      weight: e.weight,
-      customSets: false,
-      setsData: [],
+      key: String(Date.now() + i), exerciseId: e.exerciseId, sets: e.sets, reps: e.reps,
+      weight: e.weight, customSets: false, setsData: [],
     })));
     setShowTemplates(false);
-    setToast({ message: `Załadowano szablon „${tpl.name}" 📋`, type: 'success' });
+    setToast({ message: `Zaladowano szablon "${tpl.name}"`, type: 'success' });
   };
 
-  // Zapisz szablon
   const saveTemplate = async () => {
     if (!templateName.trim()) return;
     setSavingTemplate(true);
-    const tplEntries = entries.map(e => ({
-      exerciseId: e.exerciseId,
-      sets: e.customSets ? (e.setsData?.length || e.sets) : e.sets,
-      reps: e.reps,
-      weight: e.weight,
-    })).filter(e => e.exerciseId);
+    const tplEntries = entries.filter(e => e.exerciseId).map(e => ({
+      exerciseId: e.exerciseId, sets: e.customSets ? (e.setsData?.length || e.sets) : e.sets,
+      reps: e.reps, weight: e.weight,
+    }));
     const res = await fetch('/api/templates', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -178,32 +131,20 @@ function TreningPage() {
     if (res.ok) {
       const tpl = await res.json();
       setTemplates(prev => [tpl, ...prev]);
-      setToast({ message: `Szablon „${tpl.name}" zapisany!`, type: 'success' });
-      setTemplateName('');
-      setShowSaveTemplate(false);
+      setToast({ message: `Szablon "${tpl.name}" zapisany!`, type: 'success' });
+      setTemplateName(''); setShowSaveTemplate(false);
     }
     setSavingTemplate(false);
   };
 
-  // Usuń szablon
-  const deleteTemplate = async (id: string) => {
-    await fetch(`/api/templates/${id}`, { method: 'DELETE' });
-    setTemplates(prev => prev.filter(t => t.id !== id));
-  };
+  const addEntry = () => setEntries(prev => [...prev, {
+    key: String(Date.now()), exerciseId: '', sets: 3, reps: 10, weight: 0, customSets: false, setsData: []
+  }]);
 
-  const addEntry = () => {
-    setEntries(prev => [...prev, {
-      key: String(Date.now()), exerciseId: '', sets: 3, reps: 10, weight: 0, customSets: false, setsData: []
-    }]);
-  };
+  const removeEntry = (key: string) => setEntries(prev => prev.filter(e => e.key !== key));
 
-  const removeEntry = (key: string) => {
-    setEntries(prev => prev.filter(e => e.key !== key));
-  };
-
-  const updateEntry = (key: string, field: keyof NewEntryForm, value: string | number) => {
+  const updateEntry = (key: string, field: keyof NewEntryForm, value: string | number) =>
     setEntries(prev => prev.map(e => e.key === key ? { ...e, [field]: value } : e));
-  };
 
   const toggleCustomSets = (key: string, custom: boolean) => {
     setEntries(prev => prev.map(e => {
@@ -236,39 +177,33 @@ function TreningPage() {
   const removeSet = (entryKey: string, setIdx: number) => {
     setEntries(prev => prev.map(e => {
       if (e.key !== entryKey) return e;
-      const newSets = (e.setsData || []).filter((_, i) => i !== setIdx);
-      return { ...e, setsData: newSets };
+      return { ...e, setsData: (e.setsData || []).filter((_, i) => i !== setIdx) };
     }));
   };
 
   const addNewExercise = async () => {
     if (!newExName.trim()) return;
     const res = await fetch('/api/exercises', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: newExName.trim() }),
     });
     if (res.ok) {
       const ex = await res.json();
       setExercises(prev => [...prev, ex].sort((a, b) => a.name.localeCompare(b.name)));
-      setNewExName('');
-      setShowNewEx(false);
+      setNewExName(''); setShowNewEx(false);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userId || !date) {
-      setToast({ message: 'Wypełnij wszystkie wymagane pola', type: 'error' });
-      return;
-    }
+    if (!date) { setToast({ message: 'Wybierz date', type: 'error' }); return; }
     for (const entry of entries) {
-      if (!entry.exerciseId) { setToast({ message: 'Wybierz ćwiczenie', type: 'error' }); return; }
+      if (!entry.exerciseId) { setToast({ message: 'Wybierz cwiczenie', type: 'error' }); return; }
       if (entry.customSets && (!entry.setsData || entry.setsData.length === 0)) {
-        setToast({ message: 'Dodaj co najmniej jedną serię', type: 'error' }); return;
+        setToast({ message: 'Dodaj co najmniej jedna serie', type: 'error' }); return;
       }
       if (!entry.customSets && !entry.weight) {
-        setToast({ message: 'Podaj ciężar', type: 'error' }); return;
+        setToast({ message: 'Podaj ciezar', type: 'error' }); return;
       }
     }
     setSaving(true);
@@ -276,347 +211,177 @@ function TreningPage() {
       const url = editingSession ? `/api/sessions/${editingSession}` : '/api/sessions';
       const method = editingSession ? 'PUT' : 'POST';
       const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date, userId, notes, entries }),
+        method, headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date, notes, entries }),
       });
       if (res.ok) {
         activeSession.clear();
-        setToast({ message: editingSession ? 'Trening zaktualizowany!' : 'Trening zapisany! 💪', type: 'success' });
+        setToast({ message: editingSession ? 'Trening zaktualizowany!' : 'Trening zapisany!', type: 'success' });
         setTimeout(() => router.push('/'), 1500);
       } else {
         const err = await res.json();
-        setToast({ message: err.error || 'Błąd zapisu', type: 'error' });
+        setToast({ message: err.error || 'Blad zapisu', type: 'error' });
       }
     } finally {
       setSaving(false);
     }
   };
 
-  const hasEntries = entries.some(e => e.exerciseId);
-
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       <div className="bg-white border-b px-4 py-4 sticky top-0 z-10">
-        <h1 className="text-xl font-bold text-gray-900">{editingSession ? 'Edytuj trening' : 'Nowy trening'}</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-bold text-gray-900">{editingSession ? 'Edytuj trening' : 'Nowy trening'}</h1>
+          {authName && <span className="text-sm text-blue-600 font-medium">{authName}</span>}
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="px-4 py-4 space-y-4">
-        {/* Date & User */}
         <div className="bg-white rounded-2xl p-4 space-y-3">
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-1">Data</label>
-            <input
-              type="date"
-              value={date}
-              onChange={e => setDate(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">Kto trenuje</label>
-            <div className="flex gap-2">
-              {users.map(u => (
-                <button
-                  type="button"
-                  key={u.id}
-                  onClick={() => setUserId(u.id)}
-                  className={`flex-1 py-3 rounded-xl font-medium text-base transition-colors ${
-                    userId === u.id ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900'
-                  }`}
-                >
-                  {u.name}
-                </button>
-              ))}
-            </div>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900" required />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-1">Notatki (opcjonalne)</label>
-            <input
-              type="text"
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              placeholder="np. dobry dzień, PR..."
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900"
-            />
+            <input type="text" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Np. dobry dzien, PR na klatkce..."
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900" />
           </div>
         </div>
 
-        {/* Szybkie akcje – kopiuj ostatni + szablony */}
-        {!editingSession && (
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={copyLastWorkout}
-              className="flex-1 bg-white border border-gray-200 rounded-xl py-3 text-sm font-medium text-gray-700 flex items-center justify-center gap-1.5"
-            >
-              📋 Kopiuj ostatni
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowTemplates(o => !o)}
-              className={`flex-1 rounded-xl py-3 text-sm font-medium flex items-center justify-center gap-1.5 ${
-                showTemplates ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-700'
-              }`}
-            >
-              ⚡ Szablony {templates.length > 0 && `(${templates.length})`}
-            </button>
-          </div>
-        )}
+        <div className="flex gap-2">
+          <button type="button" onClick={copyLastWorkout}
+            className="flex-1 bg-white border border-gray-200 text-gray-700 py-2.5 rounded-xl text-sm font-medium">
+            Kopiuj ostatni
+          </button>
+          <button type="button" onClick={() => setShowTemplates(o => !o)}
+            className="flex-1 bg-white border border-gray-200 text-gray-700 py-2.5 rounded-xl text-sm font-medium">
+            Szablony ({templates.length})
+          </button>
+        </div>
 
-        {/* Lista szablonów */}
         {showTemplates && (
-          <div className="bg-white rounded-2xl p-4 shadow-sm space-y-2">
-            <h3 className="font-semibold text-gray-900 text-sm">Załaduj szablon</h3>
+          <div className="bg-white rounded-2xl p-4 space-y-2">
             {templates.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-2">Brak szablonów. Zapisz trening jako szablon.</p>
-            ) : (
-              templates.map(tpl => (
-                <div key={tpl.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-                  <button
-                    type="button"
-                    onClick={() => loadTemplate(tpl)}
-                    className="flex-1 text-left text-sm font-medium text-gray-900"
-                  >
-                    {tpl.name}
-                    <span className="ml-2 text-xs text-gray-500">({tpl.entries.length} ćw.)</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => deleteTemplate(tpl.id)}
-                    className="text-red-400 text-xs px-2 py-1 ml-2"
-                  >
-                    🗑️
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-        )}
-
-        {/* Entries */}
-        <div className="space-y-3">
-          {entries.map((entry, idx) => (
-            <div key={entry.key} className="bg-white rounded-2xl p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-gray-900">Ćwiczenie {idx + 1}</span>
-                {entries.length > 1 && (
-                  <button type="button" onClick={() => removeEntry(entry.key)} className="text-red-500 text-sm">Usuń</button>
-                )}
-              </div>
-
-              {/* Searchable exercise picker */}
-              <ExerciseSearch
-                exercises={exercises}
-                value={entry.exerciseId}
-                onChange={id => updateEntry(entry.key, 'exerciseId', id)}
-              />
-
-              {/* Toggle trybu serii */}
-              <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
-                <button
-                  type="button"
-                  onClick={() => toggleCustomSets(entry.key, false)}
-                  className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    !entry.customSets ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
-                  }`}
-                >
-                  Jednakowe serie
+              <p className="text-sm text-gray-500 text-center py-2">Brak szablonow</p>
+            ) : templates.map(tpl => (
+              <div key={tpl.id} className="flex items-center justify-between">
+                <button type="button" onClick={() => loadTemplate(tpl)} className="text-sm font-medium text-blue-600 flex-1 text-left">
+                  {tpl.name}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => toggleCustomSets(entry.key, true)}
-                  className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    entry.customSets ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
-                  }`}
-                >
-                  Różne serie
-                </button>
+                <button type="button" onClick={() => setTemplates(prev => prev.filter(t => t.id !== tpl.id))}
+                  className="text-red-400 text-xs px-2">usun</button>
               </div>
-
-              {/* Tryb: jednakowe serie */}
-              {!entry.customSets && (
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <label className="block text-xs text-gray-700 font-medium mb-1">Serie</label>
-                    <input
-                      type="number" min="1"
-                      value={entry.sets}
-                      onChange={e => updateEntry(entry.key, 'sets', parseInt(e.target.value))}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-3 text-base text-center text-gray-900"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-700 font-medium mb-1">Powtórzenia</label>
-                    <input
-                      type="number" min="1"
-                      value={entry.reps}
-                      onChange={e => updateEntry(entry.key, 'reps', parseInt(e.target.value))}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-3 text-base text-center text-gray-900"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-700 font-medium mb-1">Ciężar (kg)</label>
-                    <input
-                      type="number" min="0" step="0.5"
-                      value={entry.weight}
-                      onChange={e => updateEntry(entry.key, 'weight', parseFloat(e.target.value))}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-3 text-base text-center text-gray-900"
-                      required
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Tryb: różne serie */}
-              {entry.customSets && (
-                <div className="space-y-2">
-                  <div className="grid grid-cols-12 gap-1 text-xs text-gray-700 font-medium px-1">
-                    <span className="col-span-2 text-center">Seria</span>
-                    <span className="col-span-4 text-center">Powt.</span>
-                    <span className="col-span-5 text-center">Ciężar (kg)</span>
-                    <span className="col-span-1"></span>
-                  </div>
-                  {(entry.setsData || []).map((set, setIdx) => (
-                    <div key={setIdx} className="grid grid-cols-12 gap-1 items-center">
-                      <span className="col-span-2 text-center text-sm font-semibold text-gray-700">#{setIdx + 1}</span>
-                      <input
-                        type="number" min="1"
-                        value={set.reps}
-                        onChange={e => updateSet(entry.key, setIdx, 'reps', parseInt(e.target.value) || 1)}
-                        className="col-span-4 border border-gray-200 rounded-xl px-2 py-3 text-base text-center text-gray-900"
-                      />
-                      <input
-                        type="number" min="0" step="0.5"
-                        value={set.weight}
-                        onChange={e => updateSet(entry.key, setIdx, 'weight', parseFloat(e.target.value) || 0)}
-                        className="col-span-5 border border-gray-200 rounded-xl px-2 py-3 text-base text-center text-gray-900"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeSet(entry.key, setIdx)}
-                        className="col-span-1 text-red-400 text-lg font-bold flex items-center justify-center"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => addSet(entry.key)}
-                    className="w-full border border-dashed border-blue-300 text-blue-600 rounded-xl py-2 text-sm font-medium"
-                  >
-                    + Dodaj serię
-                  </button>
-                </div>
-              )}
-
-              {/* RPE + komentarz */}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs text-gray-700 font-medium mb-1">RPE (1-10)</label>
-                  <input
-                    type="number" min="1" max="10" step="0.5"
-                    value={entry.rpe || ''}
-                    onChange={e => updateEntry(entry.key, 'rpe', parseFloat(e.target.value) || 0)}
-                    placeholder="opcjonalne"
-                    className="w-full border border-gray-200 rounded-xl px-3 py-3 text-base text-gray-900"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-700 font-medium mb-1">Komentarz</label>
-                  <input
-                    type="text"
-                    value={entry.comment || ''}
-                    onChange={e => updateEntry(entry.key, 'comment', e.target.value)}
-                    placeholder="opcjonalne"
-                    className="w-full border border-gray-200 rounded-xl px-3 py-3 text-base text-gray-900"
-                  />
-                </div>
-              </div>
-            </div>
-          ))}
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={addEntry}
-              className="flex-1 bg-white border-2 border-dashed border-blue-300 text-blue-600 py-4 rounded-2xl font-medium"
-            >
-              + Dodaj ćwiczenie
-            </button>
-          </div>
-
-          {showNewEx ? (
-            <div className="bg-white rounded-2xl p-4 flex gap-2">
-              <input
-                type="text"
-                value={newExName}
-                onChange={e => setNewExName(e.target.value)}
-                placeholder="Nazwa nowego ćwiczenia"
-                className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
-                onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addNewExercise())}
-              />
-              <button type="button" onClick={addNewExercise} className="bg-blue-600 text-white px-4 rounded-xl">Dodaj</button>
-              <button type="button" onClick={() => setShowNewEx(false)} className="text-gray-600 px-3">✕</button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setShowNewEx(true)}
-              className="w-full text-center text-sm text-gray-700 py-2"
-            >
-              Nie ma ćwiczenia na liście? Dodaj nowe →
-            </button>
-          )}
-        </div>
-
-        {/* Zapisz jako szablon */}
-        {hasEntries && !editingSession && (
-          <div>
-            {showSaveTemplate ? (
-              <div className="bg-white rounded-2xl p-4 flex gap-2">
-                <input
-                  type="text"
-                  value={templateName}
-                  onChange={e => setTemplateName(e.target.value)}
-                  placeholder="Nazwa szablonu (np. Klatka + Triceps)"
-                  className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-gray-900 text-sm"
-                  onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), saveTemplate())}
-                />
-                <button
-                  type="button"
-                  onClick={saveTemplate}
-                  disabled={savingTemplate}
-                  className="bg-blue-600 text-white px-4 rounded-xl text-sm font-medium disabled:opacity-60"
-                >
-                  Zapisz
-                </button>
-                <button type="button" onClick={() => setShowSaveTemplate(false)} className="text-gray-600 px-3">✕</button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowSaveTemplate(true)}
-                className="w-full text-center text-sm text-gray-700 py-2"
-              >
-                ⚡ Zapisz jako szablon →
+            ))}
+            {!showSaveTemplate ? (
+              <button type="button" onClick={() => setShowSaveTemplate(true)}
+                className="w-full text-sm text-gray-500 border border-dashed border-gray-300 rounded-xl py-2 mt-2">
+                + Zapisz obecny jako szablon
               </button>
+            ) : (
+              <div className="flex gap-2 mt-2">
+                <input value={templateName} onChange={e => setTemplateName(e.target.value)} placeholder="Nazwa szablonu"
+                  className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm" />
+                <button type="button" onClick={saveTemplate} disabled={savingTemplate}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium disabled:opacity-50">
+                  {savingTemplate ? '...' : 'Zapisz'}
+                </button>
+              </div>
             )}
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-lg disabled:opacity-60"
-        >
-          {saving ? 'Zapisuję...' : editingSession ? 'Zaktualizuj trening' : 'Zapisz trening'}
+        {entries.map((entry, idx) => (
+          <div key={entry.key} className="bg-white rounded-2xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-bold text-gray-500">Cwiczenie {idx + 1}</span>
+              {entries.length > 1 && (
+                <button type="button" onClick={() => removeEntry(entry.key)} className="text-red-400 text-sm">Usun</button>
+              )}
+            </div>
+            <ExerciseSearch
+              exercises={exercises}
+              value={entry.exerciseId}
+              onChange={val => updateEntry(entry.key, 'exerciseId', val)}
+            />
+            <div className="flex gap-2 items-center">
+              <label className="text-xs text-gray-500">Serie per-set</label>
+              <button type="button" onClick={() => toggleCustomSets(entry.key, !entry.customSets)}
+                className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors ${entry.customSets ? 'bg-blue-600' : 'bg-gray-200'}`}>
+                <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${entry.customSets ? 'translate-x-5' : 'translate-x-1'}`} />
+              </button>
+            </div>
+            {!entry.customSets ? (
+              <div className="grid grid-cols-3 gap-2">
+                {[['Serie', 'sets'], ['Powt.', 'reps'], ['Ciezar kg', 'weight']].map(([label, field]) => (
+                  <div key={field}>
+                    <label className="block text-xs text-gray-500 mb-1">{label}</label>
+                    <input type="number" min="0" step={field === 'weight' ? '0.5' : '1'}
+                      value={entry[field as keyof NewEntryForm] as number}
+                      onChange={e => updateEntry(entry.key, field as keyof NewEntryForm, parseFloat(e.target.value) || 0)}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-base text-gray-900" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {(entry.setsData || []).map((s, si) => (
+                  <div key={si} className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400 w-6">{si + 1}.</span>
+                    <input type="number" min="1" value={s.reps} onChange={e => updateSet(entry.key, si, 'reps', parseInt(e.target.value) || 1)}
+                      className="w-16 border border-gray-200 rounded-xl px-2 py-2 text-sm text-center" placeholder="Powt" />
+                    <span className="text-xs text-gray-400">x</span>
+                    <input type="number" min="0" step="0.5" value={s.weight} onChange={e => updateSet(entry.key, si, 'weight', parseFloat(e.target.value) || 0)}
+                      className="w-20 border border-gray-200 rounded-xl px-2 py-2 text-sm text-center" placeholder="kg" />
+                    <button type="button" onClick={() => removeSet(entry.key, si)} className="text-red-400 text-sm px-1">x</button>
+                  </div>
+                ))}
+                <button type="button" onClick={() => addSet(entry.key)}
+                  className="w-full text-sm text-blue-600 border border-dashed border-blue-300 rounded-xl py-2">
+                  + Dodaj serie
+                </button>
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">RPE (opcjonalne)</label>
+                <input type="number" min="1" max="10" step="0.5" value={entry.rpe || ''} onChange={e => updateEntry(entry.key, 'rpe', parseFloat(e.target.value) || 0)}
+                  placeholder="1-10" className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Komentarz</label>
+                <input type="text" value={entry.comment || ''} onChange={e => updateEntry(entry.key, 'comment', e.target.value)}
+                  placeholder="np. zmeczony..." className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm" />
+              </div>
+            </div>
+          </div>
+        ))}
+
+        <button type="button" onClick={addEntry}
+          className="w-full bg-white border-2 border-dashed border-gray-300 text-gray-600 py-3 rounded-2xl text-sm font-medium">
+          + Dodaj cwiczenie
+        </button>
+
+        {showNewEx ? (
+          <div className="bg-white rounded-2xl p-4 flex gap-2">
+            <input value={newExName} onChange={e => setNewExName(e.target.value)} placeholder="Nazwa cwiczenia"
+              className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm" />
+            <button type="button" onClick={addNewExercise} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium">Dodaj</button>
+            <button type="button" onClick={() => setShowNewEx(false)} className="text-gray-400 px-2">X</button>
+          </div>
+        ) : (
+          <button type="button" onClick={() => setShowNewEx(true)}
+            className="w-full text-sm text-gray-500 py-2">
+            + Nowe cwiczenie w bibliotece
+          </button>
+        )}
+
+        <button type="submit" disabled={saving || !entries.some(e => e.exerciseId)}
+          className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-lg disabled:opacity-50">
+          {saving ? 'Zapisuje...' : editingSession ? 'Aktualizuj trening' : 'Zapisz trening'}
         </button>
       </form>
     </div>
@@ -625,7 +390,7 @@ function TreningPage() {
 
 export default function TreningPageWrapper() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-600">Ładowanie...</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-500">Ladowanie...</div>}>
       <TreningPage />
     </Suspense>
   );

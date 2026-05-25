@@ -6,7 +6,6 @@ export async function GET() {
   try {
     const userId = await getAuthUserId();
     if (!userId) return NextResponse.json({ error: 'Nieautoryzowany' }, { status: 401 });
-
     const entries = await prisma.bodyWeight.findMany({
       where: { userId },
       include: { user: true },
@@ -15,7 +14,7 @@ export async function GET() {
     });
     return NextResponse.json(entries);
   } catch {
-    return NextResponse.json({ error: 'Błąd serwera' }, { status: 500 });
+    return NextResponse.json({ error: 'Blad serwera' }, { status: 500 });
   }
 }
 
@@ -23,10 +22,9 @@ export async function POST(req: Request) {
   try {
     const userId = await getAuthUserId();
     if (!userId) return NextResponse.json({ error: 'Nieautoryzowany' }, { status: 401 });
-
     const { date, weight, notes } = await req.json();
     if (!date || !weight) {
-      return NextResponse.json({ error: 'Brakuje pól' }, { status: 400 });
+      return NextResponse.json({ error: 'Brakuje pol' }, { status: 400 });
     }
     const entry = await prisma.bodyWeight.create({
       data: {
@@ -39,6 +37,6 @@ export async function POST(req: Request) {
     });
     return NextResponse.json(entry, { status: 201 });
   } catch {
-    return NextResponse.json({ error: 'Błąd serwera' }, { status: 500 });
+    return NextResponse.json({ error: 'Blad serwera' }, { status: 500 });
   }
 }

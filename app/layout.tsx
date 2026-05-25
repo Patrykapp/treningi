@@ -5,8 +5,8 @@ import { DarkModeInit } from "@/components/DarkModeInit";
 import { WorkoutDraftBar } from "@/components/ui/WorkoutDraftBar";
 
 export const metadata: Metadata = {
-  title: "Dziennik Treningów",
-  description: "Wspólny dziennik treningów siłowych",
+  title: "Dziennik Treningow",
+  description: "Wspolny dziennik treningow silowych",
 };
 
 export const viewport: Viewport = {
@@ -15,21 +15,14 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pl">
       <body className="bg-gray-50 min-h-screen">
         <DarkModeInit />
-        <div className="max-w-2xl mx-auto">
-          {children}
-        </div>
+        <main className="pb-16">{children}</main>
         <WorkoutDraftBar />
         <Navigation />
-        <div className="h-16" />
       </body>
     </html>
   );
