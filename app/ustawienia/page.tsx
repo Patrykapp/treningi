@@ -264,6 +264,21 @@ export default function UstawieniaPage() {
           </div>
         </section>
 
+        {/* Baza danych */}
+        <section className="bg-white rounded-2xl p-4 shadow-sm">
+          <h2 className="font-bold text-gray-900 mb-1">🗄️ Baza danych</h2>
+          <p className="text-sm text-gray-600 mb-3">Edytuj wpisy bezpośrednio w Supabase — działa też na telefonie.</p>
+          <a
+            href="https://supabase.com/dashboard/project/fjhvexqbkasxrffcwlfg/editor"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-full bg-gray-900 text-white text-center py-3 rounded-xl font-medium"
+          >
+            Otwórz bazę danych →
+          </a>
+          <p className="text-xs text-gray-500 mt-2 text-center">Zaloguj się na supabase.com, jeśli poprosi</p>
+        </section>
+
         {/* Export */}
         <section className="bg-white rounded-2xl p-4 shadow-sm">
           <h2 className="font-bold text-gray-800 mb-3">📤 Eksport CSV</h2>
