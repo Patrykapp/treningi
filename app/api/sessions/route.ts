@@ -1,0 +1,69 @@
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+    const from = searchParams.get('from');
+    const to = searchParams.get('to');
+    const limit = parseInt(searchParams.get('limit') || '50');
+
+    const sessions = await prisma.workoutSession.findMany({
+      where: {
+        ...(userId ? { userId } : {}),
+        ...(from || to ? {
+          date: {
+            ...(from ? { gte: new Date(from) } : {}),
+            ...(to ? { lte: new Date(to) } : {}),
+          },
+        } : {}),
+      },
+      include: {
+        user: true,
+        entries: { include: { exercise: true } },
+      },
+      orderBy: { date: 'desc' },
+      take: limit,
+    });
+    return NextResponse.json(sessions);
+  } catch {
+    return NextResponse.json({ error: 'Błąd serwera' }, { status: 500 });
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const { date, userId, notes, entries } = await request.json();
+    if (!date || !userId) {
+      return NextResponse.json({ error: 'Data i użytkownik są wymagani' }, { status: 400 });
+    }
+    if (!entries?.length) {
+      return NextResponse.json({ error: 'Dodaj co najmniej jedno ćwiczenie' }, { status: 400 });
+    }
+    const session = await prisma.workoutSession.create({
+      data: {
+        date: new Date(date),
+        userId,
+        notes: notes || null,
+        entries: {
+          create: entries.map((e: { exerciseId: string; sets: number; reps: number; weight: number; rpe?: number; comment?: string }) => ({
+            exerciseId: e.exerciseId,
+            sets: Number(e.sets),
+            reps: Number(e.reps),
+            weight: Number(e.weight),
+            rpe: e.rpe ? Number(e.rpe) : null,
+            comment: e.comment || null,
+          })),
+        },
+      },
+      include: {
+        user: true,
+        entries: { include: { exercise: true } },
+      },
+    });
+    return NextResponse.json(session, { status: 201 });
+  } catch {
+    return NextResponse.json({ error: 'Błąd serwera' }, { status: 500 });
+  }
+}
