@@ -100,12 +100,12 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
           <h1 className="text-xl font-bold">{exercise?.name || '...'}</h1>
         </div>
         {exercise?.muscleGroup && (
-          <p className="text-sm text-gray-500 mt-1">{exercise.muscleGroup}</p>
+          <p className="text-sm text-gray-700 mt-1">{exercise.muscleGroup}</p>
         )}
       </div>
 
       {loading ? (
-        <div className="text-center py-8 text-gray-400">Ładowanie...</div>
+        <div className="text-center py-8 text-gray-600">Ładowanie...</div>
       ) : (
         <div className="px-4 py-4 space-y-4">
           {/* User filter */}
@@ -131,19 +131,19 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-white rounded-2xl p-4 text-center shadow-sm">
               <div className="text-2xl font-bold text-blue-600">{bestWeight}kg</div>
-              <div className="text-xs text-gray-500 mt-1">Najlepszy wynik</div>
+              <div className="text-xs text-gray-700 font-medium mt-1">Najlepszy wynik</div>
             </div>
             <div className="bg-white rounded-2xl p-4 text-center shadow-sm">
               <div className="text-2xl font-bold text-gray-800">{lastEntry?.weight || 0}kg</div>
-              <div className="text-xs text-gray-500 mt-1">Ostatni wynik</div>
-              {lastEntry && <div className="text-xs text-gray-400">{formatDate(lastEntry.session.date)}</div>}
+              <div className="text-xs text-gray-700 font-medium mt-1">Ostatni wynik</div>
+              {lastEntry && <div className="text-xs text-gray-600">{formatDate(lastEntry.session.date)}</div>}
             </div>
           </div>
 
           {/* Chart */}
           {chartData.length > 1 && (
             <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <h3 className="font-semibold text-gray-700 mb-3">Progres ciężaru</h3>
+              <h3 className="font-semibold text-gray-900 mb-3">Progres ciężaru</h3>
               <ResponsiveContainer width="100%" height={200}>
                 <LineChart data={filteredChartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -169,9 +169,9 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
 
           {/* History */}
           <div className="space-y-2">
-            <h3 className="font-semibold text-gray-700">Historia</h3>
+            <h3 className="font-semibold text-gray-900">Historia</h3>
             {filtered.length === 0 ? (
-              <p className="text-gray-400 text-center py-4">Brak wyników</p>
+              <p className="text-gray-600 text-center py-4">Brak wyników</p>
             ) : (
               filtered.map(entry => (
                 <div key={entry.id} className="bg-white rounded-2xl p-4 shadow-sm">
@@ -182,11 +182,11 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                     </div>
                     <div className="text-right">
                       <span className="font-bold text-gray-900">{entry.weight}kg</span>
-                      <span className="text-sm text-gray-500 ml-1">{entry.sets}×{entry.reps}</span>
+                      <span className="text-sm text-gray-700 ml-1">{entry.sets}×{entry.reps}</span>
                     </div>
                   </div>
                   {(entry.rpe || entry.comment) && (
-                    <div className="mt-1 text-sm text-gray-500">
+                    <div className="mt-1 text-sm text-gray-700">
                       {entry.rpe && <span>RPE {entry.rpe} </span>}
                       {entry.comment && <span className="italic">{entry.comment}</span>}
                     </div>

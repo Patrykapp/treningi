@@ -167,7 +167,7 @@ export default function TreningPage() {
           {entries.map((entry, idx) => (
             <div key={entry.key} className="bg-white rounded-2xl p-4 space-y-3">
               <div className="flex items-center justify-between mb-1">
-                <span className="font-semibold text-gray-700">Ćwiczenie {idx + 1}</span>
+                <span className="font-semibold text-gray-900">Ćwiczenie {idx + 1}</span>
                 {entries.length > 1 && (
                   <button
                     type="button"
@@ -195,7 +195,7 @@ export default function TreningPage() {
               {/* Sets / Reps / Weight */}
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Serie</label>
+                  <label className="block text-xs text-gray-700 font-medium mb-1">Serie</label>
                   <input
                     type="number"
                     min="1"
@@ -206,7 +206,7 @@ export default function TreningPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Powtórzenia</label>
+                  <label className="block text-xs text-gray-700 font-medium mb-1">Powtórzenia</label>
                   <input
                     type="number"
                     min="1"
@@ -217,7 +217,7 @@ export default function TreningPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Ciężar (kg)</label>
+                  <label className="block text-xs text-gray-700 font-medium mb-1">Ciężar (kg)</label>
                   <input
                     type="number"
                     min="0"
@@ -232,7 +232,7 @@ export default function TreningPage() {
               {/* RPE + comment (collapsible) */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">RPE (1-10)</label>
+                  <label className="block text-xs text-gray-700 font-medium mb-1">RPE (1-10)</label>
                   <input
                     type="number"
                     min="1"
@@ -245,7 +245,7 @@ export default function TreningPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Komentarz</label>
+                  <label className="block text-xs text-gray-700 font-medium mb-1">Komentarz</label>
                   <input
                     type="text"
                     value={entry.comment || ''}
@@ -281,13 +281,13 @@ export default function TreningPage() {
                 onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addNewExercise())}
               />
               <button type="button" onClick={addNewExercise} className="bg-blue-600 text-white px-4 rounded-xl">Dodaj</button>
-              <button type="button" onClick={() => setShowNewEx(false)} className="text-gray-400 px-3">✕</button>
+              <button type="button" onClick={() => setShowNewEx(false)} className="text-gray-600 px-3">✕</button>
             </div>
           ) : (
             <button
               type="button"
               onClick={() => setShowNewEx(true)}
-              className="w-full text-center text-sm text-gray-500 py-2"
+              className="w-full text-center text-sm text-gray-700 py-2"
             >
               Nie ma ćwiczenia na liście? Dodaj nowe →
             </button>

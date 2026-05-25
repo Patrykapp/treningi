@@ -128,15 +128,15 @@ export default function HistoriaPage() {
 
       <div className="px-4 py-4">
         {loading ? (
-          <div className="text-center py-8 text-gray-400">Ładowanie...</div>
+          <div className="text-center py-8 text-gray-600">Ładowanie...</div>
         ) : sessions.length === 0 ? (
-          <div className="text-center py-8 text-gray-400 bg-white rounded-2xl">
+          <div className="text-center py-8 text-gray-600 bg-white rounded-2xl">
             <p className="text-4xl mb-2">🔍</p>
             <p>Brak wyników</p>
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-sm text-gray-500">{sessions.length} treningów</p>
+            <p className="text-sm text-gray-700 font-medium">{sessions.length} treningów</p>
             {sessions.map(session => (
               <div key={session.id} className="bg-white rounded-2xl p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
@@ -160,20 +160,20 @@ export default function HistoriaPage() {
                   </div>
                 </div>
                 {session.notes && (
-                  <p className="text-sm text-gray-500 italic mb-2">{session.notes}</p>
+                  <p className="text-sm text-gray-700 italic mb-2">{session.notes}</p>
                 )}
                 <div className="space-y-1">
                   {session.entries.map(entry => (
                     <div key={entry.id} className="flex items-center justify-between py-1">
                       <Link
                         href={`/cwiczenie/${entry.exerciseId}`}
-                        className="text-sm font-medium text-gray-800 hover:text-blue-600 flex-1"
+                        className="text-sm font-medium text-gray-900 hover:text-blue-600 flex-1"
                       >
                         {entry.exercise.name}
                       </Link>
-                      <div className="text-sm text-gray-600 text-right">
+                      <div className="text-sm text-gray-700 text-right">
                         {entry.sets}×{entry.reps} @ <strong>{entry.weight}kg</strong>
-                        {entry.rpe && <span className="ml-1 text-gray-400">RPE {entry.rpe}</span>}
+                        {entry.rpe && <span className="ml-1 text-gray-600">RPE {entry.rpe}</span>}
                       </div>
                     </div>
                   ))}

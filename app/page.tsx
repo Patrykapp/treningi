@@ -51,7 +51,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-gray-900">Dziennik Treningów</h1>
-            <p className="text-sm text-gray-500">Witaj, {currentUser?.name || '...'} 💪</p>
+            <p className="text-sm text-gray-700">Witaj, {currentUser?.name || '...'} 💪</p>
           </div>
           <div className="flex gap-2">
             {users.map(u => (
@@ -82,11 +82,11 @@ export default function DashboardPage() {
 
         {/* Recent sessions */}
         <div>
-          <h2 className="text-base font-semibold text-gray-700 mb-3">Ostatnie treningi</h2>
+          <h2 className="text-base font-semibold text-gray-900 mb-3">Ostatnie treningi</h2>
           {loading ? (
-            <div className="text-center py-8 text-gray-400">Ładowanie...</div>
+            <div className="text-center py-8 text-gray-600">Ładowanie...</div>
           ) : sessions.length === 0 ? (
-            <div className="text-center py-8 text-gray-400 bg-white rounded-2xl">
+            <div className="text-center py-8 text-gray-600 bg-white rounded-2xl">
               <p className="text-4xl mb-2">🏋️</p>
               <p>Brak treningów. Czas zacząć!</p>
             </div>
@@ -110,7 +110,7 @@ export default function DashboardPage() {
                     ))}
                   </div>
                   {session.notes && (
-                    <p className="text-sm text-gray-500 mt-2 italic">{session.notes}</p>
+                    <p className="text-sm text-gray-700 mt-2 italic">{session.notes}</p>
                   )}
                 </div>
               ))}
@@ -122,11 +122,11 @@ export default function DashboardPage() {
         <div className="grid grid-cols-2 gap-3">
           <Link href="/historia" className="bg-white rounded-2xl p-4 shadow-sm text-center">
             <div className="text-3xl mb-1">📋</div>
-            <div className="text-sm font-medium text-gray-700">Historia</div>
+            <div className="text-sm font-medium text-gray-800">Historia</div>
           </Link>
           <Link href="/ustawienia" className="bg-white rounded-2xl p-4 shadow-sm text-center">
             <div className="text-3xl mb-1">⚙️</div>
-            <div className="text-sm font-medium text-gray-700">Ustawienia</div>
+            <div className="text-sm font-medium text-gray-800">Ustawienia</div>
           </Link>
         </div>
       </div>
