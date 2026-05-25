@@ -45,6 +45,24 @@ function calcVol(e: EntryWithSession) {
 }
 function calc1RM(w: number, r: number) { return r === 1 ? w : Math.round(w * (1 + r / 30)); }
 
+// Map Polish muscle group names to ExerciseDB body parts
+function getBodyPart(muscleGroup: string | null | undefined, name: string): string {
+  const mg = (muscleGroup || '').toLowerCase();
+  const nm = name.toLowerCase();
+  const combined = mg + ' ' + nm;
+  if (combined.includes('klat')) return 'chest';
+  if (combined.includes('plec')) return 'back';
+  if (combined.includes('bark') || combined.includes('ramion')) return 'shoulders';
+  if (combined.includes('biceps')) return 'upper arms';
+  if (combined.includes('triceps')) return 'upper arms';
+  if (combined.includes('nogi') || combined.includes('udo') || combined.includes('przysiad') || combined.includes('wykrok')) return 'upper legs';
+  if (combined.includes('brzuch') || combined.includes('abs')) return 'waist';
+  if (combined.includes('przedrami') || combined.includes('nadgarstek')) return 'lower arms';
+  if (combined.includes('lydka') || combined.includes('laska')) return 'lower legs';
+  if (combined.includes('szyja') || combined.includes('kark')) return 'neck';
+  return 'back';
+}
+
 function buildChart(
   mine: EntryWithSession[],
   theirs: EntryWithSession[],
@@ -94,11 +112,12 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
   const [formSetsData, setFormSetsData] = useState<SetData[]>([]);
   const [saving, setSaving] = useState(false);
 
+  // Technika section
   const [showTechnika, setShowTechnika] = useState(false);
-  const [dbQuery, setDbQuery] = useState('');
-  const [dbResults, setDbResults] = useState<DbExercise[]>([]);
-  const [dbLoading, setDbLoading] = useState(false);
-  const [selectedDb, setSelectedDb] = useState<DbExercise | null>(null);
+  const [linkedDb, setLinkedDb] = useState<DbExercise | null>(null);
+  const [suggestions, setSuggestions] = useState<DbExercise[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [linking, setLinking] = useState(false);
 
   const loadData = async () => {
     const uq = authUserId ? `&userId=${authUserId}` : '';
@@ -107,14 +126,26 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
       fetch(`/api/entries?exerciseId=${id}${uq}`).then(r => r.json()),
       fetch('/api/users').then(r => r.json()),
     ]);
-    const ex = (Array.isArray(exRes) ? exRes : []).find((e: Exercise) => e.id === id);
-    setExercise(ex || null);
+    const ex = (Array.isArray(exRes) ? exRes : []).find((e: Exercise) => e.id === id) || null;
+    setExercise(ex);
     setEntries(Array.isArray(entRes) ? entRes : []);
     setUsers(Array.isArray(usersRes) ? usersRes : []);
     setLoading(false);
+    return ex;
   };
 
-  useEffect(() => { if (!authLoading) loadData(); }, [id, authLoading]);
+  useEffect(() => {
+    if (!authLoading) {
+      loadData().then(ex => {
+        if (ex?.exerciseDbId) {
+          fetch(`https://oss.exercisedb.dev/exercises/${ex.exerciseDbId}`)
+            .then(r => r.json())
+            .then(d => { if (d?.id) setLinkedDb(d); })
+            .catch(() => {});
+        }
+      });
+    }
+  }, [id, authLoading]);
 
   useEffect(() => {
     if (!compareUserId) { setCompareEntries([]); return; }
@@ -122,10 +153,52 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
       .then(r => r.json()).then(d => setCompareEntries(Array.isArray(d) ? d : []));
   }, [compareUserId, id]);
 
+  // Auto-load suggestions when Technika section opens and nothing is linked
+  useEffect(() => {
+    if (!showTechnika || linkedDb || loadingSuggestions || suggestions.length > 0) return;
+    const bodyPart = getBodyPart(exercise?.muscleGroup, exercise?.name || '');
+    if (!bodyPart) return;
+    setLoadingSuggestions(true);
+    fetch(`https://oss.exercisedb.dev/exercises/bodyPart/${encodeURIComponent(bodyPart)}?limit=30`)
+      .then(r => r.json())
+      .then(data => setSuggestions(Array.isArray(data) ? data : []))
+      .catch(() => {})
+      .finally(() => setLoadingSuggestions(false));
+  }, [showTechnika, linkedDb, exercise]);
+
+  const linkExercise = async (dbEx: DbExercise) => {
+    setLinking(true);
+    const res = await fetch(`/api/exercises/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ exerciseDbId: dbEx.id }),
+    });
+    if (res.ok) {
+      setLinkedDb(dbEx);
+      setExercise(prev => prev ? { ...prev, exerciseDbId: dbEx.id } : prev);
+      setToast({ message: 'Technika powiazana!', type: 'success' });
+    } else {
+      setToast({ message: 'Blad zapisu', type: 'error' });
+    }
+    setLinking(false);
+  };
+
+  const unlinkExercise = async () => {
+    await fetch(`/api/exercises/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ exerciseDbId: '' }),
+    });
+    setLinkedDb(null);
+    setSuggestions([]);
+    setExercise(prev => prev ? { ...prev, exerciseDbId: null } : prev);
+  };
+
   const bestWeight = entries.length ? Math.max(...entries.map(calcMax)) : 0;
   const lastEntry = entries[0];
   const chartData = buildChart(entries, compareEntries, chartType);
   const compareName = users.find(u => u.id === compareUserId)?.name || 'Porownanie';
+  const otherUsers = users.filter(u => u.id !== authUserId);
 
   const initCustomSets = () => {
     setFormSetsData(Array.from({ length: formSets }, () => ({ reps: formReps, weight: formWeight })));
@@ -166,22 +239,10 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
     setSaving(false);
   };
 
-  const searchDb = async () => {
-    if (!dbQuery.trim()) return;
-    setDbLoading(true);
-    try {
-      const res = await fetch(`https://oss.exercisedb.dev/exercises/name/${encodeURIComponent(dbQuery.trim())}`);
-      const data = await res.json();
-      setDbResults(Array.isArray(data) ? data.slice(0, 8) : []);
-    } catch { setDbResults([]); }
-    setDbLoading(false);
-  };
-
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Ladowanie...</div>;
   if (!exercise) return <div className="min-h-screen flex items-center justify-center text-gray-500">Nie znaleziono cwiczenia</div>;
 
   const shortName = exercise.name.includes(' - ') ? exercise.name.split(' - ').slice(1).join(' - ') : exercise.name;
-  const otherUsers = users.filter(u => u.id !== authUserId);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -233,13 +294,15 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
             {!formCustomSets ? (
               <>
                 <div className="grid grid-cols-3 gap-2">
-                  {[['Serie', formSets, (v: number) => setFormSets(v)], ['Powt.', formReps, (v: number) => setFormReps(v)], ['Ciezar kg', formWeight, (v: number) => setFormWeight(v)]].map(([label, val, fn]) => (
-                    <div key={String(label)}>
-                      <label className="text-xs text-gray-500 block mb-1">{String(label)}</label>
-                      <input type="number" value={Number(val)} onChange={e => (fn as (v: number) => void)(Number(e.target.value))} min={0} step={String(label) === 'Ciezar kg' ? 0.5 : 1}
-                        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-center" />
-                    </div>
-                  ))}
+                  <div><label className="text-xs text-gray-500 block mb-1">Serie</label>
+                    <input type="number" value={formSets} onChange={e => setFormSets(Number(e.target.value))} min={1}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-center" /></div>
+                  <div><label className="text-xs text-gray-500 block mb-1">Powt.</label>
+                    <input type="number" value={formReps} onChange={e => setFormReps(Number(e.target.value))} min={1}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-center" /></div>
+                  <div><label className="text-xs text-gray-500 block mb-1">Ciezar kg</label>
+                    <input type="number" value={formWeight} onChange={e => setFormWeight(Number(e.target.value))} min={0} step={0.5}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-center" /></div>
                 </div>
                 <button onClick={initCustomSets} className="text-sm text-blue-600">+ Rozpisz serie osobno</button>
               </>
@@ -254,28 +317,23 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                     <input type="number" value={s.weight} onChange={e => updateSet(i, 'weight', Number(e.target.value))} min={0} step={0.5}
                       className="flex-1 border border-gray-200 rounded-lg px-2 py-1 text-sm text-center" />
                     <span className="text-xs text-gray-400">kg</span>
-                    <button onClick={() => removeSet(i)} className="text-red-400 text-sm">x</button>
+                    <button onClick={() => removeSet(i)} className="text-red-400 px-1">x</button>
                   </div>
                 ))}
                 <button onClick={addSet} className="text-sm text-blue-600">+ Dodaj serie</button>
               </div>
             )}
             <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-xs text-gray-500 block mb-1">RPE</label>
+              <div><label className="text-xs text-gray-500 block mb-1">RPE</label>
                 <input type="number" value={formRpe} onChange={e => setFormRpe(e.target.value)} min={1} max={10} step={0.5} placeholder="6-10"
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-center" />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 block mb-1">Komentarz</label>
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-center" /></div>
+              <div><label className="text-xs text-gray-500 block mb-1">Komentarz</label>
                 <input type="text" value={formComment} onChange={e => setFormComment(e.target.value)} placeholder="np. pas"
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm" />
-              </div>
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm" /></div>
             </div>
             <div className="flex gap-2">
               {activeSession.getId() && (
-                <button onClick={handleAddToDraft}
-                  className="flex-1 bg-green-600 text-white py-2 rounded-xl text-sm font-medium">
+                <button onClick={handleAddToDraft} className="flex-1 bg-green-600 text-white py-2 rounded-xl text-sm font-medium">
                   Dodaj do treningu
                 </button>
               )}
@@ -287,6 +345,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
           </div>
         )}
 
+        {/* Chart */}
         {(entries.length > 0 || compareEntries.length > 0) && (
           <div className="bg-white rounded-2xl shadow-sm p-4">
             <div className="flex items-center justify-between mb-3">
@@ -300,7 +359,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
               </div>
               {otherUsers.length > 0 && (
                 <select value={compareUserId} onChange={e => setCompareUserId(e.target.value)}
-                  className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 max-w-32">
+                  className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600">
                   <option value="">+ Porownaj</option>
                   {otherUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                 </select>
@@ -313,42 +372,30 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                 <YAxis tick={{ fontSize: 10 }} width={40} />
                 <Tooltip />
                 {compareUserId && <Legend />}
-                <Line type="monotone" dataKey="Ty" stroke="#2563eb" strokeWidth={2} dot={false}
-                  name={authName || 'Ty'} connectNulls />
+                <Line type="monotone" dataKey="Ty" stroke="#2563eb" strokeWidth={2} dot={false} name={authName || 'Ty'} connectNulls />
                 {compareUserId && (
-                  <Line type="monotone" dataKey="Porownanie" stroke="#f97316" strokeWidth={2} dot={false}
-                    name={compareName} connectNulls />
+                  <Line type="monotone" dataKey="Porownanie" stroke="#f97316" strokeWidth={2} dot={false} name={compareName} connectNulls />
                 )}
               </LineChart>
             </ResponsiveContainer>
-            {compareUserId && (
-              <div className="flex gap-4 justify-center mt-2 text-xs">
-                <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-blue-600 inline-block"></span>{authName || 'Ty'}</span>
-                <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-orange-500 inline-block"></span>{compareName}</span>
-              </div>
-            )}
           </div>
         )}
 
+        {/* 1RM */}
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <button onClick={() => setShowCalc(!showCalc)}
-            className="w-full flex items-center justify-between px-4 py-3 text-left">
+          <button onClick={() => setShowCalc(!showCalc)} className="w-full flex items-center justify-between px-4 py-3 text-left">
             <span className="font-medium text-gray-900 text-sm">Kalkulator 1RM</span>
             <span className="text-gray-400 text-xs">{showCalc ? '▲' : '▼'}</span>
           </button>
           {showCalc && (
             <div className="px-4 pb-4 border-t border-gray-100 space-y-3">
               <div className="grid grid-cols-2 gap-3 mt-3">
-                <div>
-                  <label className="text-xs text-gray-500 block mb-1">Ciezar (kg)</label>
+                <div><label className="text-xs text-gray-500 block mb-1">Ciezar (kg)</label>
                   <input type="number" value={calcWeight} onChange={e => setCalcWeight(Number(e.target.value))} min={0} step={0.5}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-center" />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 block mb-1">Powtorzenia</label>
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-center" /></div>
+                <div><label className="text-xs text-gray-500 block mb-1">Powtorzenia</label>
                   <input type="number" value={calcReps} onChange={e => setCalcReps(Number(e.target.value))} min={1} max={30}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-center" />
-                </div>
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-center" /></div>
               </div>
               <div className="bg-blue-50 rounded-xl p-3 text-center">
                 <div className="text-2xl font-bold text-blue-600">{calc1RM(calcWeight, calcReps)} kg</div>
@@ -366,27 +413,32 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
           )}
         </div>
 
+        {/* Technika section */}
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <button onClick={() => setShowTechnika(!showTechnika)}
-            className="w-full flex items-center justify-between px-4 py-3 text-left">
-            <span className="font-medium text-gray-900 text-sm">Technika i opis</span>
+          <button onClick={() => setShowTechnika(!showTechnika)} className="w-full flex items-center justify-between px-4 py-3 text-left">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-900 text-sm">Technika i opis</span>
+              {linkedDb && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">powiazane</span>}
+            </div>
             <span className="text-gray-400 text-xs">{showTechnika ? '▲' : '▼'}</span>
           </button>
+
           {showTechnika && (
-            <div className="px-4 pb-4 border-t border-gray-100">
-              {selectedDb ? (
-                <div className="space-y-4 mt-3">
+            <div className="border-t border-gray-100">
+              {/* Linked — show the data */}
+              {linkedDb ? (
+                <div className="p-4 space-y-4">
                   <div className="flex gap-3">
-                    <img src={selectedDb.gifUrl} alt={selectedDb.name}
+                    <img src={linkedDb.gifUrl} alt={linkedDb.name}
                       className="w-28 h-28 object-cover rounded-xl border border-gray-200 flex-shrink-0" />
                     <div className="min-w-0">
-                      <h3 className="font-semibold text-gray-900 text-sm">{selectedDb.name}</h3>
+                      <h3 className="font-semibold text-gray-900 text-sm">{linkedDb.name}</h3>
                       <div className="text-xs text-gray-500 mt-1 space-y-1">
-                        <div>Miesien: <span className="text-gray-700 font-medium">{selectedDb.target}</span></div>
-                        <div>Czesc ciala: <span className="text-gray-700">{selectedDb.bodyPart}</span></div>
-                        <div>Sprzet: <span className="text-gray-700">{selectedDb.equipment}</span></div>
-                        {selectedDb.secondaryMuscles.length > 0 && (
-                          <div>Pomocnicze: <span className="text-gray-700">{selectedDb.secondaryMuscles.join(', ')}</span></div>
+                        <div>Miesien: <span className="text-gray-700 font-medium">{linkedDb.target}</span></div>
+                        <div>Czesc ciala: <span className="text-gray-700">{linkedDb.bodyPart}</span></div>
+                        <div>Sprzet: <span className="text-gray-700">{linkedDb.equipment}</span></div>
+                        {linkedDb.secondaryMuscles.length > 0 && (
+                          <div>Pomocnicze: <span className="text-gray-700">{linkedDb.secondaryMuscles.slice(0, 3).join(', ')}</span></div>
                         )}
                       </div>
                     </div>
@@ -394,7 +446,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                   <div>
                     <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Instrukcja</h4>
                     <ol className="space-y-2">
-                      {selectedDb.instructions.map((step, i) => (
+                      {linkedDb.instructions.map((step, i) => (
                         <li key={i} className="flex gap-2 text-sm text-gray-700">
                           <span className="flex-shrink-0 w-5 h-5 bg-blue-100 text-blue-600 rounded-full text-xs flex items-center justify-center font-bold mt-0.5">{i + 1}</span>
                           <span>{step}</span>
@@ -402,38 +454,42 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                       ))}
                     </ol>
                   </div>
-                  <button onClick={() => { setSelectedDb(null); setDbResults([]); }}
-                    className="text-sm text-blue-600">Szukaj innego</button>
+                  {isLoggedIn && (
+                    <button onClick={unlinkExercise} className="text-xs text-gray-400 underline">Zmien powiazanie</button>
+                  )}
                 </div>
               ) : (
-                <div className="space-y-3 mt-3">
-                  <p className="text-xs text-gray-400">Wyszukaj cwiczenie po angielskiej nazwie aby zobaczyc animacje i instrukcje.</p>
-                  <div className="flex gap-2">
-                    <input type="text" value={dbQuery} onChange={e => setDbQuery(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && searchDb()}
-                      placeholder="np. bench press, squat, deadlift..."
-                      className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm" />
-                    <button onClick={searchDb} disabled={dbLoading}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium disabled:opacity-50">
-                      {dbLoading ? '...' : 'Szukaj'}
-                    </button>
-                  </div>
-                  {dbResults.length > 0 && (
-                    <div className="space-y-2 max-h-72 overflow-y-auto">
-                      {dbResults.map(ex => (
-                        <button key={ex.id} onClick={() => setSelectedDb(ex)}
-                          className="w-full flex items-center gap-3 p-2 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50 transition-colors text-left">
-                          <img src={ex.gifUrl} alt={ex.name} className="w-12 h-12 object-cover rounded-lg flex-shrink-0" />
-                          <div className="min-w-0">
-                            <div className="text-sm font-medium text-gray-900 truncate">{ex.name}</div>
-                            <div className="text-xs text-gray-500">{ex.target} · {ex.equipment}</div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  {dbResults.length === 0 && dbQuery && !dbLoading && (
-                    <p className="text-xs text-gray-400 text-center py-2">Brak wynikow. Sprobuj innej nazwy.</p>
+                /* Not linked — show auto-suggestions */
+                <div className="p-4">
+                  {isLoggedIn ? (
+                    <>
+                      <p className="text-sm text-gray-500 mb-3">
+                        Wybierz odpowiadajace cwiczenie aby zapisac animacje i instrukcje dla wszystkich uzytkownikow:
+                      </p>
+                      {loadingSuggestions && (
+                        <div className="text-center py-6 text-gray-400 text-sm">Szukam cwiczen...</div>
+                      )}
+                      {!loadingSuggestions && suggestions.length > 0 && (
+                        <div className="space-y-2 max-h-96 overflow-y-auto">
+                          {suggestions.map(ex => (
+                            <button key={ex.id} onClick={() => linkExercise(ex)} disabled={linking}
+                              className="w-full flex items-center gap-3 p-2 rounded-xl border border-gray-100 active:bg-blue-50 text-left disabled:opacity-50 transition-colors">
+                              <img src={ex.gifUrl} alt={ex.name} className="w-14 h-14 object-cover rounded-lg flex-shrink-0" />
+                              <div className="min-w-0 flex-1">
+                                <div className="text-sm font-medium text-gray-900">{ex.name}</div>
+                                <div className="text-xs text-gray-500">{ex.target} · {ex.equipment}</div>
+                              </div>
+                              <span className="text-blue-500 text-xs flex-shrink-0">Wybierz</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {!loadingSuggestions && suggestions.length === 0 && (
+                        <p className="text-sm text-gray-400 text-center py-4">Brak propozycji. Sprawdz polaczenie z internetem.</p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-sm text-gray-400 text-center py-4">Zaloguj sie aby zobaczyc technikę.</p>
                   )}
                 </div>
               )}
@@ -441,6 +497,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
           )}
         </div>
 
+        {/* History */}
         {entries.length > 0 && (
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
             <h2 className="px-4 py-3 font-semibold text-gray-900 text-sm border-b border-gray-100">Historia</h2>

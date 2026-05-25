@@ -9,6 +9,7 @@ export interface Exercise {
   id: string;
   name: string;
   muscleGroup?: string | null;
+  exerciseDbId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -29,6 +30,16 @@ export interface SetData {
   weight: number;
 }
 
+export interface NewEntryForm {
+  exerciseId: string;
+  sets: number;
+  reps: number;
+  weight: number;
+  rpe?: number;
+  comment?: string;
+  setsData: SetData[];
+}
+
 export interface WorkoutEntry {
   id: string;
   sessionId: string;
@@ -39,35 +50,7 @@ export interface WorkoutEntry {
   weight: number;
   rpe?: number | null;
   comment?: string | null;
-  setsData?: SetData[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface NewEntryForm {
-  exerciseId: string;
-  sets: number;
-  reps: number;
-  weight: number;
-  rpe?: number;
-  comment?: string;
-  setsData?: SetData[];
-}
-
-export interface BodyWeightEntry {
-  id: string;
-  userId: string;
-  user: User;
-  date: string;
-  weight: number;
-  notes?: string | null;
-  createdAt: string;
-}
-
-export interface WorkoutTemplate {
-  id: string;
-  name: string;
-  entries: NewEntryForm[];
+  setsData: SetData[];
   createdAt: string;
   updatedAt: string;
 }

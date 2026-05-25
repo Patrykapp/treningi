@@ -26,13 +26,14 @@ model User {
 }
 
 model Exercise {
-  id          String         @id @default(cuid())
-  name        String         @unique
-  muscleGroup String?
-  entries     WorkoutEntry[]
-  favorites   UserFavorite[]
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id           String         @id @default(cuid())
+  name         String         @unique
+  muscleGroup  String?
+  exerciseDbId String?
+  entries      WorkoutEntry[]
+  favorites    UserFavorite[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 }
 
 model WorkoutSession {
