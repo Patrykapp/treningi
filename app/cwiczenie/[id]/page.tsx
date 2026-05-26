@@ -115,25 +115,25 @@ function getBodyPart(muscleGroup: string | null | undefined, name: string): stri
 
 function buildChart(
   mine: EntryWithSession[], theirs: EntryWithSession[], type: 'weight' | 'volume' | 'reps'
-): { date: string; isoDate: string; Ty?: number; Porownanie?: number }[] {
-  const map: Record<string, { date: string; isoDate: string; Ty?: number; Porownanie?: number }> = {};
+): { date: string; ts: number; Ty?: number; Porownanie?: number }[] {
+  const map: Record<string, { date: string; ts: number; Ty?: number; Porownanie?: number }> = {};
   const val = (e: EntryWithSession) =>
     type === 'weight' ? calcMax(e) :
     type === 'reps' ? calcTotalReps(e) :
     Math.round(calcVol(e));
-  const key = (e: EntryWithSession) => e.session.date.slice(0, 10); // YYYY-MM-DD
-  [...mine].reverse().forEach(e => {
+  const key = (e: EntryWithSession) => new Date(e.session.date).toISOString().slice(0, 10);
+  const ts  = (e: EntryWithSession) => new Date(e.session.date).getTime();
+  mine.forEach(e => {
     const k = key(e);
-    if (!map[k]) map[k] = { date: formatDate(e.session.date), isoDate: k };
+    if (!map[k]) map[k] = { date: formatDate(e.session.date), ts: ts(e) };
     map[k].Ty = val(e);
   });
-  [...theirs].reverse().forEach(e => {
+  theirs.forEach(e => {
     const k = key(e);
-    if (!map[k]) map[k] = { date: formatDate(e.session.date), isoDate: k };
+    if (!map[k]) map[k] = { date: formatDate(e.session.date), ts: ts(e) };
     map[k].Porownanie = val(e);
   });
-  // Sort chronologically using ISO date (YYYY-MM-DD sorts correctly)
-  return Object.values(map).sort((a, b) => a.isoDate.localeCompare(b.isoDate));
+  return Object.values(map).sort((a, b) => a.ts - b.ts);
 }
 
 export default function CwiczeniePage({ params }: { params: Promise<{ id: string }> }) {
