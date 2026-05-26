@@ -43,6 +43,10 @@ function calcVol(e: EntryWithSession) {
   if (e.setsData && e.setsData.length > 0) return e.setsData.reduce((s, x) => s + x.reps * x.weight, 0);
   return e.sets * e.reps * e.weight;
 }
+function calcTotalReps(e: EntryWithSession) {
+  if (e.setsData && e.setsData.length > 0) return e.setsData.reduce((s, x) => s + x.reps, 0);
+  return e.sets * e.reps;
+}
 function calc1RM(w: number, r: number) { return r === 1 ? w : Math.round(w * (1 + r / 30)); }
 
 function getBodyPart(muscleGroup: string | null | undefined, name: string): string {
@@ -104,10 +108,13 @@ function getBodyPart(muscleGroup: string | null | undefined, name: string): stri
 }
 
 function buildChart(
-  mine: EntryWithSession[], theirs: EntryWithSession[], type: 'weight' | 'volume'
+  mine: EntryWithSession[], theirs: EntryWithSession[], type: 'weight' | 'volume' | 'reps'
 ): { date: string; Ty?: number; Porownanie?: number }[] {
   const map: Record<string, { date: string; Ty?: number; Porownanie?: number }> = {};
-  const val = (e: EntryWithSession) => type === 'weight' ? calcMax(e) : Math.round(calcVol(e));
+  const val = (e: EntryWithSession) =>
+    type === 'weight' ? calcMax(e) :
+    type === 'reps' ? calcTotalReps(e) :
+    Math.round(calcVol(e));
   [...mine].reverse().forEach(e => { const d = formatDate(e.session.date); if (!map[d]) map[d] = { date: d }; map[d].Ty = val(e); });
   [...theirs].reverse().forEach(e => { const d = formatDate(e.session.date); if (!map[d]) map[d] = { date: d }; map[d].Porownanie = val(e); });
   return Object.values(map).sort((a, b) => a.date.localeCompare(b.date));
@@ -121,7 +128,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
   const [entries, setEntries] = useState<EntryWithSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  const [chartType, setChartType] = useState<'weight' | 'volume'>('weight');
+  const [chartType, setChartType] = useState<'weight' | 'volume' | 'reps'>('weight');
 
   const [users, setUsers] = useState<AppUser[]>([]);
   const [compareUserId, setCompareUserId] = useState('');
@@ -165,6 +172,10 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
     setLoading(false);
     return ex;
   };
+
+  useEffect(() => {
+    if (isBodyweightExercise) setChartType('reps');
+  }, [isBodyweightExercise]);
 
   useEffect(() => {
     if (!authLoading) {
@@ -221,6 +232,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
   };
 
   const bestWeight = entries.length ? Math.max(...entries.map(calcMax)) : 0;
+  const isBodyweightExercise = entries.length > 0 && bestWeight === 0;
   const lastEntry = entries[0];
   const chartData = buildChart(entries, compareEntries, chartType);
   const compareName = users.find(u => u.id === compareUserId)?.name || 'Porownanie';
@@ -416,10 +428,13 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
           <div className="bg-white rounded-2xl shadow-sm p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex gap-2">
-                {(['weight', 'volume'] as const).map(t => (
+                {(isBodyweightExercise
+                  ? (['reps', 'volume'] as const)
+                  : (['weight', 'volume', 'reps'] as const)
+                ).map(t => (
                   <button key={t} onClick={() => setChartType(t)}
                     className={`px-3 py-1 rounded-full text-xs font-medium ${chartType === t ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
-                    {t === 'weight' ? 'Ciężar' : 'Wolumen'}
+                    {t === 'weight' ? 'Ciężar' : t === 'reps' ? 'Powtórzenia' : 'Wolumen'}
                   </button>
                 ))}
               </div>
@@ -466,7 +481,9 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                 <Tooltip
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: '13px' }}
                   formatter={(value: number, name: string) => [
-                    chartType === 'weight' ? `${value} kg` : `${value} kg·powt`,
+                    chartType === 'weight' ? `${value} kg` :
+                    chartType === 'reps' ? `${value} powt.` :
+                    `${value} kg·powt`,
                     name,
                   ]}
                   labelStyle={{ fontWeight: 600, color: '#111827', marginBottom: 4 }}
