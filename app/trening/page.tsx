@@ -12,6 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 interface EntryRow extends NewEntryForm {
   key: string;
   customSets: boolean;
+  bodyweight: boolean; // ćwiczenie własnym ciężarem – brak pola ciężaru
 }
 
 interface Template {
@@ -28,7 +29,7 @@ function TreningPage() {
   const [date, setDate] = useState(formatDateInput(new Date()));
   const [notes, setNotes] = useState('');
   const [entries, setEntries] = useState<EntryRow[]>([{
-    key: '0', exerciseId: '', sets: 3, reps: 10, weight: 0, customSets: false, setsData: []
+    key: '0', exerciseId: '', sets: 3, reps: 10, weight: 0, customSets: false, setsData: [], bodyweight: false,
   }]);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -62,7 +63,7 @@ function TreningPage() {
         }, i: number) => {
           const sd: SetData[] = Array.isArray(e.setsData) && e.setsData.length > 0 ? e.setsData : [];
           return { key: String(i), exerciseId: e.exerciseId, sets: e.sets, reps: e.reps, weight: e.weight,
-            rpe: e.rpe || undefined, comment: e.comment || undefined, setsData: sd, customSets: sd.length > 0 };
+            rpe: e.rpe || undefined, comment: e.comment || undefined, setsData: sd, customSets: sd.length > 0, bodyweight: e.weight === 0 && sd.every(s => s.weight === 0) };
         }));
         return;
       }
@@ -81,7 +82,7 @@ function TreningPage() {
         }, i: number) => {
           const sd: SetData[] = Array.isArray(e.setsData) && e.setsData.length > 0 ? e.setsData : [];
           return { key: String(i), exerciseId: e.exerciseId, sets: e.sets, reps: e.reps, weight: e.weight,
-            rpe: e.rpe || undefined, comment: e.comment || undefined, setsData: sd, customSets: sd.length > 0 };
+            rpe: e.rpe || undefined, comment: e.comment || undefined, setsData: sd, customSets: sd.length > 0, bodyweight: e.weight === 0 && sd.every(s => s.weight === 0) };
         }));
       }
       sessionStorage.removeItem('editSessionId');
@@ -138,13 +139,13 @@ function TreningPage() {
   };
 
   const addEntry = () => setEntries(prev => [...prev, {
-    key: String(Date.now()), exerciseId: '', sets: 3, reps: 10, weight: 0, customSets: false, setsData: []
+    key: String(Date.now()), exerciseId: '', sets: 3, reps: 10, weight: 0, customSets: false, setsData: [], bodyweight: false,
   }]);
 
   const removeEntry = (key: string) => setEntries(prev => prev.filter(e => e.key !== key));
 
   const updateEntry = (key: string, field: keyof NewEntryForm, value: string | number) =>
-    setEntries(prev => prev.map(e => e.key === key ? { ...e, [field]: value } : e));
+    setEntries(prev => prev.map(e => e.key !== key ? e : { ...e, [field]: value }));
 
   const toggleCustomSets = (key: string, custom: boolean) => {
     setEntries(prev => prev.map(e => {
@@ -202,8 +203,8 @@ function TreningPage() {
       if (entry.customSets && (!entry.setsData || entry.setsData.length === 0)) {
         setToast({ message: 'Dodaj co najmniej jedna serie', type: 'error' }); return;
       }
-      if (!entry.customSets && !entry.weight) {
-        setToast({ message: 'Podaj ciezar', type: 'error' }); return;
+      if (!entry.customSets && !entry.weight && !entry.bodyweight) {
+        setToast({ message: 'Podaj ciezar lub zaznacz "własna masa"', type: 'error' }); return;
       }
     }
     setSaving(true);
@@ -307,22 +308,38 @@ function TreningPage() {
               value={entry.exerciseId}
               onChange={val => updateEntry(entry.key, 'exerciseId', val)}
             />
-            <div className="flex gap-2 items-center">
-              <label className="text-xs text-gray-500">Serie per-set</label>
-              <button type="button" onClick={() => toggleCustomSets(entry.key, !entry.customSets)}
-                className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors ${entry.customSets ? 'bg-blue-600' : 'bg-gray-200'}`}>
-                <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${entry.customSets ? 'translate-x-5' : 'translate-x-1'}`} />
-              </button>
+            {/* Przełączniki */}
+            <div className="flex gap-4 items-center">
+              <div className="flex gap-2 items-center">
+                <label className="text-xs text-gray-500">Serie per-set</label>
+                <button type="button" onClick={() => toggleCustomSets(entry.key, !entry.customSets)}
+                  className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors ${entry.customSets ? 'bg-blue-600' : 'bg-gray-200'}`}>
+                  <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${entry.customSets ? 'translate-x-5' : 'translate-x-1'}`} />
+                </button>
+              </div>
+              <div className="flex gap-2 items-center">
+                <label className="text-xs text-gray-500">Własna masa</label>
+                <button type="button"
+                  onClick={() => setEntries(prev => prev.map(e =>
+                    e.key === entry.key ? { ...e, bodyweight: !e.bodyweight, weight: 0, setsData: (e.setsData || []).map(s => ({ ...s, weight: 0 })) } : e
+                  ))}
+                  className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors ${entry.bodyweight ? 'bg-green-500' : 'bg-gray-200'}`}>
+                  <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${entry.bodyweight ? 'translate-x-5' : 'translate-x-1'}`} />
+                </button>
+              </div>
             </div>
             {!entry.customSets ? (
-              <div className="grid grid-cols-3 gap-2">
-                {[['Serie', 'sets'], ['Powt.', 'reps'], ['Ciezar kg', 'weight']].map(([label, field]) => (
+              <div className={`grid gap-2 ${entry.bodyweight ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                {[['Serie', 'sets'], ['Powt.', 'reps'], ...(!entry.bodyweight ? [['Ciezar kg', 'weight']] : [])].map(([label, field]) => (
                   <div key={field}>
                     <label className="block text-xs text-gray-500 mb-1">{label}</label>
-                    <input type="number" min="0" step={field === 'weight' ? '0.5' : '1'}
-                      value={entry[field as keyof NewEntryForm] as number}
+                    <input
+                      type="number" min="0" step={field === 'weight' ? '0.5' : '1'}
+                      inputMode={field === 'weight' ? 'decimal' : 'numeric'}
+                      value={(entry[field as keyof NewEntryForm] as number) === 0 ? '' : (entry[field as keyof NewEntryForm] as number)}
+                      placeholder="0"
                       onChange={e => updateEntry(entry.key, field as keyof NewEntryForm, parseFloat(e.target.value) || 0)}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-base text-gray-900" />
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-base text-gray-900 text-center" />
                   </div>
                 ))}
               </div>
@@ -331,11 +348,19 @@ function TreningPage() {
                 {(entry.setsData || []).map((s, si) => (
                   <div key={si} className="flex items-center gap-2">
                     <span className="text-xs text-gray-400 w-6">{si + 1}.</span>
-                    <input type="number" min="1" value={s.reps} onChange={e => updateSet(entry.key, si, 'reps', parseInt(e.target.value) || 1)}
-                      className="w-16 border border-gray-200 rounded-xl px-2 py-2 text-sm text-center" placeholder="Powt" />
-                    <span className="text-xs text-gray-400">x</span>
-                    <input type="number" min="0" step="0.5" value={s.weight} onChange={e => updateSet(entry.key, si, 'weight', parseFloat(e.target.value) || 0)}
-                      className="w-20 border border-gray-200 rounded-xl px-2 py-2 text-sm text-center" placeholder="kg" />
+                    <input type="number" min="1" inputMode="numeric"
+                      value={s.reps === 0 ? '' : s.reps} placeholder="0"
+                      onChange={e => updateSet(entry.key, si, 'reps', parseInt(e.target.value) || 1)}
+                      className="w-16 border border-gray-200 rounded-xl px-2 py-2 text-sm text-center" />
+                    {!entry.bodyweight && (
+                      <>
+                        <span className="text-xs text-gray-400">x</span>
+                        <input type="number" min="0" step="0.5" inputMode="decimal"
+                          value={s.weight === 0 ? '' : s.weight} placeholder="0"
+                          onChange={e => updateSet(entry.key, si, 'weight', parseFloat(e.target.value) || 0)}
+                          className="w-20 border border-gray-200 rounded-xl px-2 py-2 text-sm text-center" />
+                      </>
+                    )}
                     <button type="button" onClick={() => removeSet(entry.key, si)} className="text-red-400 text-sm px-1">x</button>
                   </div>
                 ))}

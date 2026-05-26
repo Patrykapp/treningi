@@ -6,6 +6,7 @@ import { Exercise } from '@/types';
 import { Toast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useAuth } from '@/hooks/useAuth';
+import { activeSession } from '@/hooks/useActiveSession';
 import Papa from 'papaparse';
 
 function useDarkMode() {
@@ -114,6 +115,7 @@ export default function UstawieniaPage() {
   };
 
   const handleLogout = async () => {
+    activeSession.clearAll(); // usuń aktywny trening z localStorage
     await fetch('/api/auth', { method: 'DELETE' });
     router.push('/login');
     router.refresh();

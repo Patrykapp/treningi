@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { activeSession } from '@/hooks/useActiveSession';
 
 export default function LoginPage() {
   const [mode, setMode] = useState<'code' | 'email'>('code');
@@ -28,6 +29,7 @@ export default function LoginPage() {
     });
 
     if (res.ok) {
+      activeSession.clearAll(); // wyczyść aktywny trening poprzedniego użytkownika
       router.push('/');
       router.refresh();
     } else {
