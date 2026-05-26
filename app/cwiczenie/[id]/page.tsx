@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Exercise, SetData } from '@/types';
 import { formatDate, formatDateInput } from '@/lib/utils';
 import { Toast } from '@/components/ui/Toast';
@@ -419,30 +419,84 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                 {(['weight', 'volume'] as const).map(t => (
                   <button key={t} onClick={() => setChartType(t)}
                     className={`px-3 py-1 rounded-full text-xs font-medium ${chartType === t ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
-                    {t === 'weight' ? 'Ciezar' : 'Wolumen'}
+                    {t === 'weight' ? 'Ciężar' : 'Wolumen'}
                   </button>
                 ))}
               </div>
               {otherUsers.length > 0 && (
                 <select value={compareUserId} onChange={e => setCompareUserId(e.target.value)}
                   className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600">
-                  <option value="">+ Porownaj</option>
+                  <option value="">+ Porównaj</option>
                   {otherUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                 </select>
               )}
             </div>
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="date" tick={{ fontSize: 9 }} interval="preserveStartEnd" />
-                <YAxis tick={{ fontSize: 10 }} width={40} />
-                <Tooltip />
-                {compareUserId && <Legend />}
-                <Line type="monotone" dataKey="Ty" stroke="#2563eb" strokeWidth={2} dot={false} name={authName || 'Ty'} connectNulls />
+            <ResponsiveContainer width="100%" height={220}>
+              <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="gradBlue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.18} />
+                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="gradOrange" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 10, fill: '#9ca3af' }}
+                  tickLine={false}
+                  axisLine={false}
+                  interval="preserveStartEnd"
+                  tickFormatter={(v: string) => {
+                    const parts = v.split('.');
+                    return parts.length >= 2 ? `${parts[0]}.${parts[1]}` : v;
+                  }}
+                />
+                <YAxis
+                  tick={{ fontSize: 10, fill: '#9ca3af' }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={36}
+                  domain={(['dataMin - 5', 'dataMax + 5'] as [string, string])}
+                  tickFormatter={(v: number) => chartType === 'volume' && v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v)}
+                />
+                <Tooltip
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: '13px' }}
+                  formatter={(value: number, name: string) => [
+                    chartType === 'weight' ? `${value} kg` : `${value} kg·powt`,
+                    name,
+                  ]}
+                  labelStyle={{ fontWeight: 600, color: '#111827', marginBottom: 4 }}
+                />
+                {compareUserId && <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }} />}
+                <Area
+                  type="monotone"
+                  dataKey="Ty"
+                  stroke="#2563eb"
+                  strokeWidth={2.5}
+                  fill="url(#gradBlue)"
+                  dot={{ r: 3, fill: '#2563eb', strokeWidth: 0 }}
+                  activeDot={{ r: 5, fill: '#2563eb', strokeWidth: 0 }}
+                  name={authName || 'Ty'}
+                  connectNulls
+                />
                 {compareUserId && (
-                  <Line type="monotone" dataKey="Porownanie" stroke="#f97316" strokeWidth={2} dot={false} name={compareName} connectNulls />
+                  <Area
+                    type="monotone"
+                    dataKey="Porownanie"
+                    stroke="#f97316"
+                    strokeWidth={2.5}
+                    fill="url(#gradOrange)"
+                    dot={{ r: 3, fill: '#f97316', strokeWidth: 0 }}
+                    activeDot={{ r: 5, fill: '#f97316', strokeWidth: 0 }}
+                    name={compareName}
+                    connectNulls
+                  />
                 )}
-              </LineChart>
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         )}
