@@ -24,6 +24,8 @@ export default function ChallengePage() {
 
   // Setup
   const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
+  const [saveAsUserId, setSaveAsUserId] = useState('');
   const [search, setSearch] = useState('');
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [numSets, setNumSets] = useState(3);
@@ -44,6 +46,7 @@ export default function ChallengePage() {
 
   useEffect(() => {
     fetch('/api/exercises').then(r => r.json()).then(d => setExercises(Array.isArray(d) ? d : []));
+    fetch('/api/users').then(r => r.json()).then(d => setUsers(Array.isArray(d) ? d : []));
   }, []);
 
   const filtered = exercises.filter(e =>
@@ -120,12 +123,14 @@ export default function ChallengePage() {
     const setsData = results.map(r => ({ reps: r.reps, weight: 0 }));
     const totalReps = results.reduce((s, r) => s + r.reps, 0);
 
+    const effectiveUserId = saveAsUserId || userId;
     const res = await fetch('/api/sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         date: new Date().toISOString().split('T')[0],
         notes: `Challenge: ${numSets} serie do upadku`,
+        targetUserId: effectiveUserId || undefined,
         entries: [{
           exerciseId: selectedExercise.id,
           sets: results.length,
@@ -404,6 +409,25 @@ export default function ChallengePage() {
             <span className="font-bold text-gray-900">{Math.min(...results.map(r => r.reps))} powt.</span>
           </div>
         </div>
+
+        {/* Save as */}
+        {users.length > 1 && (
+          <div className="bg-white rounded-2xl shadow-sm p-4">
+            <label className="text-sm font-medium text-gray-700 block mb-2">Zapisz jako</label>
+            <div className="flex gap-2">
+              {users.map(u => (
+                <button key={u.id} onClick={() => setSaveAsUserId(u.id)}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
+                    (saveAsUserId || userId) === u.id
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white text-gray-600 border-gray-200'
+                  }`}>
+                  {u.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="space-y-2">

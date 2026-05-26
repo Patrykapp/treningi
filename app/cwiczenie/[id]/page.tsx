@@ -143,6 +143,8 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
   const [formBodyweight, setFormBodyweight] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const [saveAsUserId, setSaveAsUserId] = useState('');
+
   const [showTechnika, setShowTechnika] = useState(false);
   const [linkedDb, setLinkedDb] = useState<DbExercise | null>(null);
   const [suggestions, setSuggestions] = useState<DbExercise[]>([]);
@@ -236,6 +238,8 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
   const updateSet = (i: number, f: 'reps' | 'weight', v: number) =>
     setFormSetsData(p => p.map((s, idx) => idx === i ? { ...s, [f]: v } : s));
 
+  const effectiveUserId = saveAsUserId || authUserId || '';
+
   const handleAddToDraft = async () => {
     const sid = activeSession.getId();
     if (!sid) { setToast({ message: 'Brak aktywnego treningu', type: 'error' }); return; }
@@ -254,7 +258,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
     const sd = formCustomSets && formSetsData.length > 0 ? formSetsData : [];
     const res = await fetch('/api/sessions', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date: formDate, notes: '', entries: [{ exerciseId: id, sets: formSets,
+      body: JSON.stringify({ date: formDate, notes: '', targetUserId: effectiveUserId || undefined, entries: [{ exerciseId: id, sets: formSets,
         reps: formReps, weight: formWeight, rpe: formRpe ? parseFloat(formRpe) : undefined,
         comment: formComment || undefined, setsData: sd }] })
     });
@@ -377,6 +381,23 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                 <input type="text" value={formComment} onChange={e => setFormComment(e.target.value)} placeholder="np. pas"
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm" /></div>
             </div>
+            {users.length > 1 && (
+              <div>
+                <label className="text-xs text-gray-500 block mb-1">Zapisz jako</label>
+                <div className="flex gap-2">
+                  {users.map(u => (
+                    <button key={u.id} onClick={() => setSaveAsUserId(u.id)}
+                      className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${
+                        (saveAsUserId || authUserId) === u.id
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white text-gray-600 border-gray-200'
+                      }`}>
+                      {u.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="flex gap-2">
               {activeSession.getId() && (
                 <button onClick={handleAddToDraft} className="flex-1 bg-green-600 text-white py-2 rounded-xl text-sm font-medium">

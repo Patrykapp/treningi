@@ -27,9 +27,11 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const userId = await getAuthUserId();
-    if (!userId) return NextResponse.json({ error: 'Nieautoryzowany' }, { status: 401 });
-    const { date, notes, entries } = await request.json();
+    const authUserId = await getAuthUserId();
+    if (!authUserId) return NextResponse.json({ error: 'Nieautoryzowany' }, { status: 401 });
+    const { date, notes, entries, targetUserId } = await request.json();
+    // Allow logged-in user to save session for any other user (family/friend app)
+    const userId = targetUserId || authUserId;
     if (!date) return NextResponse.json({ error: 'Data jest wymagana' }, { status: 400 });
     if (!entries?.length) return NextResponse.json({ error: 'Dodaj co najmniej jedno cwiczenie' }, { status: 400 });
     const session = await prisma.workoutSession.create({

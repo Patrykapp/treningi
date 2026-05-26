@@ -41,14 +41,18 @@ function TreningPage() {
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [templateName, setTemplateName] = useState('');
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+  const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
+  const [saveAsUserId, setSaveAsUserId] = useState('');
 
   const loadData = useCallback(async () => {
-    const [exRes, tplRes] = await Promise.all([
+    const [exRes, tplRes, usersRes] = await Promise.all([
       fetch('/api/exercises').then(r => r.json()),
       fetch('/api/templates').then(r => r.json()),
+      fetch('/api/users').then(r => r.json()),
     ]);
     setExercises(Array.isArray(exRes) ? exRes : []);
     setTemplates(Array.isArray(tplRes) ? tplRes : []);
+    setUsers(Array.isArray(usersRes) ? usersRes : []);
 
     const sessionIdParam = searchParams.get('sessionId');
     if (sessionIdParam) {
@@ -213,7 +217,7 @@ function TreningPage() {
       const method = editingSession ? 'PUT' : 'POST';
       const res = await fetch(url, {
         method, headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date, notes, entries }),
+        body: JSON.stringify({ date, notes, entries, targetUserId: saveAsUserId || undefined }),
       });
       if (res.ok) {
         activeSession.clear();
@@ -402,6 +406,24 @@ function TreningPage() {
             className="w-full text-sm text-gray-500 py-2">
             + Nowe cwiczenie w bibliotece
           </button>
+        )}
+
+        {users.length > 1 && !editingSession && (
+          <div className="bg-white rounded-2xl p-4 space-y-2">
+            <label className="text-sm font-medium text-gray-700 block">Zapisz jako</label>
+            <div className="flex gap-2">
+              {users.map(u => (
+                <button key={u.id} type="button" onClick={() => setSaveAsUserId(u.id)}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
+                    (saveAsUserId || authUserId) === u.id
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white text-gray-600 border-gray-200'
+                  }`}>
+                  {u.name}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
 
         <button type="submit" disabled={saving || !entries.some(e => e.exerciseId)}
