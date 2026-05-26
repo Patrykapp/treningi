@@ -327,12 +327,12 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                   <div><label className="text-xs text-gray-500 block mb-1">Serie</label>
                     <input type="number" inputMode="numeric"
                       value={formSets === 0 ? '' : formSets} placeholder="0"
-                      onChange={e => setFormSets(Number(e.target.value) || 1)} min={1}
+                      onChange={e => setFormSets(e.target.value === '' ? 0 : Math.max(1, Number(e.target.value)))} min={1}
                       className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-center" /></div>
                   <div><label className="text-xs text-gray-500 block mb-1">Powt.</label>
                     <input type="number" inputMode="numeric"
                       value={formReps === 0 ? '' : formReps} placeholder="0"
-                      onChange={e => setFormReps(Number(e.target.value) || 1)} min={1}
+                      onChange={e => setFormReps(e.target.value === '' ? 0 : Number(e.target.value))} min={1}
                       className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-center" /></div>
                   {!formBodyweight && (
                     <div><label className="text-xs text-gray-500 block mb-1">Ciezar kg</label>
@@ -347,23 +347,23 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
             ) : (
               <div className="space-y-2">
                 {formSetsData.map((s, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500 w-12">Seria {i + 1}</span>
+                  <div key={i} className="flex items-center gap-1.5">
+                    <span className="text-xs text-gray-500 shrink-0 w-9">S{i + 1}</span>
                     <input type="number" inputMode="numeric"
-                      value={s.reps === 0 ? '' : s.reps} placeholder="0"
-                      onChange={e => updateSet(i, 'reps', Number(e.target.value) || 1)} min={1}
-                      className="flex-1 border border-gray-200 rounded-lg px-2 py-1 text-sm text-center" />
+                      value={s.reps === 0 ? '' : s.reps} placeholder="powt."
+                      onChange={e => updateSet(i, 'reps', e.target.value === '' ? 0 : Number(e.target.value))} min={1}
+                      className="w-16 border border-gray-200 rounded-lg px-1 py-1.5 text-sm text-center" />
                     {!formBodyweight && (
                       <>
-                        <span className="text-xs text-gray-400">x</span>
+                        <span className="text-xs text-gray-400 shrink-0">×</span>
                         <input type="number" inputMode="decimal" step={0.5}
-                          value={s.weight === 0 ? '' : s.weight} placeholder="0"
-                          onChange={e => updateSet(i, 'weight', Number(e.target.value) || 0)} min={0}
-                          className="flex-1 border border-gray-200 rounded-lg px-2 py-1 text-sm text-center" />
-                        <span className="text-xs text-gray-400">kg</span>
+                          value={s.weight === 0 ? '' : s.weight} placeholder="kg"
+                          onChange={e => updateSet(i, 'weight', e.target.value === '' ? 0 : Number(e.target.value))} min={0}
+                          className="w-16 border border-gray-200 rounded-lg px-1 py-1.5 text-sm text-center" />
+                        <span className="text-xs text-gray-400 shrink-0">kg</span>
                       </>
                     )}
-                    <button onClick={() => removeSet(i)} className="text-red-400 px-1">x</button>
+                    <button onClick={() => removeSet(i)} className="ml-auto text-red-400 p-1 shrink-0">✕</button>
                   </div>
                 ))}
                 <button onClick={addSet} className="text-sm text-blue-600">+ Dodaj serie</button>
