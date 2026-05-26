@@ -503,3 +503,868 @@
     "polish": "Jednorącz odwrotne uginanie nadgarstka z hantlą (nachwytem)",
     "group": "lower arms"
   },
+  {
+    "exerciseDbId": "4Jc36XM",
+    "english": "dumbbell over bench one arm reverse wrist curl",
+    "polish": "Jednorącz odwrotne uginanie nadgarstka oparte o ławkę",
+    "group": "lower arms"
+  },
+  {
+    "exerciseDbId": "KI1DjNN",
+    "english": "dumbbell over bench one arm wrist curl",
+    "polish": "Jednorącz uginanie nadgarstka podchwytem oparte o ławkę",
+    "group": "lower arms"
+  },
+  {
+    "exerciseDbId": "7AnZtSv",
+    "english": "dumbbell over bench one arm wrist curl - strength variation",
+    "polish": "Jednorącz uginanie nadgarstka oparte o ławkę (wersja siłowa)",
+    "group": "lower arms"
+  },
+  {
+    "exerciseDbId": "3tAXPQ6",
+    "english": "dumbbell over bench revers wrist curl",
+    "polish": "Odwrotne uginanie nadgarstków z hantlami oparte o ławkę (nachwytem)",
+    "group": "lower arms"
+  },
+  {
+    "exerciseDbId": "D1xYJAU",
+    "english": "dumbbell over bench wrist curl",
+    "polish": "Uginanie nadgarstków z hantlami oparte o ławkę (podchwytem)",
+    "group": "lower arms"
+  },
+  {
+    "exerciseDbId": "BLCvwr2",
+    "english": "dumbbell reverse wrist curl",
+    "polish": "Odwrotne uginanie nadgarstków z hantlami",
+    "group": "lower arms"
+  },
+  {
+    "exerciseDbId": "7f2jsqP",
+    "english": "dumbbell seated one arm rotate",
+    "polish": "Rotacja nadgarstka z hantlą jednorącz siedząc",
+    "group": "lower arms"
+  },
+  {
+    "exerciseDbId": "2dImyQ8",
+    "english": "dumbbell seated palms up wrist curl",
+    "polish": "Uginanie nadgarstków z hantlami podchwytem siedząc",
+    "group": "lower arms"
+  },
+  {
+    "exerciseDbId": "awG04cF",
+    "english": "finger curls",
+    "polish": "Zwijanie palców (wzmacnianie chwytu)",
+    "group": "lower arms"
+  },
+  {
+    "exerciseDbId": "I4tibZG",
+    "english": "kettlebell alternating hang clean",
+    "polish": "Naprzemienny zarzut ze zwisu z kettlebellem",
+    "group": "lower arms"
+  },
+  {
+    "exerciseDbId": "arvaszz",
+    "english": "modified push up to lower arms",
+    "polish": "Pompki z przejściem na przedramiona (Plank Press)",
+    "group": "lower arms"
+  },
+  {
+    "exerciseDbId": "B6dAO1t",
+    "english": "smith seated wrist curl",
+    "polish": "Uginanie nadgarstków podchwytem siedząc na Maszynie Smitha",
+    "group": "lower arms"
+  },
+  {
+    "exerciseDbId": "hfmQ0Tz",
+    "english": "smith standing back wrist curl",
+    "polish": "Uginanie nadgarstków z tyłu stojąc na Maszynie Smitha",
+    "group": "lower arms"
+  },
+  {
+    "exerciseDbId": "bjqbauy",
+    "english": "weighted standing hand squeeze",
+    "polish": "Zaciskanie dłoni z obciążeniem stojąc (wzmacnianie chwytu)",
+    "group": "lower arms"
+  },
+  {
+    "exerciseDbId": "2zNKRUB",
+    "english": "wrist circles",
+    "polish": "Krążenia nadgarstków",
+    "group": "lower arms"
+  },
+  {
+    "exerciseDbId": "bd5b860",
+    "english": "wrist rollerer",
+    "polish": "Nawijanie ciężaru na drążek (Wrist Roller)",
+    "group": "lower arms"
+  },
+  {
+    "exerciseDbId": "9JprnPh",
+    "english": "band single leg calf raise",
+    "polish": "Wspięcia na palce jednonóż z gumą oporową",
+    "group": "lower legs"
+  },
+  {
+    "exerciseDbId": "2IHEa2T",
+    "english": "barbell floor calf raise",
+    "polish": "Wspięcia na palce ze sztangą stojąc na podłodze",
+    "group": "lower legs"
+  },
+  {
+    "exerciseDbId": "8ozhUIZ",
+    "english": "barbell standing calf raise",
+    "polish": "Wspięcia na palce ze sztangą stojąc na podwyższeniu",
+    "group": "lower legs"
+  },
+  {
+    "exerciseDbId": "6HiHHe0",
+    "english": "barbell standing rocking leg calf raise",
+    "polish": "Wspięcia na palce ze sztangą z przejściem na pięty (kołysanie)",
+    "group": "lower legs"
+  },
+  {
+    "exerciseDbId": "bJYHBIN",
+    "english": "bodyweight standing calf raise",
+    "polish": "Wspięcia na palce stojąc z masą własnego ciała",
+    "group": "lower legs"
+  },
+  {
+    "exerciseDbId": "fgc9Xdl",
+    "english": "cable standing one leg calf raise",
+    "polish": "Wspięcia na palce jednonóż stojąc z wyciągiem dolnym",
+    "group": "lower legs"
+  },
+  {
+    "exerciseDbId": "1LVFcEn",
+    "english": "calf stretch with rope",
+    "polish": "Rozciąganie łydki za pomocą liny lub taśmy",
+    "group": "lower legs"
+  },
+  {
+    "exerciseDbId": "1kB3Wmk",
+    "english": "dumbbell single leg calf raise",
+    "polish": "Wspięcia na palce jednonóż z hantlą",
+    "group": "lower legs"
+  },
+  {
+    "exerciseDbId": "dPmaUaU",
+    "english": "dumbbell standing calf raise",
+    "polish": "Wspięcia na palce stojąc z hantlami",
+    "group": "lower legs"
+  },
+  {
+    "exerciseDbId": "2ORFMoR",
+    "english": "hack calf raise",
+    "polish": "Wspięcia na palce na maszynie Hack",
+    "group": "lower legs"
+  },
+  {
+    "exerciseDbId": "AxFoqAD",
+    "english": "hack one leg calf raise",
+    "polish": "Wspięcia na palce jednonóż na maszynie Hack",
+    "group": "lower legs"
+  },
+  {
+    "exerciseDbId": "7B4F5nZ",
+    "english": "lever calf press",
+    "polish": "Wypychanie ciężaru palcami na maszynie",
+    "group": "lower legs"
+  },
+  {
+    "exerciseDbId": "C9LuR4A",
+    "english": "lever donkey calf raise",
+    "polish": "Wspięcia na palce w opadzie na maszynie (Ośle wspięcia)",
+    "group": "lower legs"
+  },
+  {
+    "exerciseDbId": "bOOdeyc",
+    "english": "lever seated calf raise",
+    "polish": "Wspięcia na palce siedząc na maszynie",
+    "group": "lower legs"
+  },
+  {
+    "exerciseDbId": "A2upspL",
+    "english": "one leg donkey calf raise",
+    "polish": "Wspięcia na palce jednonóż w opadzie (Ośle wspięcia)",
+    "group": "lower legs"
+  },
+  {
+    "exerciseDbId": "0jp9Rlz",
+    "english": "one leg floor calf raise",
+    "polish": "Wspięcia na palce jednonóż na podłodze",
+    "group": "lower legs"
+  },
+  {
+    "exerciseDbId": "DEEqoI2",
+    "english": "posterior tibialis stretch",
+    "polish": "Rozciąganie mięśnia piszczelowego tylnego",
+    "group": "lower legs"
+  },
+  {
+    "exerciseDbId": "17bqEXD",
+    "english": "seated calf stretch (male)",
+    "polish": "Rozciąganie łydki w siadzie",
+    "group": "lower legs"
+  },
+  {
+    "exerciseDbId": "fKZgDEO",
+    "english": "single leg calf raise (on a dumbbell)",
+    "polish": "Wspięcia na palce jednonóż stojąc na uchwycie hantli",
+    "group": "lower legs"
+  },
+  {
+    "exerciseDbId": "9GXrTE6",
+    "english": "smith one leg floor calf raise",
+    "polish": "Wspięcia na palce jednonóż na podłodze na Maszynie Smitha",
+    "group": "lower legs"
+  },
+  {
+    "exerciseDbId": "0S75mYG",
+    "english": "smith seated one leg calf raise",
+    "polish": "Wspięcia na palce jednonóż siedząc na Maszynie Smitha",
+    "group": "lower legs"
+  },
+  {
+    "exerciseDbId": "6MaEjVA",
+    "english": "smith standing leg calf raise",
+    "polish": "Wspięcia na palce stojąc na Maszynie Smitha",
+    "group": "lower legs"
+  },
+  {
+    "exerciseDbId": "6HmFgmx",
+    "english": "standing calf raise (on a staircase)",
+    "polish": "Wspięcia na palce stojąc na schodach",
+    "group": "lower legs"
+  },
+  {
+    "exerciseDbId": "DICPHtq",
+    "english": "targeted style single leg calf raise (on a dumbbell)",
+    "polish": "Izolowane wspięcia na palce jednonóż na hantli",
+    "group": "lower legs"
+  },
+  {
+    "exerciseDbId": "Dx2RIva",
+    "english": "triple style sled one leg calf press on leg press",
+    "polish": "Wypychanie palcami jednonóż na suwnicy (różne kąty stopy)",
+    "group": "lower legs"
+  },
+  {
+    "exerciseDbId": "trmte8s",
+    "english": "band shrug",
+    "polish": "Szrugsy z gumą oporową",
+    "group": "neck"
+  },
+  {
+    "exerciseDbId": "x2chWLO",
+    "english": "neck side stretch",
+    "polish": "Rozciąganie szyi w bok",
+    "group": "neck"
+  },
+  {
+    "exerciseDbId": "oQRJYkC",
+    "english": "side push neck stretch",
+    "polish": "Rozciąganie szyi z naciskiem dłoni",
+    "group": "neck"
+  },
+  {
+    "exerciseDbId": "aHDy5O5",
+    "english": "band y-raise",
+    "polish": "Unoszenie ramion w kształt litery Y z gumą oporową",
+    "group": "shoulders"
+  },
+  {
+    "exerciseDbId": "0dCyly0",
+    "english": "barbell seated bradford rocky press",
+    "polish": "Wyciskanie Bradforda sztangą siedząc (Rocky Press)",
+    "group": "shoulders"
+  },
+  {
+    "exerciseDbId": "4Leypho",
+    "english": "barbell skier",
+    "polish": "Narciarz ze sztangą (skier)",
+    "group": "shoulders"
+  },
+  {
+    "exerciseDbId": "83HoW9X",
+    "english": "barbell upright row v. 2",
+    "polish": "Przyciąganie sztangi wzdłuż tułowia stojąc (wersja 2)",
+    "group": "shoulders"
+  },
+  {
+    "exerciseDbId": "1oE78pm",
+    "english": "core barbell upright row v. 2",
+    "polish": "Przyciąganie sztangi wzdłuż tułowia z silnym napięciem tułowia",
+    "group": "shoulders"
+  },
+  {
+    "exerciseDbId": "3d7wHyd",
+    "english": "dumbbell bench seated press",
+    "polish": "Wyciskanie hantli na barki siedząc na ławce",
+    "group": "shoulders"
+  },
+  {
+    "exerciseDbId": "3eGE2JC",
+    "english": "dumbbell front raise",
+    "polish": "Unoszenie hantli przodem",
+    "group": "shoulders"
+  },
+  {
+    "exerciseDbId": "AQ0mC4Y",
+    "english": "dumbbell full can lateral raise",
+    "polish": "Unoszenie hantli bokiem z kciukami w górę (Full Can)",
+    "group": "shoulders"
+  },
+  {
+    "exerciseDbId": "1RIkUHT",
+    "english": "dumbbell iron cross - improved variation",
+    "polish": "Żelazny krzyż z hantlami (izometria barków)",
+    "group": "shoulders"
+  },
+  {
+    "exerciseDbId": "53Ttlck",
+    "english": "dumbbell lying rear lateral raise",
+    "polish": "Odwodzenie ramion z hantlami leżąc przodem (tył barku)",
+    "group": "shoulders"
+  },
+  {
+    "exerciseDbId": "84RyJf8",
+    "english": "dumbbell one arm shoulder press",
+    "polish": "Wyciskanie hantli na barki jednorącz",
+    "group": "shoulders"
+  },
+  {
+    "exerciseDbId": "1TkiAFK",
+    "english": "dumbbell one arm shoulder press v. 2",
+    "polish": "Wyciskanie hantli na barki jednorącz (wersja 2)",
+    "group": "shoulders"
+  },
+  {
+    "exerciseDbId": "6cKQC5E",
+    "english": "dumbbell one arm upright row",
+    "polish": "Przyciąganie hantli wzdłuż tułowia jednorącz",
+    "group": "shoulders"
+  },
+  {
+    "exerciseDbId": "8DiFDVA",
+    "english": "dumbbell rear fly",
+    "polish": "Odwrotne rozpiętki z hantlami (tył barku)",
+    "group": "shoulders"
+  },
+  {
+    "exerciseDbId": "5vfAI0I",
+    "english": "dumbbell scott press",
+    "polish": "Wyciskanie hantli chwytem Scotta (Scott Press)",
+    "group": "shoulders"
+  },
+  {
+    "exerciseDbId": "A6wtbuL",
+    "english": "dumbbell standing overhead press",
+    "polish": "Wyciskanie hantli nad głowę stojąc (żołnierskie)",
+    "group": "shoulders"
+  },
+  {
+    "exerciseDbId": "ainizkb",
+    "english": "dumbbell upright row",
+    "polish": "Przyciąganie hantli wzdłuż tułowia oburącz",
+    "group": "shoulders"
+  },
+  {
+    "exerciseDbId": "5KLbZWx",
+    "english": "kettlebell alternating press",
+    "polish": "Naprzemienne wyciskanie kettlebelli nad głowę",
+    "group": "shoulders"
+  },
+  {
+    "exerciseDbId": "89HVjEp",
+    "english": "kettlebell seated press with high",
+    "polish": "Wyciskanie kettlebelli siedząc z wysokim uniesieniem",
+    "group": "shoulders"
+  },
+  {
+    "exerciseDbId": "7Ba7bQ2",
+    "english": "kettlebell two arm clean",
+    "polish": "Zarzut dwóch kettlebelli oburącz",
+    "group": "shoulders"
+  },
+  {
+    "exerciseDbId": "2KGnL6M",
+    "english": "lever one arm shoulder press",
+    "polish": "Wyciskanie na barki jednorącz na maszynie",
+    "group": "shoulders"
+  },
+  {
+    "exerciseDbId": "67n3r98",
+    "english": "lever shoulder press",
+    "polish": "Wyciskanie na barki na maszynie",
+    "group": "shoulders"
+  },
+  {
+    "exerciseDbId": "903mzG8",
+    "english": "smith shoulder press",
+    "polish": "Wyciskanie na barki na Maszynie Smitha",
+    "group": "shoulders"
+  },
+  {
+    "exerciseDbId": "1DN3iz4",
+    "english": "smith upright row",
+    "polish": "Przyciąganie wzdłuż tułowia na Maszynie Smitha",
+    "group": "shoulders"
+  },
+  {
+    "exerciseDbId": "7uFJuXp",
+    "english": "weighted kneeling step with swing",
+    "polish": "Krok z klęku z wymachem z obciążeniem",
+    "group": "shoulders"
+  },
+  {
+    "exerciseDbId": "3omWx6P",
+    "english": "band alternating biceps curl",
+    "polish": "Naprzemienne uginanie przedramion z gumą oporową",
+    "group": "upper arms"
+  },
+  {
+    "exerciseDbId": "25GPyDY",
+    "english": "barbell curl",
+    "polish": "Uginanie przedramion ze sztangą (biceps)",
+    "group": "upper arms"
+  },
+  {
+    "exerciseDbId": "1TVoin7",
+    "english": "barbell lying triceps extension double",
+    "polish": "Francuskie wyciskanie sztangi leżąc na ławce (triceps)",
+    "group": "upper arms"
+  },
+  {
+    "exerciseDbId": "4CBIBOM",
+    "english": "barbell seated close grip behind neck triceps extension",
+    "polish": "Francuskie wyciskanie sztangi za głowę w wąskim chwycie siedząc",
+    "group": "upper arms"
+  },
+  {
+    "exerciseDbId": "1V1gj1u",
+    "english": "barbell seated close-grip concentration curl",
+    "polish": "Uginanie przedramion ze sztangą w opadzie w wąskim chwycie (koncentryczne)",
+    "group": "upper arms"
+  },
+  {
+    "exerciseDbId": "4dUn2iv",
+    "english": "barbell standing close grip curl",
+    "polish": "Uginanie przedramion ze sztangą w wąskim chwycie stojąc",
+    "group": "upper arms"
+  },
+  {
+    "exerciseDbId": "1xHyxys",
+    "english": "cable high pulley overhead tricep extension",
+    "polish": "Prostowanie przedramion na wyciągu górnym zza głowy",
+    "group": "upper arms"
+  },
+  {
+    "exerciseDbId": "2IxROQ1",
+    "english": "cable overhead triceps extension (rope attachment)",
+    "polish": "Prostowanie przedramion zza głowy na wyciągu z użyciem sznura",
+    "group": "upper arms"
+  },
+  {
+    "exerciseDbId": "3ZflifB",
+    "english": "cable pushdown",
+    "polish": "Prostowanie przedramion na wyciągu górnym (Triceps Pushdown)",
+    "group": "upper arms"
+  },
+  {
+    "exerciseDbId": "3XFdb1Z",
+    "english": "cable squatting curl",
+    "polish": "Uginanie przedramion z wyciągiem dolnym w przysiadzie",
+    "group": "upper arms"
+  },
+  {
+    "exerciseDbId": "1VpF8db",
+    "english": "dumbbell bicep curl lunge with bowling motion",
+    "polish": "Uginanie bicepsa z wykrokiem i ruchem na kręgle (bowling motion)",
+    "group": "upper arms"
+  },
+  {
+    "exerciseDbId": "2NImIAG",
+    "english": "dumbbell bicep curl on exercise ball with leg raised",
+    "polish": "Uginanie bicepsa na piłce gimnastycznej z uniesioną nogą",
+    "group": "upper arms"
+  },
+  {
+    "exerciseDbId": "2NpxjC1",
+    "english": "dumbbell hammer curl v. 2",
+    "polish": "Uginanie przedramion z hantlami chwytem młotkowym",
+    "group": "upper arms"
+  },
+  {
+    "exerciseDbId": "2JCuFTU",
+    "english": "dumbbell kneeling bicep curl exercise ball",
+    "polish": "Uginanie przedramion z hantlami w klęku przed piłką gimnastyczną",
+    "group": "upper arms"
+  },
+  {
+    "exerciseDbId": "4dF3maG",
+    "english": "dumbbell one arm hammer preacher curl",
+    "polish": "Jednorącz uginanie młotkowe na modlitewniku",
+    "group": "upper arms"
+  },
+  {
+    "exerciseDbId": "2sQGZ5b",
+    "english": "dumbbell one arm standing hammer curl",
+    "polish": "Jednorącz uginanie młotkowe stojąc",
+    "group": "upper arms"
+  },
+  {
+    "exerciseDbId": "3T12T87",
+    "english": "dumbbell standing bent over two arm triceps extension",
+    "polish": "Prostowanie przedramion z hantlami w opadzie tułowia (Triceps kickback)",
+    "group": "upper arms"
+  },
+  {
+    "exerciseDbId": "3s4NnTh",
+    "english": "dumbbell standing biceps curl",
+    "polish": "Uginanie przedramion z hantlami stojąc",
+    "group": "upper arms"
+  },
+  {
+    "exerciseDbId": "0IgNjSM",
+    "english": "dumbbell standing reverse curl",
+    "polish": "Uginanie przedramion z hantlami nachwytem stojąc",
+    "group": "upper arms"
+  },
+  {
+    "exerciseDbId": "1cTf2Ux",
+    "english": "ez bar standing french press",
+    "polish": "Francuskie wyciskanie stojąc sztangą łamaną (EZ)",
+    "group": "upper arms"
+  },
+  {
+    "exerciseDbId": "2kattbR",
+    "english": "ez barbell spider curl",
+    "polish": "Uginanie przedramion sztangą łamaną w oparciu klatki o ławkę (Spider Curl)",
+    "group": "upper arms"
+  },
+  {
+    "exerciseDbId": "05Cf2v8",
+    "english": "impossible dips",
+    "polish": "Niemożliwe pompki na poręczach (Impossible dips - na przedramionach)",
+    "group": "upper arms"
+  },
+  {
+    "exerciseDbId": "1YB40kg",
+    "english": "incline close-grip push-up",
+    "polish": "Pompki w wąskim chwycie w oparciu o podwyższenie",
+    "group": "upper arms"
+  },
+  {
+    "exerciseDbId": "4cWjYEN",
+    "english": "narrow push-up on exercise ball",
+    "polish": "Wąskie pompki na piłce gimnastycznej",
+    "group": "upper arms"
+  },
+  {
+    "exerciseDbId": "1IFV9h3",
+    "english": "push-up on lower arms - resistance variation",
+    "polish": "Pompki z przedramion (Sfinks) - wersja z gumą",
+    "group": "upper arms"
+  },
+  {
+    "exerciseDbId": "2Ty4idJ",
+    "english": "advanced dumbbell stiff leg deadlift",
+    "polish": "Zaawansowany martwy ciąg na prostych nogach z hantlami",
+    "group": "upper legs"
+  },
+  {
+    "exerciseDbId": "5VCj6iH",
+    "english": "barbell hack squat",
+    "polish": "Przysiad Hack ze sztangą z tyłu",
+    "group": "upper legs"
+  },
+  {
+    "exerciseDbId": "1gFNTZV",
+    "english": "barbell jump squat",
+    "polish": "Przysiad z wyskokiem ze sztangą",
+    "group": "upper legs"
+  },
+  {
+    "exerciseDbId": "2DxtqHL",
+    "english": "barbell one arm side deadlift",
+    "polish": "Jednorącz martwy ciąg boczny ze sztangą (walizkowy)",
+    "group": "upper legs"
+  },
+  {
+    "exerciseDbId": "62Nw60O",
+    "english": "barbell rear lunge v. 2",
+    "polish": "Wykroki w tył ze sztangą",
+    "group": "upper legs"
+  },
+  {
+    "exerciseDbId": "6sYyrRX",
+    "english": "bent knee lying twist (male)",
+    "polish": "Skręty miednicy leżąc na plecach ze zgiętymi kolanami",
+    "group": "upper legs"
+  },
+  {
+    "exerciseDbId": "6pTkI99",
+    "english": "dumbbell one arm snatch",
+    "polish": "Rwanie hantli jednorącz",
+    "group": "upper legs"
+  },
+  {
+    "exerciseDbId": "5eLRITT",
+    "english": "dumbbell stiff leg deadlift",
+    "polish": "Martwy ciąg na prostych nogach z hantlami",
+    "group": "upper legs"
+  },
+  {
+    "exerciseDbId": "2LQkNPW",
+    "english": "exercise ball hip flexor stretch",
+    "polish": "Rozciąganie zginaczy bioder na piłce gimnastycznej",
+    "group": "upper legs"
+  },
+  {
+    "exerciseDbId": "0rHfvy9",
+    "english": "inverse leg curl (on pull-up cable machine)",
+    "polish": "Odwrotne uginanie nóg (na maszynie wyciągowej)",
+    "group": "upper legs"
+  },
+  {
+    "exerciseDbId": "5bpPTHv",
+    "english": "kettlebell pistol squat",
+    "polish": "Przysiad na jednej nodze z kettlebellem (Pistolet)",
+    "group": "upper legs"
+  },
+  {
+    "exerciseDbId": "17lJ1kr",
+    "english": "lever lying leg curl",
+    "polish": "Uginanie nóg leżąc na maszynie",
+    "group": "upper legs"
+  },
+  {
+    "exerciseDbId": "0br45wL",
+    "english": "push-up inside leg kick",
+    "polish": "Pompki z wykopem nogi do wewnątrz",
+    "group": "upper legs"
+  },
+  {
+    "exerciseDbId": "0xDpB4L",
+    "english": "resistance band seated hip abduction",
+    "polish": "Odwodzenie nóg siedząc z gumą oporową",
+    "group": "upper legs"
+  },
+  {
+    "exerciseDbId": "2Dk4xQV",
+    "english": "rocking frog stretch",
+    "polish": "Rozciąganie w pozycji żaby z kołysaniem",
+    "group": "upper legs"
+  },
+  {
+    "exerciseDbId": "0L2KwtI",
+    "english": "roller hip lat stretch",
+    "polish": "Rozciąganie biodra i boku na wałku",
+    "group": "upper legs"
+  },
+  {
+    "exerciseDbId": "0mB6wHO",
+    "english": "runners stretch",
+    "polish": "Rozciąganie w wykroku (dla biegaczy)",
+    "group": "upper legs"
+  },
+  {
+    "exerciseDbId": "4H86mXM",
+    "english": "sled 45 degrees one leg press pointed",
+    "polish": "Wypychanie jednonóż na suwnicy 45° z wysoko ułożoną stopą",
+    "group": "upper legs"
+  },
+  {
+    "exerciseDbId": "2Qh2J1e",
+    "english": "sled 45° leg press (side pov)",
+    "polish": "Wypychanie nóg na suwnicy 45 stopni",
+    "group": "upper legs"
+  },
+  {
+    "exerciseDbId": "10Z2DXU",
+    "english": "sled 45в° leg press",
+    "polish": "Wypychanie nóg na suwnicy 45 stopni",
+    "group": "upper legs"
+  },
+  {
+    "exerciseDbId": "1bQkKZK",
+    "english": "smith bent knee good morning",
+    "polish": "Dzień dobry (Good Morning) ze zgiętymi kolanami na Maszynie Smitha",
+    "group": "upper legs"
+  },
+  {
+    "exerciseDbId": "5BZHW9s",
+    "english": "squat to overhead reach with twist",
+    "polish": "Przysiad z wyciągnięciem rąk nad głowę i rotacją tułowia",
+    "group": "upper legs"
+  },
+  {
+    "exerciseDbId": "5WiFcYk",
+    "english": "weighted lunge with swing",
+    "polish": "Wykrok w tył z wymachem obciążenia",
+    "group": "upper legs"
+  },
+  {
+    "exerciseDbId": "0lQnxMZ",
+    "english": "weighted sissy squat",
+    "polish": "Przysiad Sissy z obciążeniem",
+    "group": "upper legs"
+  },
+  {
+    "exerciseDbId": "13VW2VO",
+    "english": "weighted stretch lunge",
+    "polish": "Rozciągający wykrok z obciążeniem",
+    "group": "upper legs"
+  },
+  {
+    "exerciseDbId": "2gPfomN",
+    "english": "3/4 sit-up",
+    "polish": "Krótkie spięcia brzucha (brzuszki 3/4)",
+    "group": "waist"
+  },
+  {
+    "exerciseDbId": "1ZFqTDN",
+    "english": "air bike",
+    "polish": "Rowerek w powietrzu (ćwiczenie na brzuch)",
+    "group": "waist"
+  },
+  {
+    "exerciseDbId": "03lzqwk",
+    "english": "assisted hanging knee raise",
+    "polish": "Unoszenie kolan w zwisie na drążku ze wsparciem",
+    "group": "waist"
+  },
+  {
+    "exerciseDbId": "8K0w2yA",
+    "english": "assisted hanging knee raise with throw down",
+    "polish": "Unoszenie kolan w zwisie z odrzutem nóg (ze wsparciem)",
+    "group": "waist"
+  },
+  {
+    "exerciseDbId": "2Ryn564",
+    "english": "assisted prone rectus femoris stretch",
+    "polish": "Rozciąganie mięśnia prostego uda leżąc przodem ze wsparciem",
+    "group": "waist"
+  },
+  {
+    "exerciseDbId": "3pqGMQj",
+    "english": "band alternating v-up with simple",
+    "polish": "Naprzemienne scyzoryki (V-up) z gumą oporową",
+    "group": "waist"
+  },
+  {
+    "exerciseDbId": "225x2Vd",
+    "english": "band kneeling twisting crunch",
+    "polish": "Skręty tułowia w klęku z gumą oporową z góry",
+    "group": "waist"
+  },
+  {
+    "exerciseDbId": "7M66AVi",
+    "english": "barbell rollerout",
+    "polish": "Wychylenia w przód na sztandze w klęku (Barbell rollout)",
+    "group": "waist"
+  },
+  {
+    "exerciseDbId": "5VXmnV5",
+    "english": "bodyweight incline side plank",
+    "polish": "Deska boczna w oparciu o podwyższenie",
+    "group": "waist"
+  },
+  {
+    "exerciseDbId": "8xUv4J7",
+    "english": "cable seated crunch",
+    "polish": "Skłony tułowia na wyciągu siedząc",
+    "group": "waist"
+  },
+  {
+    "exerciseDbId": "7i4msxz",
+    "english": "cocoons with mega",
+    "polish": "Skłony tułowia z przyciąganiem nóg (Kokony) z obciążeniem",
+    "group": "waist"
+  },
+  {
+    "exerciseDbId": "9Ap7miY",
+    "english": "decline crunch",
+    "polish": "Brzuszki na ławce skośnej w dół",
+    "group": "waist"
+  },
+  {
+    "exerciseDbId": "4QqYaJW",
+    "english": "gentle prone twist on stability ball",
+    "polish": "Lekkie skręty tułowia w oparciu klatką o piłkę gimnastyczną",
+    "group": "waist"
+  },
+  {
+    "exerciseDbId": "4Ml7QFO",
+    "english": "hanging straight leg raise",
+    "polish": "Unoszenie prostych nóg w zwisie na drążku",
+    "group": "waist"
+  },
+  {
+    "exerciseDbId": "6vcvsLS",
+    "english": "hanging straight leg raise with elevated",
+    "polish": "Unoszenie prostych nóg w zwisie na podwyższeniu",
+    "group": "waist"
+  },
+  {
+    "exerciseDbId": "196HJGw",
+    "english": "hip raise (bent knee)",
+    "polish": "Unoszenie bioder leżąc (przy zgiętych kolanach)",
+    "group": "waist"
+  },
+  {
+    "exerciseDbId": "1GPHRyK",
+    "english": "janda sit-up",
+    "polish": "Brzuszki Jandy (bez angażowania zginaczy bioder)",
+    "group": "waist"
+  },
+  {
+    "exerciseDbId": "58rdhvL",
+    "english": "narrow style band jack knife sit-up",
+    "polish": "Wąskie scyzoryki z gumą oporową (Jackknife)",
+    "group": "waist"
+  },
+  {
+    "exerciseDbId": "75Bgtjy",
+    "english": "potty squat",
+    "polish": "Głęboki przysiad z zatrzymaniem (słowiański przykuc)",
+    "group": "waist"
+  },
+  {
+    "exerciseDbId": "1IG6gVF",
+    "english": "prone twist on stability ball",
+    "polish": "Skręty tułowia w oparciu klatką o piłkę gimnastyczną",
+    "group": "waist"
+  },
+  {
+    "exerciseDbId": "6Wr0F3W",
+    "english": "rounded twisted leg raise (female)",
+    "polish": "Rotacyjne unoszenie nóg po okręgu",
+    "group": "waist"
+  },
+  {
+    "exerciseDbId": "8gQo5Ss",
+    "english": "single style cable standing crunch (with rope attachment)",
+    "polish": "Skłony tułowia na wyciągu górnym stojąc (Allahy stojąc ze sznurem)",
+    "group": "waist"
+  },
+  {
+    "exerciseDbId": "6ZCiYWQ",
+    "english": "sit-up with arms on chest",
+    "polish": "Brzuszki z rękoma skrzyżowanymi na klatce",
+    "group": "waist"
+  },
+  {
+    "exerciseDbId": "2jl9K55",
+    "english": "spine twist",
+    "polish": "Skręty kręgosłupa",
+    "group": "waist"
+  },
+  {
+    "exerciseDbId": "6bOA1Oi",
+    "english": "weighted side bend (on stability ball)",
+    "polish": "Skłony boczne tułowia z obciążeniem na piłce gimnastycznej",
+    "group": "waist"
+  }
+]
