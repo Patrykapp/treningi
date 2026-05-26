@@ -103,7 +103,7 @@ function TreningPage() {
     }, i: number) => {
       const sd: SetData[] = Array.isArray(e.setsData) && e.setsData.length > 0 ? e.setsData : [];
       return { key: String(Date.now() + i), exerciseId: e.exerciseId, sets: e.sets, reps: e.reps,
-        weight: e.weight, rpe: e.rpe || undefined, comment: e.comment || undefined, setsData: sd, customSets: sd.length > 0 };
+        weight: e.weight, rpe: e.rpe || undefined, comment: e.comment || undefined, setsData: sd, customSets: sd.length > 0, bodyweight: false };
     }));
     setToast({ message: 'Skopiowano ostatni trening', type: 'success' });
   };
@@ -111,7 +111,7 @@ function TreningPage() {
   const loadTemplate = (tpl: Template) => {
     setEntries(tpl.entries.map((e, i) => ({
       key: String(Date.now() + i), exerciseId: e.exerciseId, sets: e.sets, reps: e.reps,
-      weight: e.weight, customSets: false, setsData: [],
+      weight: e.weight, customSets: false, setsData: [], bodyweight: false,
     })));
     setShowTemplates(false);
     setToast({ message: `Zaladowano szablon "${tpl.name}"`, type: 'success' });
