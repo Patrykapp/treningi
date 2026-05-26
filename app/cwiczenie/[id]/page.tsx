@@ -40,7 +40,13 @@ function calcMax(e: EntryWithSession) {
   return e.weight;
 }
 function calcVol(e: EntryWithSession) {
-  if (e.setsData && e.setsData.length > 0) return e.setsData.reduce((s, x) => s + x.reps * x.weight, 0);
+  if (e.setsData && e.setsData.length > 0) {
+    const totalWeight = e.setsData.reduce((s, x) => s + x.weight, 0);
+    // bodyweight exercise — volume = total reps
+    if (totalWeight === 0) return e.setsData.reduce((s, x) => s + x.reps, 0);
+    return e.setsData.reduce((s, x) => s + x.reps * x.weight, 0);
+  }
+  if (e.weight === 0) return e.sets * e.reps; // bodyweight
   return e.sets * e.reps * e.weight;
 }
 function calcTotalReps(e: EntryWithSession) {
@@ -109,15 +115,25 @@ function getBodyPart(muscleGroup: string | null | undefined, name: string): stri
 
 function buildChart(
   mine: EntryWithSession[], theirs: EntryWithSession[], type: 'weight' | 'volume' | 'reps'
-): { date: string; Ty?: number; Porownanie?: number }[] {
-  const map: Record<string, { date: string; Ty?: number; Porownanie?: number }> = {};
+): { date: string; isoDate: string; Ty?: number; Porownanie?: number }[] {
+  const map: Record<string, { date: string; isoDate: string; Ty?: number; Porownanie?: number }> = {};
   const val = (e: EntryWithSession) =>
     type === 'weight' ? calcMax(e) :
     type === 'reps' ? calcTotalReps(e) :
     Math.round(calcVol(e));
-  [...mine].reverse().forEach(e => { const d = formatDate(e.session.date); if (!map[d]) map[d] = { date: d }; map[d].Ty = val(e); });
-  [...theirs].reverse().forEach(e => { const d = formatDate(e.session.date); if (!map[d]) map[d] = { date: d }; map[d].Porownanie = val(e); });
-  return Object.values(map).sort((a, b) => a.date.localeCompare(b.date));
+  const key = (e: EntryWithSession) => e.session.date.slice(0, 10); // YYYY-MM-DD
+  [...mine].reverse().forEach(e => {
+    const k = key(e);
+    if (!map[k]) map[k] = { date: formatDate(e.session.date), isoDate: k };
+    map[k].Ty = val(e);
+  });
+  [...theirs].reverse().forEach(e => {
+    const k = key(e);
+    if (!map[k]) map[k] = { date: formatDate(e.session.date), isoDate: k };
+    map[k].Porownanie = val(e);
+  });
+  // Sort chronologically using ISO date (YYYY-MM-DD sorts correctly)
+  return Object.values(map).sort((a, b) => a.isoDate.localeCompare(b.isoDate));
 }
 
 export default function CwiczeniePage({ params }: { params: Promise<{ id: string }> }) {
@@ -483,6 +499,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                   formatter={(value: number, name: string) => [
                     chartType === 'weight' ? `${value} kg` :
                     chartType === 'reps' ? `${value} powt.` :
+                    isBodyweightExercise ? `${value} powt.` :
                     `${value} kg·powt`,
                     name,
                   ]}
