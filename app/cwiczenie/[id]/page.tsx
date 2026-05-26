@@ -167,15 +167,15 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
     ]);
     const ex = (Array.isArray(exRes) ? exRes : []).find((e: Exercise) => e.id === id) || null;
     setExercise(ex);
-    setEntries(Array.isArray(entRes) ? entRes : []);
+    const loadedEntries = Array.isArray(entRes) ? entRes : [];
+    setEntries(loadedEntries);
     setUsers(Array.isArray(usersRes) ? usersRes : []);
+    // Auto-switch to reps chart for bodyweight exercises
+    const allBodyweight = loadedEntries.length > 0 && loadedEntries.every((e: EntryWithSession) => calcMax(e) === 0);
+    if (allBodyweight) setChartType('reps');
     setLoading(false);
     return ex;
   };
-
-  useEffect(() => {
-    if (isBodyweightExercise) setChartType('reps');
-  }, [isBodyweightExercise]);
 
   useEffect(() => {
     if (!authLoading) {
