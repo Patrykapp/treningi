@@ -38,10 +38,11 @@ export function Navigation() {
 
   const navItems = [
     { href: '/', label: 'Start', icon: '🏠' },
-    { href: '/cwiczenia', label: 'Cwiczenia', icon: '🏋️' },
+    { href: '/cwiczenia', label: 'Ćwicz.', icon: '🏋️' },
     { href: '/trening', label: 'Trening', icon: '💪' },
+    { href: '/challenge', label: 'Challenge', icon: '⚡' },
     { href: '/historia', label: 'Historia', icon: '📋' },
-    { href: '/ustawienia', label: 'Ustawienia', icon: '⚙️' },
+    { href: '/ustawienia', label: 'Ustaw.', icon: '⚙️' },
   ];
 
   return (
