@@ -36,7 +36,7 @@ export default function WagaPage() {
   useEffect(() => { loadEntries(); }, [loadEntries]);
 
   const handleSave = async () => {
-    if (!formWeight || !selectedUser) {
+    if (!formWeight) {
       setToast({ message: 'Wpisz wagę', type: 'error' });
       return;
     }
@@ -45,7 +45,7 @@ export default function WagaPage() {
       const res = await fetch('/api/body-weight', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: selectedUser, date: formDate, weight: parseFloat(formWeight), notes: formNotes || null }),
+        body: JSON.stringify({ date: formDate, weight: parseFloat(formWeight), notes: formNotes || null }),
       });
       if (res.ok) {
         setToast({ message: 'Waga zapisana!', type: 'success' });
