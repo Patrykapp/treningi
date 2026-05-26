@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { User } from '@/types';
 import { formatDate, formatDateInput } from '@/lib/utils';
 import { Toast } from '@/components/ui/Toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -13,16 +12,13 @@ interface BodyWeightEntry {
   date: string;
   weight: number;
   notes?: string | null;
-  user: User;
 }
 
 export default function WagaPage() {
   const [entries, setEntries] = useState<BodyWeightEntry[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [selectedUser, setSelectedUser] = useState('');
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, name: authName } = useAuth();
 
   // Formularz
   const [formDate, setFormDate] = useState(formatDateInput(new Date()));
@@ -30,24 +26,14 @@ export default function WagaPage() {
   const [formNotes, setFormNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    fetch('/api/users').then(r => r.json()).then((u: User[]) => {
-      setUsers(u);
-      const saved = localStorage.getItem('selectedUserId');
-      const id = saved && u.find(us => us.id === saved) ? saved : u[0]?.id || '';
-      setSelectedUser(id);
-    });
+  const loadEntries = useCallback(async () => {
+    setLoading(true);
+    const data = await fetch('/api/body-weight').then(r => r.json());
+    setEntries(Array.isArray(data) ? data : []);
+    setLoading(false);
   }, []);
 
-  const loadEntries = useCallback(async () => {
-    if (!selectedUser) return;
-    setLoading(true);
-    const data = await fetch(`/api/body-weight?userId=${selectedUser}`).then(r => r.json());
-    setEntries(data);
-    setLoading(false);
-  }, [selectedUser]);
-
-  useEffect(() => { if (selectedUser) loadEntries(); }, [selectedUser, loadEntries]);
+  useEffect(() => { loadEntries(); }, [loadEntries]);
 
   const handleSave = async () => {
     if (!formWeight || !selectedUser) {
@@ -102,20 +88,9 @@ export default function WagaPage() {
       </div>
 
       <div className="px-4 py-4 space-y-4">
-        {/* Wybór użytkownika */}
-        <div className="flex gap-2">
-          {users.map(u => (
-            <button
-              key={u.id}
-              onClick={() => setSelectedUser(u.id)}
-              className={`flex-1 py-2.5 rounded-xl font-medium text-sm transition-colors ${
-                selectedUser === u.id ? 'bg-blue-600 text-white' : 'bg-white text-gray-900'
-              }`}
-            >
-              {u.name}
-            </button>
-          ))}
-        </div>
+        {authName && (
+          <p className="text-sm text-gray-500 text-center">Twoje pomiary, {authName}</p>
+        )}
 
         {/* Statystyki */}
         {!loading && entries.length > 0 && (
