@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Toast } from '@/components/ui/Toast';
 import { Exercise } from '@/types';
@@ -9,111 +9,192 @@ type Phase = 'setup' | 'active' | 'rest' | 'summary';
 
 interface SetResult {
   reps: number;
-  duration: number; // seconds
+  duration: number;
+}
+
+interface SavedState {
+  phase: Phase;
+  selectedExercise: Exercise | null;
+  numSets: number;
+  restSeconds: number;
+  currentSet: number;
+  results: SetResult[];
+  pendingReps: string;
+  // Timestamps for timer reconstruction
+  setStartedAt: number | null;   // Date.now() when active set began
+  restStartedAt: number | null;  // Date.now() when rest began
+}
+
+const STORAGE_KEY = 'challenge_state';
+
+function saveState(s: SavedState) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch {}
+}
+function clearState() {
+  try { localStorage.removeItem(STORAGE_KEY); } catch {}
+}
+function loadState(): SavedState | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
 }
 
 function formatTime(sec: number) {
-  const m = Math.floor(sec / 60).toString().padStart(2, '0');
-  const s = (sec % 60).toString().padStart(2, '0');
+  const m = Math.floor(Math.abs(sec) / 60).toString().padStart(2, '0');
+  const s = (Math.abs(sec) % 60).toString().padStart(2, '0');
   return `${m}:${s}`;
 }
 
 export default function ChallengePage() {
   const { isLoggedIn, userId } = useAuth();
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [hydrated, setHydrated] = useState(false);
 
-  // Setup
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
   const [saveAsUserId, setSaveAsUserId] = useState('');
   const [search, setSearch] = useState('');
-  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
-  const [numSets, setNumSets] = useState(3);
-  const [restSeconds, setRestSeconds] = useState(300); // 5 min default
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // Active
   const [phase, setPhase] = useState<Phase>('setup');
+  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
+  const [numSets, setNumSets] = useState(3);
+  const [restSeconds, setRestSeconds] = useState(300);
   const [currentSet, setCurrentSet] = useState(1);
-  const [elapsed, setElapsed] = useState(0);
-  const [restRemaining, setRestRemaining] = useState(0);
   const [results, setResults] = useState<SetResult[]>([]);
-  const [pendingReps, setPendingReps] = useState<string>('');
+  const [pendingReps, setPendingReps] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const startTimeRef = useRef<number>(0);
+  const [elapsed, setElapsed] = useState(0);
+  const [restRemaining, setRestRemaining] = useState(0);
 
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const setStartedAtRef = useRef<number | null>(null);
+  const restStartedAtRef = useRef<number | null>(null);
+
+  const clearTimer = () => {
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+  };
+
+  // ── Restore from localStorage on mount ──────────────────────────────────
   useEffect(() => {
     fetch('/api/exercises').then(r => r.json()).then(d => setExercises(Array.isArray(d) ? d : []));
     fetch('/api/users').then(r => r.json()).then(d => setUsers(Array.isArray(d) ? d : []));
+
+    const saved = loadState();
+    if (saved && saved.phase !== 'setup') {
+      setPhase(saved.phase);
+      setSelectedExercise(saved.selectedExercise);
+      setNumSets(saved.numSets);
+      setRestSeconds(saved.restSeconds);
+      setCurrentSet(saved.currentSet);
+      setResults(saved.results);
+      setPendingReps(saved.pendingReps);
+
+      if (saved.phase === 'active' && saved.setStartedAt) {
+        setStartedAtRef.current = saved.setStartedAt;
+        setElapsed(Math.floor((Date.now() - saved.setStartedAt) / 1000));
+      }
+      if (saved.phase === 'rest' && saved.restStartedAt) {
+        restStartedAtRef.current = saved.restStartedAt;
+        const gone = Math.floor((Date.now() - saved.restStartedAt) / 1000);
+        const remaining = Math.max(0, saved.restSeconds - gone);
+        setRestRemaining(remaining);
+        if (remaining === 0) {
+          setPhase('active');
+          setStartedAtRef.current = Date.now();
+        }
+      }
+    }
+    setHydrated(true);
   }, []);
+
+  // ── Persist state on every change ────────────────────────────────────────
+  useEffect(() => {
+    if (!hydrated) return;
+    if (phase === 'setup') { clearState(); return; }
+    saveState({
+      phase, selectedExercise, numSets, restSeconds, currentSet, results, pendingReps,
+      setStartedAt: setStartedAtRef.current,
+      restStartedAt: restStartedAtRef.current,
+    });
+  }, [phase, selectedExercise, numSets, restSeconds, currentSet, results, pendingReps, hydrated]);
+
+  // ── Active set timer ──────────────────────────────────────────────────────
+  useEffect(() => {
+    if (phase !== 'active') return;
+    if (!setStartedAtRef.current) {
+      setStartedAtRef.current = Date.now();
+      setElapsed(0);
+    }
+    clearTimer();
+    timerRef.current = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - setStartedAtRef.current!) / 1000));
+    }, 1000);
+    return clearTimer;
+  }, [phase, currentSet]);
+
+  // ── Rest countdown ────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (phase !== 'rest') return;
+    if (!restStartedAtRef.current) {
+      restStartedAtRef.current = Date.now();
+      setRestRemaining(restSeconds);
+    }
+    clearTimer();
+    timerRef.current = setInterval(() => {
+      const gone = Math.floor((Date.now() - restStartedAtRef.current!) / 1000);
+      const remaining = Math.max(0, restSeconds - gone);
+      setRestRemaining(remaining);
+      if (remaining === 0) {
+        clearTimer();
+        restStartedAtRef.current = null;
+        setStartedAtRef.current = Date.now();
+        setPhase('active');
+      }
+    }, 1000);
+    return clearTimer;
+  }, [phase, restSeconds]);
 
   const filtered = exercises.filter(e =>
     e.name.toLowerCase().includes(search.toLowerCase())
   ).slice(0, 8);
-
-  const clearTimer = () => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = null;
-  };
-
-  // Active set timer
-  useEffect(() => {
-    if (phase === 'active') {
-      startTimeRef.current = Date.now();
-      setElapsed(0);
-      timerRef.current = setInterval(() => {
-        setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000));
-      }, 1000);
-    }
-    return clearTimer;
-  }, [phase, currentSet]);
-
-  // Rest countdown
-  useEffect(() => {
-    if (phase === 'rest') {
-      setRestRemaining(restSeconds);
-      timerRef.current = setInterval(() => {
-        setRestRemaining(prev => {
-          if (prev <= 1) {
-            clearTimer();
-            setPhase('active');
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return clearTimer;
-  }, [phase]);
 
   const startChallenge = () => {
     if (!selectedExercise) return;
     setResults([]);
     setCurrentSet(1);
     setPendingReps('');
+    setStartedAtRef.current = Date.now();
+    restStartedAtRef.current = null;
     setPhase('active');
   };
 
   const finishSet = () => {
     clearTimer();
     const reps = parseInt(pendingReps) || 0;
-    const newResult: SetResult = { reps, duration: elapsed };
-    const newResults = [...results, newResult];
+    const newResults = [...results, { reps, duration: elapsed }];
     setResults(newResults);
     setPendingReps('');
+    setStartedAtRef.current = null;
 
     if (currentSet >= numSets) {
+      restStartedAtRef.current = null;
       setPhase('summary');
     } else {
       setCurrentSet(s => s + 1);
+      restStartedAtRef.current = Date.now();
+      setRestRemaining(restSeconds);
       setPhase('rest');
     }
   };
 
   const skipRest = () => {
     clearTimer();
+    restStartedAtRef.current = null;
+    setStartedAtRef.current = Date.now();
+    setElapsed(0);
     setPhase('active');
   };
 
@@ -122,7 +203,6 @@ export default function ChallengePage() {
     setSaving(true);
     const setsData = results.map(r => ({ reps: r.reps, weight: 0 }));
     const totalReps = results.reduce((s, r) => s + r.reps, 0);
-
     const effectiveUserId = saveAsUserId || userId;
     const res = await fetch('/api/sessions', {
       method: 'POST',
@@ -141,13 +221,15 @@ export default function ChallengePage() {
         }],
       }),
     });
-
     if (res.ok) {
+      clearState();
       setToast({ message: 'Challenge zapisany! 💪', type: 'success' });
       setTimeout(() => {
         setPhase('setup');
         setResults([]);
         setPendingReps('');
+        setStartedAtRef.current = null;
+        restStartedAtRef.current = null;
       }, 1500);
     } else {
       setToast({ message: 'Błąd zapisu', type: 'error' });
@@ -156,12 +238,18 @@ export default function ChallengePage() {
   };
 
   const restartChallenge = () => {
+    clearTimer();
+    clearState();
     setPhase('setup');
     setResults([]);
     setPendingReps('');
+    setStartedAtRef.current = null;
+    restStartedAtRef.current = null;
   };
 
   const totalReps = results.reduce((s, r) => s + r.reps, 0);
+
+  if (!hydrated) return null;
 
   // ── SETUP ──────────────────────────────────────────────────────────────────
   if (phase === 'setup') {
@@ -172,9 +260,7 @@ export default function ChallengePage() {
           <h1 className="text-xl font-bold text-gray-900">⚡ Challenge</h1>
           <p className="text-sm text-gray-500">Serie do upadku mięśniowego</p>
         </div>
-
         <div className="px-4 py-4 space-y-4">
-          {/* Exercise picker */}
           <div className="bg-white rounded-2xl shadow-sm p-4 space-y-2">
             <label className="text-sm font-medium text-gray-700 block">Ćwiczenie</label>
             <div className="relative">
@@ -206,7 +292,6 @@ export default function ChallengePage() {
             )}
           </div>
 
-          {/* Settings */}
           <div className="bg-white rounded-2xl shadow-sm p-4 space-y-4">
             <label className="text-sm font-medium text-gray-700 block">Ustawienia</label>
             <div className="grid grid-cols-2 gap-3">
@@ -234,12 +319,8 @@ export default function ChallengePage() {
             </div>
           </div>
 
-          {/* Start */}
-          <button
-            onClick={startChallenge}
-            disabled={!selectedExercise || !isLoggedIn}
-            className="w-full bg-blue-600 text-white py-4 rounded-2xl text-lg font-bold disabled:opacity-40 shadow-sm active:scale-95 transition-transform"
-          >
+          <button onClick={startChallenge} disabled={!selectedExercise || !isLoggedIn}
+            className="w-full bg-blue-600 text-white py-4 rounded-2xl text-lg font-bold disabled:opacity-40 shadow-sm active:scale-95 transition-transform">
             {!isLoggedIn ? 'Zaloguj się aby kontynuować' : !selectedExercise ? 'Wybierz ćwiczenie' : `🔥 Start — ${numSets} serie`}
           </button>
         </div>
@@ -262,15 +343,11 @@ export default function ChallengePage() {
           </div>
           <p className="text-sm text-blue-600 font-medium mt-1 truncate">{selectedExercise?.name}</p>
         </div>
-
         <div className="flex-1 flex flex-col items-center justify-center gap-8 px-4 py-8">
-          {/* Elapsed timer */}
           <div className="text-center">
             <div className="text-7xl font-black text-gray-900 tabular-nums">{formatTime(elapsed)}</div>
             <p className="text-sm text-gray-400 mt-1">czas serii</p>
           </div>
-
-          {/* Previous sets */}
           {results.length > 0 && (
             <div className="flex gap-2">
               {results.map((r, i) => (
@@ -281,26 +358,15 @@ export default function ChallengePage() {
               ))}
             </div>
           )}
-
-          {/* Reps input */}
           <div className="w-full max-w-xs space-y-3">
             <label className="text-sm text-gray-500 block text-center">Ile powtórzeń zrobiłeś?</label>
-            <input
-              type="number"
-              inputMode="numeric"
-              value={pendingReps}
-              onChange={e => setPendingReps(e.target.value)}
-              placeholder="np. 25"
+            <input type="number" inputMode="numeric" value={pendingReps}
+              onChange={e => setPendingReps(e.target.value)} placeholder="np. 25"
               className="w-full border-2 border-blue-200 rounded-2xl px-4 py-4 text-3xl font-bold text-center focus:border-blue-500 outline-none"
-              autoFocus
-            />
+              autoFocus />
           </div>
-
-          <button
-            onClick={finishSet}
-            disabled={!pendingReps}
-            className="w-full max-w-xs bg-blue-600 text-white py-4 rounded-2xl text-lg font-bold disabled:opacity-40 shadow active:scale-95 transition-transform"
-          >
+          <button onClick={finishSet} disabled={!pendingReps}
+            className="w-full max-w-xs bg-blue-600 text-white py-4 rounded-2xl text-lg font-bold disabled:opacity-40 shadow active:scale-95 transition-transform">
             {currentSet < numSets ? `Koniec serii → odpoczynek ${formatTime(restSeconds)}` : 'Koniec ostatniej serii ✓'}
           </button>
         </div>
@@ -312,17 +378,19 @@ export default function ChallengePage() {
   if (phase === 'rest') {
     const lastResult = results[results.length - 1];
     const pct = ((restSeconds - restRemaining) / restSeconds) * 100;
-
     return (
       <div className="min-h-screen bg-gray-50 pb-24 flex flex-col">
         <div className="bg-white border-b px-4 pt-4 pb-3">
-          <p className="text-xs text-gray-500 uppercase tracking-wide">Następna</p>
-          <h1 className="text-3xl font-black text-gray-900">Seria {currentSet} / {numSets}</h1>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Następna</p>
+              <h1 className="text-3xl font-black text-gray-900">Seria {currentSet} / {numSets}</h1>
+            </div>
+            <button onClick={restartChallenge} className="text-sm text-gray-400 underline">Anuluj</button>
+          </div>
           <p className="text-sm text-blue-600 font-medium mt-1 truncate">{selectedExercise?.name}</p>
         </div>
-
         <div className="flex-1 flex flex-col items-center justify-center gap-8 px-4 py-8">
-          {/* Last result */}
           {lastResult && (
             <div className="bg-white rounded-2xl shadow-sm px-8 py-4 text-center">
               <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">Seria {results.length}</div>
@@ -330,19 +398,13 @@ export default function ChallengePage() {
               <div className="text-sm text-gray-400">powtórzeń · {formatTime(lastResult.duration)}</div>
             </div>
           )}
-
-          {/* Countdown */}
           <div className="text-center">
             <div className="text-7xl font-black text-blue-600 tabular-nums">{formatTime(restRemaining)}</div>
             <p className="text-sm text-gray-400 mt-1">odpoczynek</p>
           </div>
-
-          {/* Progress bar */}
           <div className="w-full max-w-xs bg-gray-200 rounded-full h-2">
             <div className="bg-blue-500 h-2 rounded-full transition-all duration-1000" style={{ width: `${pct}%` }} />
           </div>
-
-          {/* All results so far */}
           {results.length > 1 && (
             <div className="flex gap-2">
               {results.map((r, i) => (
@@ -353,10 +415,7 @@ export default function ChallengePage() {
               ))}
             </div>
           )}
-
-          <button onClick={skipRest} className="text-sm text-blue-600 underline">
-            Pomiń odpoczynek →
-          </button>
+          <button onClick={skipRest} className="text-sm text-blue-600 underline">Pomiń odpoczynek →</button>
         </div>
       </div>
     );
@@ -370,16 +429,12 @@ export default function ChallengePage() {
         <h1 className="text-xl font-bold text-gray-900">🏆 Challenge zakończony!</h1>
         <p className="text-sm text-blue-600 font-medium mt-0.5 truncate">{selectedExercise?.name}</p>
       </div>
-
       <div className="px-4 py-4 space-y-4">
-        {/* Total */}
         <div className="bg-blue-600 rounded-2xl p-6 text-center text-white shadow">
           <div className="text-xs uppercase tracking-widest opacity-80 mb-1">Łącznie</div>
           <div className="text-6xl font-black">{totalReps}</div>
           <div className="text-sm opacity-80 mt-1">powtórzeń w {results.length} seriach</div>
         </div>
-
-        {/* Per-set breakdown */}
         <div className="bg-white rounded-2xl shadow-sm p-4">
           <h3 className="text-sm font-semibold text-gray-700 mb-3">Wyniki per seria</h3>
           <div className="space-y-2">
@@ -410,7 +465,6 @@ export default function ChallengePage() {
           </div>
         </div>
 
-        {/* Save as */}
         {users.length > 1 && (
           <div className="bg-white rounded-2xl shadow-sm p-4">
             <label className="text-sm font-medium text-gray-700 block mb-2">Zapisz jako</label>
@@ -418,9 +472,7 @@ export default function ChallengePage() {
               {users.map(u => (
                 <button key={u.id} onClick={() => setSaveAsUserId(u.id)}
                   className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
-                    (saveAsUserId || userId) === u.id
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white text-gray-600 border-gray-200'
+                    (saveAsUserId || userId) === u.id ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200'
                   }`}>
                   {u.name}
                 </button>
@@ -429,7 +481,6 @@ export default function ChallengePage() {
           </div>
         )}
 
-        {/* Actions */}
         <div className="space-y-2">
           <button onClick={saveChallenge} disabled={saving}
             className="w-full bg-blue-600 text-white py-4 rounded-2xl text-lg font-bold disabled:opacity-50 shadow active:scale-95 transition-transform">

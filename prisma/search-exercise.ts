@@ -12,6 +12,8 @@ const MANUAL_EXERCISES = [
   { name: 'Przysiad ze sztangą', muscleGroup: 'Uda' },
   { name: 'Wiosłowanie sztangą', muscleGroup: 'Plecy' },
   { name: 'Wyciskanie żołnierskie (OHP)', muscleGroup: 'Barki' },
+  { name: 'Podciąganie nachwytem', muscleGroup: 'Plecy' },
+  { name: 'Pompki', muscleGroup: 'Klatka piersiowa' },
 ];
 
 async function main() {
