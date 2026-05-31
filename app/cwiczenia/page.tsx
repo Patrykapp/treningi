@@ -9,11 +9,11 @@ export default function CwiczeniaPage() {
   const [search, setSearch] = useState('');
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const router = useRouter();
 
   const toggleGroup = (group: string) => {
-    setCollapsedGroups(prev => {
+    setExpandedGroups(prev => {
       const next = new Set(prev);
       if (next.has(group)) next.delete(group);
       else next.add(group);
@@ -97,7 +97,7 @@ export default function CwiczeniaPage() {
       </div>
       <div className="px-4 py-4 space-y-5">
         {sortedGroups.map(([group, exs]) => {
-          const isCollapsed = collapsedGroups.has(group);
+          const isCollapsed = !expandedGroups.has(group);
           return (
           <div key={group}>
             <button
