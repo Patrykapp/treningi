@@ -88,7 +88,8 @@ export default function WagaPage() {
           message="Usunąć ten pomiar? Nie można cofnąć."
           onConfirm={() => handleDelete(confirmDeleteId)}
           onCancel={() => setConfirmDeleteId(null)}
-        />}
+        />
+      )}
 
       <div className="bg-white border-b px-4 py-4 sticky top-0 z-10">
         <div className="flex items-center gap-3">
