@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Exercise, NewEntryForm, SetData } from '@/types';
 import { formatDateInput } from '@/lib/utils';
+import { fetchExercises, invalidateExerciseCache } from '@/lib/exerciseCache';
 import { Toast } from '@/components/ui/Toast';
 import { ExerciseSearch } from '@/components/ui/ExerciseSearch';
 import { activeSession } from '@/hooks/useActiveSession';
@@ -50,7 +51,7 @@ function TreningPage() {
 
   const loadData = useCallback(async () => {
     const [exRes, tplRes, usersRes] = await Promise.all([
-      fetch('/api/exercises').then(r => r.json()),
+      fetchExercises(),
       fetch('/api/templates').then(r => r.json()),
       fetch('/api/users').then(r => r.json()),
     ]);
@@ -236,6 +237,7 @@ function TreningPage() {
     });
     if (res.ok) {
       const ex = await res.json();
+      invalidateExerciseCache();
       setExercises(prev => [...prev, ex].sort((a, b) => a.name.localeCompare(b.name)));
       // Automatycznie przypisz nowe ćwiczenie do ostatniego pustego wiersza
       setEntries(prev => {

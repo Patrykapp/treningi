@@ -82,16 +82,23 @@ export default function HistoriaPage() {
       : (Array.isArray(data) ? data : []);
     setSessions(filtered);
     setLoading(false);
+    // Load ratings in batches of 5 to avoid hammering the DB
     const sessionList = Array.isArray(data) ? data : [];
-    for (const s of sessionList.slice(0, 20)) {
-      fetch(`/api/sessions/${s.id}/rating`)
-        .then(r => r.json())
-        .then(rating => {
-          if (rating && !rating.error) {
-            setRatings(prev => ({ ...prev, [s.id]: rating }));
-          }
-        })
-        .catch(() => {});
+    const toRate = sessionList.slice(0, 10);
+    const batchSize = 5;
+    for (let i = 0; i < toRate.length; i += batchSize) {
+      const batch = toRate.slice(i, i + batchSize);
+      await Promise.allSettled(
+        batch.map((s: WorkoutSession) =>
+          fetch(`/api/sessions/${s.id}/rating`)
+            .then(r => r.json())
+            .then(rating => {
+              if (rating && !rating.error) {
+                setRatings(prev => ({ ...prev, [s.id]: rating }));
+              }
+            })
+        )
+      );
     }
   }, [filterExerciseId, filterFrom, filterTo]);
 

@@ -192,6 +192,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       details: progressDetail,
       tips,
       breakdown,
+    }, {
+      headers: {
+        // Rating for a past session won't change — cache aggressively
+        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+      },
     });
   } catch (e) {
     console.error(e);

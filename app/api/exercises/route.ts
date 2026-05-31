@@ -4,7 +4,11 @@ import { prisma } from '@/lib/prisma';
 export async function GET() {
   try {
     const exercises = await prisma.exercise.findMany({ orderBy: { name: 'asc' } });
-    return NextResponse.json(exercises);
+    return NextResponse.json(exercises, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+      },
+    });
   } catch {
     return NextResponse.json({ error: 'Błąd serwera' }, { status: 500 });
   }
