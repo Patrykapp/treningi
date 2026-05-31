@@ -167,6 +167,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
   const [saving, setSaving] = useState(false);
 
   const [saveAsUserId, setSaveAsUserId] = useState('');
+  const [existingSessionId, setExistingSessionId] = useState<string | null>(null);
 
   const [showTechnika, setShowTechnika] = useState(false);
   const [linkedDb, setLinkedDb] = useState<DbExercise | null>(null);
@@ -211,6 +212,16 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
     fetch(`/api/entries?exerciseId=${id}&userId=${compareUserId}`)
       .then(r => r.json()).then(d => setCompareEntries(Array.isArray(d) ? d : []));
   }, [compareUserId, id]);
+
+  // Check if a session already exists for the chosen date
+  useEffect(() => {
+    if (!authUserId || !formDate || !showForm) return;
+    const targetId = saveAsUserId === 'all' ? authUserId : (saveAsUserId || authUserId);
+    fetch(`/api/sessions?date=${formDate}&userId=${targetId}&limit=1`)
+      .then(r => r.json())
+      .then(d => setExistingSessionId(Array.isArray(d) && d.length > 0 ? d[0].id : null))
+      .catch(() => setExistingSessionId(null));
+  }, [formDate, saveAsUserId, authUserId, showForm]);
 
   useEffect(() => {
     if (!showTechnika || linkedDb || loadingSuggestions || suggestions.length > 0 || !exercise) return;
@@ -279,13 +290,48 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
     else setToast({ message: 'Błąd dodawania', type: 'error' });
   };
 
+  const buildEntry = () => {
+    const sd = formCustomSets && formSetsData.length > 0 ? formSetsData : [];
+    return { exerciseId: id, sets: formSets, reps: formReps, weight: formWeight,
+      rpe: formRpe ? parseFloat(formRpe) : undefined, comment: formComment || undefined, setsData: sd };
+  };
+
+  const handleAddToExisting = async () => {
+    if (!existingSessionId) return;
+    setSaving(true);
+    const entry = buildEntry();
+    const targetIds: string[] = saveAsUserId === 'all' ? users.map(u => u.id) : [saveAsUserId || authUserId || ''];
+    // For "all" we need to find each user's session for this date
+    let allOk = true;
+    if (saveAsUserId === 'all') {
+      for (const uid of targetIds) {
+        const sessRes = await fetch(`/api/sessions?date=${formDate}&userId=${uid}&limit=1`).then(r => r.json());
+        const sid = Array.isArray(sessRes) && sessRes.length > 0 ? sessRes[0].id : null;
+        if (sid) {
+          const res = await fetch(`/api/sessions/${sid}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entry }) });
+          if (!res.ok) allOk = false;
+        } else {
+          const res = await fetch('/api/sessions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: formDate, notes: '', targetUserId: uid, entries: [entry] }) });
+          if (!res.ok) allOk = false;
+        }
+      }
+    } else {
+      const res = await fetch(`/api/sessions/${existingSessionId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entry }) });
+      if (!res.ok) allOk = false;
+    }
+    if (allOk) {
+      setToast({ message: 'Dodano do treningu z tego dnia!', type: 'success' });
+      setShowForm(false);
+      loadData();
+    } else {
+      setToast({ message: 'Błąd zapisu', type: 'error' });
+    }
+    setSaving(false);
+  };
+
   const handleSaveAlone = async () => {
     setSaving(true);
-    const sd = formCustomSets && formSetsData.length > 0 ? formSetsData : [];
-    const entry = { exerciseId: id, sets: formSets, reps: formReps, weight: formWeight,
-      rpe: formRpe ? parseFloat(formRpe) : undefined, comment: formComment || undefined, setsData: sd };
-
-    // Ustal listę użytkowników do zapisu
+    const entry = buildEntry();
     const targetIds: string[] = saveAsUserId === 'all'
       ? users.map(u => u.id)
       : [saveAsUserId || authUserId || ''];
@@ -451,16 +497,34 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                 </div>
               </div>
             )}
+            {existingSessionId && (
+              <p className="text-xs text-amber-600 bg-amber-50 rounded-xl px-3 py-2 text-center font-medium">
+                ⚠️ Masz już trening z tego dnia
+              </p>
+            )}
             <div className="flex gap-2">
               {activeSession.getId() && (
                 <button onClick={handleAddToDraft} className="flex-1 bg-green-600 text-white py-2 rounded-xl text-sm font-medium">
                   Dodaj do treningu
                 </button>
               )}
-              <button onClick={handleSaveAlone} disabled={saving}
-                className="flex-1 bg-blue-600 text-white py-2 rounded-xl text-sm font-medium disabled:opacity-50">
-                {saving ? 'Zapisuję...' : 'Zapisz osobno'}
-              </button>
+              {existingSessionId ? (
+                <>
+                  <button onClick={handleAddToExisting} disabled={saving}
+                    className="flex-1 bg-blue-600 text-white py-2 rounded-xl text-sm font-medium disabled:opacity-50">
+                    {saving ? 'Zapisuję...' : '+ Dodaj do istniejącego'}
+                  </button>
+                  <button onClick={handleSaveAlone} disabled={saving}
+                    className="flex-1 bg-gray-600 text-white py-2 rounded-xl text-sm font-medium disabled:opacity-50">
+                    Osobno
+                  </button>
+                </>
+              ) : (
+                <button onClick={handleSaveAlone} disabled={saving}
+                  className="flex-1 bg-blue-600 text-white py-2 rounded-xl text-sm font-medium disabled:opacity-50">
+                  {saving ? 'Zapisuję...' : 'Zapisz'}
+                </button>
+              )}
             </div>
           </div>
         )}

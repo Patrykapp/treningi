@@ -8,13 +8,25 @@ interface Props {
   value: string;
   onChange: (id: string) => void;
   placeholder?: string;
-  onAddNew?: () => void; // callback gdy user kliknie "Dodaj nowe ćwiczenie"
+  onAddNew?: () => void;
 }
+
+function normalizeMuscle(raw: string | null | undefined): string {
+  if (!raw) return 'Inne';
+  return raw.replace(/\s*\(.*?\)/g, '').trim() || 'Inne';
+}
+
+const GROUP_ORDER = [
+  'Klatka piersiowa', 'Plecy', 'Barki', 'Biceps', 'Triceps',
+  'Nogi', 'Brzuch', 'Cardio', 'Inne',
+];
 
 export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybierz ćwiczenie...', onAddNew }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [focusedIdx, setFocusedIdx] = useState(-1);
+  // collapsed groups: track which are CLOSED (default: all open)
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -23,7 +35,7 @@ export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybi
 
   const filtered = search
     ? exercises.filter(e => e.name.toLowerCase().includes(search.toLowerCase()))
-    : exercises;
+    : [];
 
   const close = useCallback(() => {
     setOpen(false);
@@ -56,12 +68,23 @@ export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybi
     setSearch('');
   };
 
+  const toggleGroup = (group: string) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(group)) next.delete(group);
+      else next.add(group);
+      return next;
+    });
+  };
+
+  // Keyboard nav applies only to flat search results
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!open) {
       if (e.key === 'Enter' || e.key === 'ArrowDown') { setOpen(true); setTimeout(() => inputRef.current?.focus(), 60); }
       return;
     }
     if (e.key === 'Escape') { close(); return; }
+    if (!search) return;
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setFocusedIdx(i => Math.min(i + 1, filtered.length - 1));
@@ -73,13 +96,22 @@ export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybi
     }
   };
 
-  // Scroll focused item into view
   useEffect(() => {
     if (focusedIdx >= 0 && listRef.current) {
-      const item = listRef.current.children[focusedIdx] as HTMLElement;
-      item?.scrollIntoView({ block: 'nearest' });
+      const items = listRef.current.querySelectorAll('[data-exercise-item]');
+      (items[focusedIdx] as HTMLElement)?.scrollIntoView({ block: 'nearest' });
     }
   }, [focusedIdx]);
+
+  // Build grouped structure
+  const grouped: Record<string, Exercise[]> = {};
+  for (const ex of exercises) {
+    const g = normalizeMuscle(ex.muscleGroup);
+    if (!grouped[g]) grouped[g] = [];
+    grouped[g].push(ex);
+  }
+  const groupKeys = GROUP_ORDER.filter(g => grouped[g])
+    .concat(Object.keys(grouped).filter(g => !GROUP_ORDER.includes(g)).sort());
 
   return (
     <div ref={containerRef} className="relative">
@@ -109,6 +141,7 @@ export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybi
 
       {open && (
         <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-xl shadow-xl mt-1 overflow-hidden">
+          {/* Search input */}
           <div className="p-2 border-b border-gray-100 relative">
             <input
               ref={inputRef}
@@ -129,39 +162,85 @@ export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybi
               </button>
             )}
           </div>
-          <div ref={listRef} className="max-h-60 overflow-y-auto">
-            {filtered.length === 0 ? (
-              <div className="text-center py-4 text-sm text-gray-500">
-                <p>Brak wyników dla &quot;{search}&quot;</p>
-                {onAddNew && (
+
+          <div ref={listRef} className="max-h-72 overflow-y-auto">
+            {search ? (
+              // ── Flat search results ──────────────────────────
+              filtered.length === 0 ? (
+                <div className="text-center py-4 text-sm text-gray-500">
+                  <p>Brak wyników dla &quot;{search}&quot;</p>
+                  {onAddNew && (
+                    <button
+                      type="button"
+                      onClick={() => { close(); onAddNew(); }}
+                      className="mt-2 text-blue-600 font-medium hover:underline"
+                    >
+                      + Dodaj nowe ćwiczenie
+                    </button>
+                  )}
+                </div>
+              ) : (
+                filtered.map((ex, i) => (
                   <button
+                    key={ex.id}
+                    data-exercise-item
                     type="button"
-                    onClick={() => { close(); onAddNew(); }}
-                    className="mt-2 text-blue-600 font-medium hover:underline"
+                    onClick={() => handleSelect(ex.id)}
+                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors border-t border-gray-50 first:border-t-0 ${
+                      i === focusedIdx
+                        ? 'bg-blue-100 text-blue-800'
+                        : ex.id === value
+                          ? 'bg-blue-50 text-blue-700 font-semibold'
+                          : 'text-gray-900 hover:bg-gray-50'
+                    }`}
                   >
-                    + Dodaj nowe ćwiczenie
+                    {ex.id === value && <span className="mr-1.5">✓</span>}
+                    {ex.name}
+                    {ex.muscleGroup && (
+                      <span className="ml-1.5 text-xs text-gray-400">{normalizeMuscle(ex.muscleGroup)}</span>
+                    )}
                   </button>
-                )}
-              </div>
+                ))
+              )
             ) : (
-              filtered.map((ex, i) => (
-                <button
-                  key={ex.id}
-                  type="button"
-                  onClick={() => handleSelect(ex.id)}
-                  className={`w-full text-left px-4 py-3 text-sm transition-colors ${
-                    i > 0 ? 'border-t border-gray-50' : ''
-                  } ${
-                    i === focusedIdx
-                      ? 'bg-blue-100 text-blue-800'
-                      : ex.id === value
-                        ? 'bg-blue-50 text-blue-700 font-semibold'
-                        : 'text-gray-900 hover:bg-gray-50 active:bg-gray-100'
-                  }`}
-                >
-                  {ex.id === value && <span className="mr-2">✓</span>}{ex.name}
-                </button>
-              ))
+              // ── Grouped view ─────────────────────────────────
+              groupKeys.map(group => {
+                const isCollapsed = collapsedGroups.has(group);
+                const groupExercises = grouped[group];
+                const hasSelected = groupExercises.some(e => e.id === value);
+                return (
+                  <div key={group}>
+                    {/* Group header */}
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(group)}
+                      className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold uppercase tracking-wide border-b border-gray-100 sticky top-0 z-10 ${
+                        hasSelected ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-500'
+                      }`}
+                    >
+                      <span>{group} <span className="font-normal opacity-60">({groupExercises.length})</span></span>
+                      <span className="text-gray-400">{isCollapsed ? '▸' : '▾'}</span>
+                    </button>
+                    {/* Exercises in group */}
+                    {!isCollapsed && groupExercises.map(ex => (
+                      <button
+                        key={ex.id}
+                        data-exercise-item
+                        type="button"
+                        onClick={() => handleSelect(ex.id)}
+                        className={`w-full text-left px-4 py-2.5 text-sm border-t border-gray-50 transition-colors ${
+                          ex.id === value
+                            ? 'bg-blue-50 text-blue-700 font-semibold'
+                            : 'text-gray-900 hover:bg-gray-50'
+                        }`}
+                      >
+                        {ex.id === value && <span className="mr-1.5">✓</span>}
+                        {ex.name}
+                      </button>
+                    ))}
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
