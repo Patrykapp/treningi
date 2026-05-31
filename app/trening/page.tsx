@@ -12,7 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 interface EntryRow extends NewEntryForm {
   key: string;
   customSets: boolean;
-  bodyweight: boolean; // ćwiczenie własnym ciężarem – brak pola ciężaru
+  bodyweight: boolean;
 }
 
 interface Template {
@@ -42,8 +42,9 @@ function TreningPage() {
   const [templateName, setTemplateName] = useState('');
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
   const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
-  const [saveAsUserId, setSaveAsUserId] = useState('');
-  const [existingSessionId, setExistingSessionId] = useState<string | null>(null); // sesja z tej samej daty
+  // null = zalogowany user, 'all' = wszyscy, string = konkretny userId
+  const [saveAsUserId, setSaveAsUserId] = useState<string | null>(null);
+  const [existingSessionId, setExistingSessionId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     const [exRes, tplRes, usersRes] = await Promise.all([
@@ -68,7 +69,8 @@ function TreningPage() {
         }, i: number) => {
           const sd: SetData[] = Array.isArray(e.setsData) && e.setsData.length > 0 ? e.setsData : [];
           return { key: String(i), exerciseId: e.exerciseId, sets: e.sets, reps: e.reps, weight: e.weight,
-            rpe: e.rpe || undefined, comment: e.comment || undefined, setsData: sd, customSets: sd.length > 0, bodyweight: e.weight === 0 && sd.every(s => s.weight === 0) };
+            rpe: e.rpe || undefined, comment: e.comment || undefined, setsData: sd, customSets: sd.length > 0,
+            bodyweight: e.weight === 0 && sd.every(s => s.weight === 0) };
         }));
         return;
       }
@@ -87,7 +89,8 @@ function TreningPage() {
         }, i: number) => {
           const sd: SetData[] = Array.isArray(e.setsData) && e.setsData.length > 0 ? e.setsData : [];
           return { key: String(i), exerciseId: e.exerciseId, sets: e.sets, reps: e.reps, weight: e.weight,
-            rpe: e.rpe || undefined, comment: e.comment || undefined, setsData: sd, customSets: sd.length > 0, bodyweight: e.weight === 0 && sd.every(s => s.weight === 0) };
+            rpe: e.rpe || undefined, comment: e.comment || undefined, setsData: sd, customSets: sd.length > 0,
+            bodyweight: e.weight === 0 && sd.every(s => s.weight === 0) };
         }));
       }
       sessionStorage.removeItem('editSessionId');
@@ -99,16 +102,12 @@ function TreningPage() {
   // Sprawdź czy istnieje sesja z wybranej daty (dla wybranego użytkownika)
   useEffect(() => {
     if (editingSession) { setExistingSessionId(null); return; }
-    const targetId = saveAsUserId || authUserId;
+    const targetId = saveAsUserId === 'all' ? authUserId : (saveAsUserId || authUserId);
     if (!targetId || !date) return;
     const check = async () => {
       const res = await fetch(`/api/sessions?date=${date}&userId=${targetId}&limit=1`);
       const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        setExistingSessionId(data[0].id);
-      } else {
-        setExistingSessionId(null);
-      }
+      setExistingSessionId(Array.isArray(data) && data.length > 0 ? data[0].id : null);
     };
     check();
   }, [date, saveAsUserId, authUserId, editingSession]);
@@ -125,7 +124,8 @@ function TreningPage() {
     }, i: number) => {
       const sd: SetData[] = Array.isArray(e.setsData) && e.setsData.length > 0 ? e.setsData : [];
       return { key: String(Date.now() + i), exerciseId: e.exerciseId, sets: e.sets, reps: e.reps,
-        weight: e.weight, rpe: e.rpe || undefined, comment: e.comment || undefined, setsData: sd, customSets: sd.length > 0, bodyweight: false };
+        weight: e.weight, rpe: e.rpe || undefined, comment: e.comment || undefined, setsData: sd,
+        customSets: sd.length > 0, bodyweight: false };
     }));
     setToast({ message: 'Skopiowano ostatni trening', type: 'success' });
   };
@@ -219,7 +219,6 @@ function TreningPage() {
         if (lastEmpty) {
           return prev.map(e => e.key === lastEmpty.key ? { ...e, exerciseId: ex.id } : e);
         }
-        // Brak pustego wiersza — dodaj nowy z tym ćwiczeniem
         return [...prev, { key: String(Date.now()), exerciseId: ex.id, sets: 3, reps: 10, weight: 0, customSets: false, setsData: [], bodyweight: false }];
       });
       setToast({ message: `Dodano "${ex.name}" i wybrano w formularzu`, type: 'success' });
@@ -280,19 +279,46 @@ function TreningPage() {
     if (!validateEntries()) return;
     setSaving(true);
     try {
-      const url = editingSession ? `/api/sessions/${editingSession}` : '/api/sessions';
-      const method = editingSession ? 'PUT' : 'POST';
-      const res = await fetch(url, {
-        method, headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date, notes, entries, targetUserId: saveAsUserId || undefined }),
-      });
-      if (res.ok) {
+      if (editingSession) {
+        // Edycja istniejącej sesji
+        const res = await fetch(`/api/sessions/${editingSession}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date, notes, entries }),
+        });
+        if (res.ok) {
+          activeSession.clear();
+          setToast({ message: 'Trening zaktualizowany!', type: 'success' });
+          setTimeout(() => router.push('/'), 1500);
+        } else {
+          const err = await res.json();
+          setToast({ message: err.error || 'Błąd zapisu', type: 'error' });
+        }
+        return;
+      }
+
+      // Nowy trening — ustal listę użytkowników do zapisu
+      const targetUserIds: string[] = saveAsUserId === 'all'
+        ? users.map(u => u.id)
+        : [saveAsUserId || authUserId || ''];
+
+      let allOk = true;
+      for (const uid of targetUserIds) {
+        const res = await fetch('/api/sessions', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date, notes, entries, targetUserId: uid }),
+        });
+        if (!res.ok) { allOk = false; }
+      }
+
+      if (allOk) {
         activeSession.clear();
-        setToast({ message: editingSession ? 'Trening zaktualizowany!' : 'Trening zapisany!', type: 'success' });
+        const msg = saveAsUserId === 'all'
+          ? `Trening zapisany dla ${users.map(u => u.name).join(' i ')}!`
+          : 'Trening zapisany!';
+        setToast({ message: msg, type: 'success' });
         setTimeout(() => router.push('/'), 1500);
       } else {
-        const err = await res.json();
-        setToast({ message: err.error || 'Błąd zapisu', type: 'error' });
+        setToast({ message: 'Błąd zapisu', type: 'error' });
       }
     } finally {
       setSaving(false);
@@ -380,7 +406,6 @@ function TreningPage() {
               onChange={val => updateEntry(entry.key, 'exerciseId', val)}
               onAddNew={() => setShowNewEx(true)}
             />
-            {/* Przełączniki */}
             <div className="flex gap-4 items-center">
               <div className="flex gap-2 items-center">
                 <label className="text-xs text-gray-500">Rozpisz serie osobno</label>
@@ -445,7 +470,8 @@ function TreningPage() {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-xs text-gray-500 mb-1">RPE (opcjonalne)</label>
-                <input type="number" min="1" max="10" step="0.5" value={entry.rpe || ''} onChange={e => updateEntry(entry.key, 'rpe', parseFloat(e.target.value) || 0)}
+                <input type="number" min="1" max="10" step="0.5" value={entry.rpe || ''}
+                  onChange={e => updateEntry(entry.key, 'rpe', parseFloat(e.target.value) || 0)}
                   placeholder="1-10" className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm" />
               </div>
               <div>
@@ -464,4 +490,82 @@ function TreningPage() {
 
         {showNewEx ? (
           <div className="bg-white rounded-2xl p-4 flex gap-2">
-            <input value={newExName} onC
+            <input value={newExName} onChange={e => setNewExName(e.target.value)} placeholder="Nazwa ćwiczenia"
+              className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm" />
+            <button type="button" onClick={addNewExercise} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium">Dodaj</button>
+            <button type="button" onClick={() => setShowNewEx(false)} className="text-gray-400 px-2">✕</button>
+          </div>
+        ) : (
+          <button type="button" onClick={() => setShowNewEx(true)}
+            className="w-full text-sm text-gray-500 py-2">
+            + Nowe ćwiczenie w bibliotece
+          </button>
+        )}
+
+        {users.length > 1 && !editingSession && (
+          <div className="bg-white rounded-2xl p-4 space-y-2">
+            <label className="text-sm font-medium text-gray-700 block">Zapisz dla</label>
+            <div className="flex gap-2">
+              {users.map(u => (
+                <button key={u.id} type="button" onClick={() => setSaveAsUserId(u.id)}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
+                    saveAsUserId === u.id
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white text-gray-600 border-gray-200'
+                  }`}>
+                  {u.name}
+                </button>
+              ))}
+              <button type="button" onClick={() => setSaveAsUserId('all')}
+                className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
+                  saveAsUserId === 'all'
+                    ? 'bg-green-600 text-white border-green-600'
+                    : 'bg-white text-gray-600 border-gray-200'
+                }`}>
+                Oboje 👥
+              </button>
+            </div>
+            {saveAsUserId === 'all' && (
+              <p className="text-xs text-green-700 bg-green-50 rounded-lg px-3 py-1.5">
+                Trening zostanie zapisany dla wszystkich użytkowników
+              </p>
+            )}
+          </div>
+        )}
+
+        {existingSessionId && !editingSession ? (
+          <div className="space-y-2">
+            <p className="text-sm text-center text-amber-600 font-medium bg-amber-50 rounded-xl py-2 px-3">
+              ⚠️ Masz już trening z tego dnia
+            </p>
+            <div className="flex gap-2">
+              <button type="button" onClick={handleSaveTogether}
+                disabled={saving || !entries.some(e => e.exerciseId)}
+                className="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-bold text-base disabled:opacity-50">
+                {saving ? 'Zapisuję...' : '+ Dodaj do istniejącego'}
+              </button>
+              <button type="submit"
+                disabled={saving || !entries.some(e => e.exerciseId)}
+                className="flex-1 bg-gray-700 text-white py-4 rounded-2xl font-bold text-base disabled:opacity-50">
+                Zapisz osobno
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button type="submit" disabled={saving || !entries.some(e => e.exerciseId)}
+            className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-lg disabled:opacity-50">
+            {saving ? 'Zapisuję...' : editingSession ? 'Aktualizuj trening' : 'Zapisz trening'}
+          </button>
+        )}
+      </form>
+    </div>
+  );
+}
+
+export default function TreningPageWrapper() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-500">Ładowanie...</div>}>
+      <TreningPage />
+    </Suspense>
+  );
+}
