@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { WorkoutSession, Exercise } from '@/types';
+import { WorkoutSession } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { Toast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -11,18 +11,46 @@ import { useAuth } from '@/hooks/useAuth';
 
 interface SessionRating {
   score: number;
+  stars: number;
   label: string;
   emoji: string;
   prCount: number;
   prExerciseIds: string[];
   details: string[];
+  tips: string[];
+  breakdown: {
+    volume: { score: number; label: string; current: number; avg: number };
+    progress: { score: number; label: string };
+    rpe: { score: number; label: string; value: number } | null;
+  };
+}
+
+// Grupuje entries sesji po grupie mięśniowej
+function groupByMuscle(entries: WorkoutSession['entries']): Record<string, WorkoutSession['entries']> {
+  const groups: Record<string, WorkoutSession['entries']> = {};
+  for (const entry of entries) {
+    const key = entry.exercise?.muscleGroup || 'Inne';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(entry);
+  }
+  return groups;
+}
+
+// Renderuje gwiazdki 1-5
+function Stars({ count, max = 5 }: { count: number; max?: number }) {
+  return (
+    <span className="text-yellow-400 text-base leading-none">
+      {'★'.repeat(Math.max(0, count))}
+      <span className="text-gray-300">{'★'.repeat(Math.max(0, max - count))}</span>
+    </span>
+  );
 }
 
 export default function HistoriaPage() {
   const router = useRouter();
   const { isLoggedIn } = useAuth();
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
-  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [exercises, setExercises] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterExerciseId, setFilterExerciseId] = useState('');
   const [filterFrom, setFilterFrom] = useState('');
@@ -47,7 +75,6 @@ export default function HistoriaPage() {
       : (Array.isArray(data) ? data : []);
     setSessions(filtered);
     setLoading(false);
-    // Pobierz oceny dla załadowanych sesji (lazy, po jednej)
     const sessionList = Array.isArray(data) ? data : [];
     for (const s of sessionList.slice(0, 20)) {
       fetch(`/api/sessions/${s.id}/rating`)
@@ -72,10 +99,6 @@ export default function HistoriaPage() {
       setToast({ message: 'Błąd usuwania', type: 'error' });
     }
     setConfirmDelete(null);
-  };
-
-  const handleEdit = (sessionId: string) => {
-    router.push(`/trening?sessionId=${sessionId}`);
   };
 
   const clearFilters = () => {
@@ -133,8 +156,7 @@ export default function HistoriaPage() {
               {filterExerciseId || filterFrom || filterTo ? 'Brak wyników dla wybranych filtrów.' : 'Nie masz jeszcze żadnych treningów.'}
             </p>
             {!filterExerciseId && !filterFrom && !filterTo && (
-              <Link href="/trening"
-                className="inline-block bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold text-sm">
+              <Link href="/trening" className="inline-block bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold text-sm">
                 + Dodaj pierwszy trening
               </Link>
             )}
@@ -142,85 +164,148 @@ export default function HistoriaPage() {
         ) : (
           <div className="space-y-3">
             <p className="text-sm text-gray-700 font-medium">{sessions.length} treningów</p>
-            {sessions.map(session => (
-              <div key={session.id} className="bg-white rounded-2xl p-4 shadow-sm">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <span className="font-bold text-gray-900">{formatDate(session.date)}</span>
-                    <span className="ml-2 text-sm text-blue-600 font-medium">{session.user?.name}</span>
+            {sessions.map(session => {
+              const rating = ratings[session.id];
+              const muscleGroups = groupByMuscle(session.entries);
+              const isExpanded = expandedRating === session.id;
+
+              return (
+                <div key={session.id} className="bg-white rounded-2xl p-4 shadow-sm">
+                  {/* Nagłówek karty */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <span className="font-bold text-gray-900">{formatDate(session.date)}</span>
+                      <span className="ml-2 text-sm text-blue-600 font-medium">{session.user?.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {/* Gwiazdki oceny */}
+                      {rating ? (
+                        <button
+                          onClick={() => setExpandedRating(isExpanded ? null : session.id)}
+                          className="flex items-center gap-1.5 bg-gray-50 rounded-xl px-2.5 py-1.5"
+                          title="Kliknij aby zobaczyć ocenę i wskazówki"
+                        >
+                          <Stars count={rating.stars} />
+                          {rating.prCount > 0 && (
+                            <span className="text-xs bg-yellow-100 text-yellow-700 rounded px-1 font-semibold">🏆×{rating.prCount}</span>
+                          )}
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-1 px-2 py-1">
+                          <Stars count={0} />
+                        </div>
+                      )}
+                      {isLoggedIn && (
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => router.push(`/trening?sessionId=${session.id}`)}
+                            className="p-2 rounded-xl text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                            title="Edytuj trening"
+                          >✏️</button>
+                          <button
+                            onClick={() => setConfirmDelete(session.id)}
+                            className="p-2 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                            title="Usuń trening"
+                          >🗑️</button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {ratings[session.id] && (
-                      <button
-                        onClick={() => setExpandedRating(expandedRating === session.id ? null : session.id)}
-                        className="flex items-center gap-1 bg-gray-50 rounded-xl px-2 py-1 text-sm font-semibold"
-                        title="Ocena treningu — kliknij aby zobaczyć szczegóły"
-                      >
-                        <span>{ratings[session.id].emoji}</span>
-                        <span className="text-gray-700">{ratings[session.id].score}/10</span>
-                        {ratings[session.id].prCount > 0 && (
-                          <span className="ml-1 text-xs bg-yellow-100 text-yellow-700 rounded px-1">🏆×{ratings[session.id].prCount}</span>
-                        )}
-                      </button>
-                    )}
-                    {isLoggedIn && (
-                      <div className="flex gap-1">
-                        <button
-                          onClick={() => handleEdit(session.id)}
-                          className="p-2 rounded-xl text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                          title="Edytuj trening"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          onClick={() => setConfirmDelete(session.id)}
-                          className="p-2 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                          title="Usuń trening"
-                        >
-                          🗑️
-                        </button>
+
+                  {/* Rozwinięta ocena ze wskazówkami */}
+                  {isExpanded && rating && (
+                    <div className="bg-gray-50 rounded-xl p-3 mb-3 space-y-3">
+                      {/* Nagłówek oceny */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl">{rating.emoji}</span>
+                        <div>
+                          <p className="font-bold text-gray-800">{rating.label} — <Stars count={rating.stars} /> <span className="text-sm text-gray-500 font-normal">({rating.score}/10)</span></p>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                </div>
-                {expandedRating === session.id && ratings[session.id] && (
-                  <div className="bg-gray-50 rounded-xl p-3 mb-3 text-sm space-y-1">
-                    <p className="font-semibold text-gray-700">{ratings[session.id].emoji} {ratings[session.id].label} — {ratings[session.id].score}/10</p>
-                    {ratings[session.id].details.map((d, i) => (
-                      <p key={i} className="text-gray-600">{d}</p>
+
+                      {/* Składowe */}
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="bg-white rounded-lg p-2">
+                          <p className="text-gray-500 mb-0.5">Wolumen</p>
+                          <p className="font-semibold text-gray-800">{rating.breakdown.volume.current.toLocaleString()} kg</p>
+                          <p className="text-gray-400">śr. {rating.breakdown.volume.avg.toLocaleString()} kg</p>
+                        </div>
+                        <div className="bg-white rounded-lg p-2">
+                          <p className="text-gray-500 mb-0.5">Progres</p>
+                          <p className="font-semibold text-gray-800">{rating.breakdown.progress.score}/10</p>
+                          {rating.prCount > 0 && <p className="text-yellow-600">🏆 {rating.prCount} PR!</p>}
+                        </div>
+                        {rating.breakdown.rpe && (
+                          <div className="bg-white rounded-lg p-2">
+                            <p className="text-gray-500 mb-0.5">Intensywność</p>
+                            <p className="font-semibold text-gray-800">RPE {rating.breakdown.rpe.value}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Co się udało */}
+                      {rating.details.length > 0 && (
+                        <div className="space-y-0.5">
+                          {rating.details.map((d, i) => (
+                            <p key={i} className="text-xs text-gray-600">{d}</p>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Wskazówki do poprawy */}
+                      {rating.tips.length > 0 && (
+                        <div className="border-t border-gray-200 pt-2">
+                          <p className="text-xs font-semibold text-gray-500 mb-1.5">Jak poprawić ocenę:</p>
+                          <div className="space-y-1">
+                            {rating.tips.map((tip, i) => (
+                              <p key={i} className="text-xs text-gray-700 bg-white rounded-lg px-2.5 py-1.5">{tip}</p>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {session.notes && <p className="text-sm text-gray-700 italic mb-2">{session.notes}</p>}
+
+                  {/* Ćwiczenia pogrupowane po mięśniach */}
+                  <div className="space-y-2">
+                    {Object.entries(muscleGroups).map(([muscle, entries]) => (
+                      <div key={muscle}>
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">{muscle}</p>
+                        <div className="space-y-1">
+                          {entries.map(entry => (
+                            <div key={entry.id} className="flex items-center justify-between py-0.5">
+                              <Link href={`/cwiczenie/${entry.exerciseId}`} className="text-sm font-medium text-gray-900 flex items-center gap-1">
+                                {entry.exercise?.name}
+                                {rating?.prExerciseIds?.includes(entry.exerciseId) && (
+                                  <span title="Nowy rekord!">🏆</span>
+                                )}
+                              </Link>
+                              <div className="text-sm text-gray-700 text-right">
+                                {Array.isArray(entry.setsData) && entry.setsData.length > 0 ? (
+                                  <span>
+                                    {(entry.setsData as { reps: number; weight: number }[]).map((s, i) => (
+                                      <span key={i}>
+                                        {i > 0 && <span className="text-gray-400 mx-0.5">·</span>}
+                                        {s.reps}x<strong>{s.weight}kg</strong>
+                                      </span>
+                                    ))}
+                                  </span>
+                                ) : (
+                                  <span>{entry.sets}x{entry.reps} @ <strong>{entry.weight}kg</strong></span>
+                                )}
+                                {entry.rpe && <span className="ml-1 text-xs text-gray-500">RPE {entry.rpe}</span>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     ))}
                   </div>
-                )}
-                {session.notes && <p className="text-sm text-gray-700 italic mb-2">{session.notes}</p>}
-                <div className="space-y-1">
-                  {session.entries.map(entry => (
-                    <div key={entry.id} className="flex items-center justify-between py-1">
-                      <Link href={`/cwiczenie/${entry.exerciseId}`} className="text-sm font-medium text-gray-900 flex-1 flex items-center gap-1">
-                        {entry.exercise?.name}
-                        {ratings[session.id]?.prExerciseIds?.includes(entry.exerciseId) && (
-                          <span title="Nowy rekord!">🏆</span>
-                        )}
-                      </Link>
-                      <div className="text-sm text-gray-700 text-right">
-                        {Array.isArray(entry.setsData) && entry.setsData.length > 0 ? (
-                          <span>
-                            {(entry.setsData as { reps: number; weight: number }[]).map((s, i) => (
-                              <span key={i}>
-                                {i > 0 && <span className="text-gray-400 mx-0.5">·</span>}
-                                {s.reps}x<strong>{s.weight}kg</strong>
-                              </span>
-                            ))}
-                          </span>
-                        ) : (
-                          <span>{entry.sets}x{entry.reps} @ <strong>{entry.weight}kg</strong></span>
-                        )}
-                        {entry.rpe && <span className="ml-1 text-xs text-gray-500">RPE {entry.rpe}</span>}
-                      </div>
-                    </div>
-                  ))}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

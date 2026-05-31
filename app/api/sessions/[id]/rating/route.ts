@@ -141,8 +141,47 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     else if (clampedScore >= 4) { label = 'Normalny'; emoji = '👍'; }
     else { label = 'Słaby'; emoji = '😴'; }
 
+    // ---- Wskazówki do poprawy ----
+    const tips: string[] = [];
+
+    if (volumeScore < 5) {
+      if (avgVolume > 0) {
+        tips.push(`📦 Wolumen był o ${Math.round((1 - currentVolume / avgVolume) * 100)}% niższy niż Twoja średnia — spróbuj dodać 1 serię do każdego ćwiczenia`);
+      } else {
+        tips.push('📦 Dodaj więcej serii lub powtórzeń aby zwiększyć wolumen');
+      }
+    }
+
+    if (progressPts < 5 && progressEntries.length > 0) {
+      tips.push('📈 W kilku ćwiczeniach wolumen był niższy niż ostatnio — spróbuj zwiększyć ciężar o 2.5kg lub dodaj 1 powtórzenie w każdej serii');
+    }
+
+    if (prCount === 0 && history.length >= 3) {
+      tips.push('🏆 Brak nowych rekordów — wybierz jedno ćwiczenie i pobij PR nawet o 1kg');
+    }
+
+    if (avgRpe === null) {
+      tips.push('⚡ Wpisuj RPE po każdym ćwiczeniu — pomoże to lepiej oceniać intensywność treningu');
+    } else if (avgRpe < 6) {
+      tips.push(`⚡ Średnie RPE wyniosło tylko ${avgRpe.toFixed(1)} — trening był za łatwy, zwiększ ciężar lub skróć przerwy`);
+    } else if (avgRpe > 9) {
+      tips.push(`⚡ Średnie RPE ${avgRpe.toFixed(1)} — bardzo wysokie, upewnij się że dobrze regenerujesz`);
+    }
+
+    if (tips.length === 0 && clampedScore >= 8) {
+      tips.push('✅ Świetny trening! Utrzymaj ten poziom i spróbuj bić kolejne rekordy');
+    }
+
+    // Składowe score dla przejrzystości
+    const breakdown = {
+      volume: { score: volumeScore, label: 'Wolumen', current: Math.round(currentVolume), avg: Math.round(avgVolume) },
+      progress: { score: Math.round(progressPts), label: 'Progres' },
+      rpe: avgRpe !== null ? { score: rpeScore, label: 'Intensywność (RPE)', value: Math.round(avgRpe * 10) / 10 } : null,
+    };
+
     return NextResponse.json({
       score: clampedScore,
+      stars: Math.round(clampedScore / 2), // 1-5 gwiazdek
       label,
       emoji,
       currentVolume: Math.round(currentVolume),
@@ -151,6 +190,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       prCount,
       prExerciseIds,
       details: progressDetail,
+      tips,
+      breakdown,
     });
   } catch (e) {
     console.error(e);
