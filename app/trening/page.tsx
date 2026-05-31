@@ -116,7 +116,7 @@ function TreningPage() {
   const copyLastWorkout = async () => {
     const sessions = await fetch('/api/sessions?limit=1').then(r => r.json());
     if (!Array.isArray(sessions) || !sessions.length) {
-      setToast({ message: 'Brak poprzednich treningow', type: 'error' }); return;
+      setToast({ message: 'Brak poprzednich treningów', type: 'error' }); return;
     }
     const last = sessions[0];
     setEntries(last.entries.map((e: {
@@ -136,7 +136,7 @@ function TreningPage() {
       weight: e.weight, customSets: false, setsData: [], bodyweight: false,
     })));
     setShowTemplates(false);
-    setToast({ message: `Zaladowano szablon "${tpl.name}"`, type: 'success' });
+    setToast({ message: `Załadowano szablon "${tpl.name}"`, type: 'success' });
   };
 
   const saveTemplate = async () => {
@@ -213,19 +213,29 @@ function TreningPage() {
     if (res.ok) {
       const ex = await res.json();
       setExercises(prev => [...prev, ex].sort((a, b) => a.name.localeCompare(b.name)));
+      // Automatycznie przypisz nowe ćwiczenie do ostatniego pustego wiersza
+      setEntries(prev => {
+        const lastEmpty = [...prev].reverse().find(e => !e.exerciseId);
+        if (lastEmpty) {
+          return prev.map(e => e.key === lastEmpty.key ? { ...e, exerciseId: ex.id } : e);
+        }
+        // Brak pustego wiersza — dodaj nowy z tym ćwiczeniem
+        return [...prev, { key: String(Date.now()), exerciseId: ex.id, sets: 3, reps: 10, weight: 0, customSets: false, setsData: [], bodyweight: false }];
+      });
+      setToast({ message: `Dodano "${ex.name}" i wybrano w formularzu`, type: 'success' });
       setNewExName(''); setShowNewEx(false);
     }
   };
 
   const validateEntries = (): boolean => {
-    if (!date) { setToast({ message: 'Wybierz date', type: 'error' }); return false; }
+    if (!date) { setToast({ message: 'Wybierz datę', type: 'error' }); return false; }
     for (const entry of entries) {
-      if (!entry.exerciseId) { setToast({ message: 'Wybierz cwiczenie', type: 'error' }); return false; }
+      if (!entry.exerciseId) { setToast({ message: 'Wybierz ćwiczenie', type: 'error' }); return false; }
       if (entry.customSets && (!entry.setsData || entry.setsData.length === 0)) {
-        setToast({ message: 'Dodaj co najmniej jedna serie', type: 'error' }); return false;
+        setToast({ message: 'Dodaj co najmniej jedną serię', type: 'error' }); return false;
       }
       if (!entry.customSets && !entry.weight && !entry.bodyweight) {
-        setToast({ message: 'Podaj ciezar lub zaznacz "własna masa"', type: 'error' }); return false;
+        setToast({ message: 'Podaj ciężar lub zaznacz "Własna masa"', type: 'error' }); return false;
       }
     }
     return true;
@@ -282,7 +292,7 @@ function TreningPage() {
         setTimeout(() => router.push('/'), 1500);
       } else {
         const err = await res.json();
-        setToast({ message: err.error || 'Blad zapisu', type: 'error' });
+        setToast({ message: err.error || 'Błąd zapisu', type: 'error' });
       }
     } finally {
       setSaving(false);
@@ -309,7 +319,7 @@ function TreningPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-1">Notatki (opcjonalne)</label>
-            <input type="text" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Np. dobry dzien, PR na klatkce..."
+            <input type="text" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Np. dobry dzień, PR na klatce..."
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900" />
           </div>
         </div>
@@ -328,14 +338,14 @@ function TreningPage() {
         {showTemplates && (
           <div className="bg-white rounded-2xl p-4 space-y-2">
             {templates.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-2">Brak szablonow</p>
+              <p className="text-sm text-gray-500 text-center py-2">Brak szablonów</p>
             ) : templates.map(tpl => (
               <div key={tpl.id} className="flex items-center justify-between">
                 <button type="button" onClick={() => loadTemplate(tpl)} className="text-sm font-medium text-blue-600 flex-1 text-left">
                   {tpl.name}
                 </button>
                 <button type="button" onClick={() => setTemplates(prev => prev.filter(t => t.id !== tpl.id))}
-                  className="text-red-400 text-xs px-2">usun</button>
+                  className="text-red-400 text-xs px-2">usuń</button>
               </div>
             ))}
             {!showSaveTemplate ? (
@@ -359,20 +369,21 @@ function TreningPage() {
         {entries.map((entry, idx) => (
           <div key={entry.key} className="bg-white rounded-2xl p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-gray-500">Cwiczenie {idx + 1}</span>
+              <span className="text-sm font-bold text-gray-500">Ćwiczenie {idx + 1}</span>
               {entries.length > 1 && (
-                <button type="button" onClick={() => removeEntry(entry.key)} className="text-red-400 text-sm">Usun</button>
+                <button type="button" onClick={() => removeEntry(entry.key)} className="text-red-400 text-sm">Usuń</button>
               )}
             </div>
             <ExerciseSearch
               exercises={exercises}
               value={entry.exerciseId}
               onChange={val => updateEntry(entry.key, 'exerciseId', val)}
+              onAddNew={() => setShowNewEx(true)}
             />
             {/* Przełączniki */}
             <div className="flex gap-4 items-center">
               <div className="flex gap-2 items-center">
-                <label className="text-xs text-gray-500">Serie per-set</label>
+                <label className="text-xs text-gray-500">Rozpisz serie osobno</label>
                 <button type="button" onClick={() => toggleCustomSets(entry.key, !entry.customSets)}
                   className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors ${entry.customSets ? 'bg-blue-600' : 'bg-gray-200'}`}>
                   <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${entry.customSets ? 'translate-x-5' : 'translate-x-1'}`} />
@@ -391,7 +402,7 @@ function TreningPage() {
             </div>
             {!entry.customSets ? (
               <div className={`grid gap-2 ${entry.bodyweight ? 'grid-cols-2' : 'grid-cols-3'}`}>
-                {[['Serie', 'sets'], ['Powt.', 'reps'], ...(!entry.bodyweight ? [['Ciezar kg', 'weight']] : [])].map(([label, field]) => (
+                {[['Serie', 'sets'], ['Powt.', 'reps'], ...(!entry.bodyweight ? [['Ciężar kg', 'weight']] : [])].map(([label, field]) => (
                   <div key={field}>
                     <label className="block text-xs text-gray-500 mb-1">{label}</label>
                     <input
@@ -427,7 +438,7 @@ function TreningPage() {
                 ))}
                 <button type="button" onClick={() => addSet(entry.key)}
                   className="w-full text-sm text-blue-600 border border-dashed border-blue-300 rounded-xl py-2">
-                  + Dodaj serie
+                  + Dodaj serię
                 </button>
               </div>
             )}
@@ -440,7 +451,7 @@ function TreningPage() {
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Komentarz</label>
                 <input type="text" value={entry.comment || ''} onChange={e => updateEntry(entry.key, 'comment', e.target.value)}
-                  placeholder="np. zmeczony..." className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm" />
+                  placeholder="np. zmęczony..." className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm" />
               </div>
             </div>
           </div>
@@ -448,74 +459,9 @@ function TreningPage() {
 
         <button type="button" onClick={addEntry}
           className="w-full bg-white border-2 border-dashed border-gray-300 text-gray-600 py-3 rounded-2xl text-sm font-medium">
-          + Dodaj cwiczenie
+          + Dodaj ćwiczenie
         </button>
 
         {showNewEx ? (
           <div className="bg-white rounded-2xl p-4 flex gap-2">
-            <input value={newExName} onChange={e => setNewExName(e.target.value)} placeholder="Nazwa cwiczenia"
-              className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm" />
-            <button type="button" onClick={addNewExercise} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium">Dodaj</button>
-            <button type="button" onClick={() => setShowNewEx(false)} className="text-gray-400 px-2">X</button>
-          </div>
-        ) : (
-          <button type="button" onClick={() => setShowNewEx(true)}
-            className="w-full text-sm text-gray-500 py-2">
-            + Nowe cwiczenie w bibliotece
-          </button>
-        )}
-
-        {users.length > 1 && !editingSession && (
-          <div className="bg-white rounded-2xl p-4 space-y-2">
-            <label className="text-sm font-medium text-gray-700 block">Zapisz jako</label>
-            <div className="flex gap-2">
-              {users.map(u => (
-                <button key={u.id} type="button" onClick={() => setSaveAsUserId(u.id)}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
-                    (saveAsUserId || authUserId) === u.id
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white text-gray-600 border-gray-200'
-                  }`}>
-                  {u.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {existingSessionId && !editingSession ? (
-          <div className="space-y-2">
-            <p className="text-sm text-center text-amber-600 font-medium bg-amber-50 rounded-xl py-2 px-3">
-              ⚠️ Masz już trening z tego dnia
-            </p>
-            <div className="flex gap-2">
-              <button type="button" onClick={handleSaveTogether}
-                disabled={saving || !entries.some(e => e.exerciseId)}
-                className="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-bold text-base disabled:opacity-50">
-                {saving ? 'Zapisuje...' : '+ Dodaj do istniejącego'}
-              </button>
-              <button type="submit"
-                disabled={saving || !entries.some(e => e.exerciseId)}
-                className="flex-1 bg-gray-700 text-white py-4 rounded-2xl font-bold text-base disabled:opacity-50">
-                Zapisz osobno
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button type="submit" disabled={saving || !entries.some(e => e.exerciseId)}
-            className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-lg disabled:opacity-50">
-            {saving ? 'Zapisuje...' : editingSession ? 'Aktualizuj trening' : 'Zapisz trening'}
-          </button>
-        )}
-      </form>
-    </div>
-  );
-}
-
-export default function TreningPageWrapper() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-500">Ladowanie...</div>}>
-      <TreningPage />
-    </Suspense>
-  );
-}
+            <input value={newExName} onC

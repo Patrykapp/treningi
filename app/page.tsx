@@ -66,9 +66,9 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       <div className="bg-white border-b px-4 py-4 sticky top-0 z-10">
-        <h1 className="text-xl font-bold text-gray-900">Dziennik Treningow</h1>
+        <h1 className="text-xl font-bold text-gray-900">Dziennik Treningów</h1>
         <p className="text-sm text-gray-500">
-          {isLoggedIn ? `Witaj, ${name || ''}` : 'Zaloguj sie aby korzystac'}
+          {isLoggedIn ? `Witaj, ${name || ''}` : 'Zaloguj się aby korzystać'}
         </p>
       </div>
 
@@ -79,7 +79,7 @@ export default function DashboardPage() {
           </Link>
         ) : (
           <Link href="/login" className="block w-full bg-gray-100 text-gray-700 text-center py-4 rounded-2xl font-medium text-base">
-            Zaloguj sie aby dodawac treningi
+            Zaloguj się aby dodawać treningi
           </Link>
         )}
 
@@ -87,16 +87,16 @@ export default function DashboardPage() {
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
               <div className="text-2xl font-bold text-blue-600">{totalCount}</div>
-              <div className="text-xs text-gray-600 font-medium mt-0.5">Treningow</div>
+              <div className="text-xs text-gray-600 font-medium mt-0.5">Treningów</div>
             </div>
             <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
               <div className="text-2xl font-bold text-orange-500">{weeklyCount}</div>
-              <div className="text-xs text-gray-600 font-medium mt-0.5">Ten tydzien</div>
+              <div className="text-xs text-gray-600 font-medium mt-0.5">Ten tydzień</div>
             </div>
             <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
               <div className="text-2xl font-bold text-green-600">{streak}</div>
               <div className="text-xs text-gray-600 font-medium mt-0.5">
-                {streak === 1 ? 'Dzien z rzedu' : 'Dni z rzedu'}
+                {streak === 1 ? 'Dzień z rzędu' : 'Dni z rzędu'}
               </div>
             </div>
           </div>
@@ -105,7 +105,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-3 gap-3">
           {[
             { href: '/historia', icon: '📊', label: 'Historia' },
-            { href: '/cwiczenia', icon: '💪', label: 'Cwiczenia' },
+            { href: '/cwiczenia', icon: '💪', label: 'Ćwiczenia' },
             { href: '/waga', icon: '⚖️', label: 'Waga' },
           ].map(({ href, icon, label }) => (
             <Link key={href} href={href} className="bg-white rounded-2xl p-4 text-center shadow-sm block">
@@ -119,9 +119,14 @@ export default function DashboardPage() {
           <div>
             <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2">Ostatnie treningi</h2>
             {loading ? (
-              <div className="bg-white rounded-2xl p-6 text-center text-gray-400 text-sm">Ladowanie...</div>
+              <div className="bg-white rounded-2xl p-6 text-center text-gray-400 text-sm">Ładowanie...</div>
             ) : sessions.length === 0 ? (
-              <div className="bg-white rounded-2xl p-6 text-center text-gray-400 text-sm">Brak treningow. Zacznij pierwszy!</div>
+              <div className="bg-white rounded-2xl p-6 text-center">
+                <p className="text-gray-400 text-sm mb-3">Brak treningów. Zacznij pierwszy!</p>
+                <Link href="/trening" className="inline-block bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold">
+                  + Dodaj trening
+                </Link>
+              </div>
             ) : (
               <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
                 {sessions.map((session, i) => (
@@ -133,7 +138,7 @@ export default function DashboardPage() {
                     <div>
                       <div className="font-medium text-gray-900 text-sm">{formatDate(session.date)}</div>
                       <div className="text-xs text-gray-500 mt-0.5">
-                        {session.entries?.length || 0} cwiczen
+                        {session.entries?.length || 0} ćwiczeń
                       </div>
                     </div>
                     <span className="text-gray-400">›</span>

@@ -48,7 +48,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="text-6xl mb-4">🏋️</div>
-          <h1 className="text-2xl font-bold text-gray-900">Dziennik Treningow</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Dziennik Treningów</h1>
         </div>
 
         <div className="flex bg-gray-200 rounded-xl p-1 mb-4">
@@ -56,20 +56,20 @@ export default function LoginPage() {
             onClick={() => setMode('code')}
             className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${mode === 'code' ? 'bg-white shadow text-gray-900' : 'text-gray-600'}`}
           >
-            Kod dostepu
+            Kod dostępu
           </button>
           <button
             onClick={() => setMode('email')}
             className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${mode === 'email' ? 'bg-white shadow text-gray-900' : 'text-gray-600'}`}
           >
-            Email + haslo
+            Email + hasło
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-6 shadow-sm space-y-4">
           {mode === 'code' ? (
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Kod dostepu</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">Kod dostępu</label>
               <input
                 type="password"
                 value={code}
@@ -94,7 +94,7 @@ export default function LoginPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">Haslo</label>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Hasło</label>
                 <input
                   type="password"
                   value={password}
@@ -118,7 +118,7 @@ export default function LoginPage() {
             disabled={isDisabled}
             className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-base disabled:opacity-50"
           >
-            {loading ? 'Loguje...' : 'Zaloguj sie'}
+            {loading ? 'Loguję...' : 'Zaloguj się'}
           </button>
         </form>
       </div>

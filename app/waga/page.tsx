@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatDate, formatDateInput } from '@/lib/utils';
 import { Toast } from '@/components/ui/Toast';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useAuth } from '@/hooks/useAuth';
 
 interface BodyWeightEntry {
@@ -25,6 +26,7 @@ export default function WagaPage() {
   const [formWeight, setFormWeight] = useState('');
   const [formNotes, setFormNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const loadEntries = useCallback(async () => {
     setLoading(true);
@@ -63,6 +65,7 @@ export default function WagaPage() {
   const handleDelete = async (id: string) => {
     await fetch(`/api/body-weight/${id}`, { method: 'DELETE' });
     setEntries(prev => prev.filter(e => e.id !== id));
+    setConfirmDeleteId(null);
   };
 
   const chartData = [...entries].reverse().map(e => ({
@@ -79,6 +82,13 @@ export default function WagaPage() {
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      {confirmDeleteId && (
+        <ConfirmDialog
+          isOpen={true}
+          message="Usunąć ten pomiar? Nie można cofnąć."
+          onConfirm={() => handleDelete(confirmDeleteId)}
+          onCancel={() => setConfirmDeleteId(null)}
+        />}
 
       <div className="bg-white border-b px-4 py-4 sticky top-0 z-10">
         <div className="flex items-center gap-3">
@@ -208,8 +218,9 @@ export default function WagaPage() {
                   </div>
                   {isLoggedIn && (
                     <button
-                      onClick={() => handleDelete(entry.id)}
-                      className="text-red-400 text-sm px-2 py-1"
+                      onClick={() => setConfirmDeleteId(entry.id)}
+                      className="p-2 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                      title="Usuń pomiar"
                     >
                       🗑️
                     </button>

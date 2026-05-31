@@ -69,7 +69,7 @@ export default function CwiczeniaPage() {
     <div className="min-h-screen bg-gray-50 pb-20">
       <div className="bg-white border-b px-4 pt-4 pb-3 sticky top-0 z-10">
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-bold text-gray-900">Cwiczenia</h1>
+          <h1 className="text-xl font-bold text-gray-900">Ćwiczenia</h1>
           <button
             onClick={() => setShowOnlyFavorites(o => !o)}
             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${showOnlyFavorites ? 'bg-yellow-400 text-yellow-900' : 'bg-gray-100 text-gray-700'}`}
@@ -118,7 +118,15 @@ export default function CwiczeniaPage() {
         {sorted.length === 0 && (
           <div className="text-center py-12 text-gray-500">
             <p className="text-3xl mb-2">{showOnlyFavorites ? '⭐' : '🔍'}</p>
-            <p>{showOnlyFavorites ? 'Brak ulubionych. Dodaj przez gwiazdke!' : `Brak wynikow dla "${search}"`}</p>
+            <p className="mb-3">{showOnlyFavorites ? 'Brak ulubionych. Dodaj przez gwiazdkę!' : `Brak wyników dla „${search}"`}</p>
+            {!showOnlyFavorites && search && (
+              <button
+                onClick={() => router.push('/trening')}
+                className="text-sm text-blue-600 font-medium hover:underline"
+              >
+                + Dodaj „{search}" jako nowe ćwiczenie w treningu
+              </button>
+            )}
           </div>
         )}
       </div>

@@ -233,7 +233,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
       setLinkedDb(dbEx);
       setExercise(prev => prev ? { ...prev, exerciseDbId: dbEx.exerciseId } : prev);
       setToast({ message: 'Technika powiazana!', type: 'success' });
-    } else setToast({ message: 'Blad zapisu', type: 'error' });
+    } else setToast({ message: 'Błąd zapisu', type: 'error' });
     setLinking(false);
   };
 
@@ -278,7 +278,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
         rpe: formRpe ? parseFloat(formRpe) : undefined, comment: formComment || undefined, setsData: sd })
     });
     if (res.ok) { setToast({ message: 'Dodano do treningu', type: 'success' }); setShowForm(false); }
-    else setToast({ message: 'Blad dodawania', type: 'error' });
+    else setToast({ message: 'Błąd dodawania', type: 'error' });
   };
 
   const handleSaveAlone = async () => {
@@ -291,12 +291,12 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
         comment: formComment || undefined, setsData: sd }] })
     });
     if (res.ok) { setToast({ message: 'Zapisano', type: 'success' }); setShowForm(false); loadData(); }
-    else setToast({ message: 'Blad zapisu', type: 'error' });
+    else setToast({ message: 'Błąd zapisu', type: 'error' });
     setSaving(false);
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Ladowanie...</div>;
-  if (!exercise) return <div className="min-h-screen flex items-center justify-center text-gray-500">Nie znaleziono cwiczenia</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Ładowanie...</div>;
+  if (!exercise) return <div className="min-h-screen flex items-center justify-center text-gray-500">Nie znaleziono ćwiczenia</div>;
 
   const shortName = exercise.name.includes(' - ') ? exercise.name.split(' - ').slice(1).join(' - ') : exercise.name;
 
@@ -305,7 +305,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       <div className="bg-white border-b px-4 pt-4 pb-3 sticky top-0 z-10">
-        <Link href="/cwiczenia" className="text-blue-600 text-sm mb-2 block">← Cwiczenia</Link>
+        <Link href="/cwiczenia" className="text-blue-600 text-sm mb-2 block">← Ćwiczenia</Link>
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-xl font-bold text-gray-900">{shortName}</h1>
@@ -367,7 +367,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                       onChange={e => setFormReps(e.target.value === '' ? 0 : Number(e.target.value))} min={1}
                       className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-center" /></div>
                   {!formBodyweight && (
-                    <div><label className="text-xs text-gray-500 block mb-1">Ciezar kg</label>
+                    <div><label className="text-xs text-gray-500 block mb-1">Ciężar kg</label>
                       <input type="number" inputMode="decimal" step={0.5}
                         value={formWeight === 0 ? '' : formWeight} placeholder="0"
                         onChange={e => setFormWeight(Number(e.target.value) || 0)} min={0}
@@ -398,7 +398,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                     <button onClick={() => removeSet(i)} className="ml-auto text-red-400 p-1 shrink-0">✕</button>
                   </div>
                 ))}
-                <button onClick={addSet} className="text-sm text-blue-600">+ Dodaj serie</button>
+                <button onClick={addSet} className="text-sm text-blue-600">+ Dodaj serię</button>
               </div>
             )}
             <div className="grid grid-cols-2 gap-2">
@@ -434,7 +434,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
               )}
               <button onClick={handleSaveAlone} disabled={saving}
                 className="flex-1 bg-blue-600 text-white py-2 rounded-xl text-sm font-medium disabled:opacity-50">
-                {saving ? 'Zapisuje...' : 'Zapisz osobno'}
+                {saving ? 'Zapisuję...' : 'Zapisz osobno'}
               </button>
             </div>
           </div>
@@ -543,7 +543,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
           {showCalc && (
             <div className="px-4 pb-4 border-t border-gray-100 space-y-3">
               <div className="grid grid-cols-2 gap-3 mt-3">
-                <div><label className="text-xs text-gray-500 block mb-1">Ciezar (kg)</label>
+                <div><label className="text-xs text-gray-500 block mb-1">Ciężar (kg)</label>
                   <input type="number" value={calcWeight} onChange={e => setCalcWeight(Number(e.target.value))} min={0} step={0.5}
                     className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-center" /></div>
                 <div><label className="text-xs text-gray-500 block mb-1">Powtorzenia</label>
@@ -621,7 +621,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                   {isLoggedIn ? (
                     <>
                       <p className="text-sm text-gray-500 mb-3">
-                        Wybierz odpowiednie cwiczenie — zostanie zapisane dla wszystkich uzytkownikow:
+                        Wybierz odpowiednie ćwiczenie — zostanie zapisane dla wszystkich użytkowników:
                       </p>
                       {loadingSuggestions && (
                         <div className="flex flex-col items-center py-8 gap-2">
@@ -651,7 +651,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                       )}
                     </>
                   ) : (
-                    <p className="text-sm text-gray-400 text-center py-4">Zaloguj sie aby zobaczyc technikę.</p>
+                    <p className="text-sm text-gray-400 text-center py-4">Zaloguj się aby zobaczyć technikę.</p>
                   )}
                 </div>
               )}
@@ -685,7 +685,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
         {entries.length === 0 && !loading && (
           <div className="text-center py-12 text-gray-500">
             <p className="text-3xl mb-2">📊</p>
-            <p>Brak historii dla tego cwiczenia.</p>
+            <p>Brak historii dla tego ćwiczenia.</p>
           </div>
         )}
       </div>

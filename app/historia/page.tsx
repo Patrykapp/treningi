@@ -66,10 +66,10 @@ export default function HistoriaPage() {
   const handleDelete = async (id: string) => {
     const res = await fetch(`/api/sessions/${id}`, { method: 'DELETE' });
     if (res.ok) {
-      setToast({ message: 'Trening usuniety', type: 'success' });
+      setToast({ message: 'Trening usunięty', type: 'success' });
       setSessions(prev => prev.filter(s => s.id !== id));
     } else {
-      setToast({ message: 'Blad usuwania', type: 'error' });
+      setToast({ message: 'Błąd usuwania', type: 'error' });
     }
     setConfirmDelete(null);
   };
@@ -90,14 +90,14 @@ export default function HistoriaPage() {
       {confirmDelete && (
         <ConfirmDialog
           isOpen={true}
-          message="Usunac ten trening? Nie mozna cofnac."
+          message="Usunąć ten trening? Nie można cofnąć."
           onConfirm={() => handleDelete(confirmDelete)}
           onCancel={() => setConfirmDelete(null)}
         />
       )}
 
       <div className="bg-white border-b px-4 py-4 sticky top-0 z-10">
-        <h1 className="text-xl font-bold text-gray-900">Historia treningow</h1>
+        <h1 className="text-xl font-bold text-gray-900">Historia treningów</h1>
       </div>
 
       <div className="bg-white border-b px-4 py-3 space-y-2">
@@ -107,7 +107,7 @@ export default function HistoriaPage() {
             onChange={e => setFilterExerciseId(e.target.value)}
             className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white"
           >
-            <option value="">Wszystkie cwiczenia</option>
+            <option value="">Wszystkie ćwiczenia</option>
             {exercises.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
           </select>
         </div>
@@ -124,15 +124,24 @@ export default function HistoriaPage() {
 
       <div className="px-4 py-4">
         {loading ? (
-          <div className="text-center py-8 text-gray-600">Ladowanie...</div>
+          <div className="text-center py-8 text-gray-600">Ładowanie...</div>
         ) : sessions.length === 0 ? (
-          <div className="text-center py-8 text-gray-600 bg-white rounded-2xl">
-            <p className="text-4xl mb-2">🔍</p>
-            <p>Brak wynikow</p>
+          <div className="text-center py-8 text-gray-600 bg-white rounded-2xl px-6">
+            <p className="text-4xl mb-2">🏋️</p>
+            <p className="font-medium mb-1">Brak treningów</p>
+            <p className="text-sm text-gray-400 mb-4">
+              {filterExerciseId || filterFrom || filterTo ? 'Brak wyników dla wybranych filtrów.' : 'Nie masz jeszcze żadnych treningów.'}
+            </p>
+            {!filterExerciseId && !filterFrom && !filterTo && (
+              <Link href="/trening"
+                className="inline-block bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold text-sm">
+                + Dodaj pierwszy trening
+              </Link>
+            )}
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-sm text-gray-700 font-medium">{sessions.length} treningow</p>
+            <p className="text-sm text-gray-700 font-medium">{sessions.length} treningów</p>
             {sessions.map(session => (
               <div key={session.id} className="bg-white rounded-2xl p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
@@ -145,7 +154,7 @@ export default function HistoriaPage() {
                       <button
                         onClick={() => setExpandedRating(expandedRating === session.id ? null : session.id)}
                         className="flex items-center gap-1 bg-gray-50 rounded-xl px-2 py-1 text-sm font-semibold"
-                        title="Ocena treningu"
+                        title="Ocena treningu — kliknij aby zobaczyć szczegóły"
                       >
                         <span>{ratings[session.id].emoji}</span>
                         <span className="text-gray-700">{ratings[session.id].score}/10</span>
@@ -156,8 +165,20 @@ export default function HistoriaPage() {
                     )}
                     {isLoggedIn && (
                       <div className="flex gap-1">
-                        <button onClick={() => handleEdit(session.id)} className="text-sm text-gray-500 px-2 py-1">Edit</button>
-                        <button onClick={() => setConfirmDelete(session.id)} className="text-sm text-red-400 px-2 py-1">Del</button>
+                        <button
+                          onClick={() => handleEdit(session.id)}
+                          className="p-2 rounded-xl text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                          title="Edytuj trening"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          onClick={() => setConfirmDelete(session.id)}
+                          className="p-2 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                          title="Usuń trening"
+                        >
+                          🗑️
+                        </button>
                       </div>
                     )}
                   </div>
@@ -183,7 +204,7 @@ export default function HistoriaPage() {
                       <div className="text-sm text-gray-700 text-right">
                         {Array.isArray(entry.setsData) && entry.setsData.length > 0 ? (
                           <span>
-                            {entry.setsData.map((s, i) => (
+                            {(entry.setsData as { reps: number; weight: number }[]).map((s, i) => (
                               <span key={i}>
                                 {i > 0 && <span className="text-gray-400 mx-0.5">·</span>}
                                 {s.reps}x<strong>{s.weight}kg</strong>

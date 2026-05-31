@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     // Allow logged-in user to save session for any other user (family/friend app)
     const userId = targetUserId || authUserId;
     if (!date) return NextResponse.json({ error: 'Data jest wymagana' }, { status: 400 });
-    if (!entries?.length) return NextResponse.json({ error: 'Dodaj co najmniej jedno cwiczenie' }, { status: 400 });
+    if (!entries?.length) return NextResponse.json({ error: 'Dodaj co najmniej jedno ćwiczenie' }, { status: 400 });
     const session = await prisma.workoutSession.create({
       data: {
         date: new Date(date),
@@ -58,19 +58,4 @@ export async function POST(request: Request) {
             return {
               exerciseId: e.exerciseId,
               sets: sd.length > 0 ? sd.length : Number(e.sets),
-              reps: sd.length > 0 ? Math.max(...sd.map(s => s.reps)) : Number(e.reps),
-              weight: sd.length > 0 ? Math.max(...sd.map(s => s.weight)) : Number(e.weight),
-              rpe: e.rpe ? Number(e.rpe) : null,
-              comment: e.comment || null,
-              setsData: sd,
-            };
-          }),
-        },
-      },
-      include: { user: true, entries: { include: { exercise: true } } },
-    });
-    return NextResponse.json(session, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: 'Blad serwera' }, { status: 500 });
-  }
-}
+              reps: sd.length > 0 ? Math.max(...sd.map(s => s.reps)) : Number(e.reps)
