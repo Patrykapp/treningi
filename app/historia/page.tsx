@@ -14,6 +14,7 @@ interface SessionRating {
   label: string;
   emoji: string;
   prCount: number;
+  prExerciseIds: string[];
   details: string[];
 }
 
@@ -173,8 +174,11 @@ export default function HistoriaPage() {
                 <div className="space-y-1">
                   {session.entries.map(entry => (
                     <div key={entry.id} className="flex items-center justify-between py-1">
-                      <Link href={`/cwiczenie/${entry.exerciseId}`} className="text-sm font-medium text-gray-900 flex-1">
+                      <Link href={`/cwiczenie/${entry.exerciseId}`} className="text-sm font-medium text-gray-900 flex-1 flex items-center gap-1">
                         {entry.exercise?.name}
+                        {ratings[session.id]?.prExerciseIds?.includes(entry.exerciseId) && (
+                          <span title="Nowy rekord!">🏆</span>
+                        )}
                       </Link>
                       <div className="text-sm text-gray-700 text-right">
                         {Array.isArray(entry.setsData) && entry.setsData.length > 0 ? (

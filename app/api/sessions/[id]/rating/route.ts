@@ -50,6 +50,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     let progressScore = 5; // neutralny gdy brak historii
     let progressDetail: string[] = [];
     let prCount = 0;
+    const prExerciseIds: string[] = [];
 
     for (const entry of session.entries) {
       // Znajdź poprzednie wpisy dla tego ćwiczenia
@@ -76,6 +77,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       const allTimeMax = Math.max(...allMaxWeights);
       if (curMaxWeight > allTimeMax && curMaxWeight > 0) {
         prCount++;
+        prExerciseIds.push(entry.exerciseId);
         progressDetail.push(`🏆 PR: ${entry.exercise.name} (${curMaxWeight}kg)`);
       }
 
@@ -147,6 +149,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       avgVolume: Math.round(avgVolume),
       avgRpe,
       prCount,
+      prExerciseIds,
       details: progressDetail,
     });
   } catch (e) {
