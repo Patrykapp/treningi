@@ -221,7 +221,12 @@ export default function HistoriaPage() {
                       <span className="ml-2 text-sm text-blue-600 font-medium">{session.user?.name}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      {/* Gwiazdki oceny */}
+                      {/* Gwiazdki oceny + PR badge */}
+                      {rating?.prCount > 0 && (
+                        <span className="text-sm font-bold bg-yellow-400 text-yellow-900 rounded-xl px-2.5 py-1 leading-none">
+                          🏆 ×{rating.prCount}
+                        </span>
+                      )}
                       {rating ? (
                         <button
                           onClick={() => setExpandedRating(isExpanded ? null : session.id)}
@@ -229,9 +234,6 @@ export default function HistoriaPage() {
                           title="Kliknij aby zobaczyć ocenę i wskazówki"
                         >
                           <Stars count={rating.stars} />
-                          {rating.prCount > 0 && (
-                            <span className="text-xs bg-yellow-100 text-yellow-700 rounded px-1 font-semibold">🏆×{rating.prCount}</span>
-                          )}
                         </button>
                       ) : (
                         <div className="flex items-center gap-1 px-2 py-1">
