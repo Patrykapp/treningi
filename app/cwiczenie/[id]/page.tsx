@@ -266,8 +266,6 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
   const updateSet = (i: number, f: 'reps' | 'weight', v: number) =>
     setFormSetsData(p => p.map((s, idx) => idx === i ? { ...s, [f]: v } : s));
 
-  const effectiveUserId = saveAsUserId || authUserId || '';
-
   const handleAddToDraft = async () => {
     const sid = activeSession.getId();
     if (!sid) { setToast({ message: 'Brak aktywnego treningu', type: 'error' }); return; }
@@ -284,14 +282,33 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
   const handleSaveAlone = async () => {
     setSaving(true);
     const sd = formCustomSets && formSetsData.length > 0 ? formSetsData : [];
-    const res = await fetch('/api/sessions', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date: formDate, notes: '', targetUserId: effectiveUserId || undefined, entries: [{ exerciseId: id, sets: formSets,
-        reps: formReps, weight: formWeight, rpe: formRpe ? parseFloat(formRpe) : undefined,
-        comment: formComment || undefined, setsData: sd }] })
-    });
-    if (res.ok) { setToast({ message: 'Zapisano', type: 'success' }); setShowForm(false); loadData(); }
-    else setToast({ message: 'Błąd zapisu', type: 'error' });
+    const entry = { exerciseId: id, sets: formSets, reps: formReps, weight: formWeight,
+      rpe: formRpe ? parseFloat(formRpe) : undefined, comment: formComment || undefined, setsData: sd };
+
+    // Ustal listę użytkowników do zapisu
+    const targetIds: string[] = saveAsUserId === 'all'
+      ? users.map(u => u.id)
+      : [saveAsUserId || authUserId || ''];
+
+    let allOk = true;
+    for (const uid of targetIds) {
+      const res = await fetch('/api/sessions', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: formDate, notes: '', targetUserId: uid, entries: [entry] })
+      });
+      if (!res.ok) allOk = false;
+    }
+
+    if (allOk) {
+      const msg = saveAsUserId === 'all'
+        ? `Zapisano dla ${users.map(u => u.name).join(' i ')}!`
+        : 'Zapisano!';
+      setToast({ message: msg, type: 'success' });
+      setShowForm(false);
+      loadData();
+    } else {
+      setToast({ message: 'Błąd zapisu', type: 'error' });
+    }
     setSaving(false);
   };
 
@@ -411,18 +428,26 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
             </div>
             {users.length > 1 && (
               <div>
-                <label className="text-xs text-gray-500 block mb-1">Zapisz jako</label>
+                <label className="text-xs text-gray-500 block mb-1">Zapisz dla</label>
                 <div className="flex gap-2">
                   {users.map(u => (
                     <button key={u.id} onClick={() => setSaveAsUserId(u.id)}
                       className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${
-                        (saveAsUserId || authUserId) === u.id
+                        saveAsUserId === u.id
                           ? 'bg-blue-600 text-white border-blue-600'
                           : 'bg-white text-gray-600 border-gray-200'
                       }`}>
                       {u.name}
                     </button>
                   ))}
+                  <button onClick={() => setSaveAsUserId('all')}
+                    className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${
+                      saveAsUserId === 'all'
+                        ? 'bg-green-600 text-white border-green-600'
+                        : 'bg-white text-gray-600 border-gray-200'
+                    }`}>
+                    Oboje 👥
+                  </button>
                 </div>
               </div>
             )}

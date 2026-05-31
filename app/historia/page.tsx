@@ -25,11 +25,18 @@ interface SessionRating {
   };
 }
 
+// Normalizuje nazwę grupy mięśniowej — usuwa warianty w nawiasach
+// np. "Nogi (uda)", "Nogi (łydki)" → "Nogi"
+function normalizeMuscle(raw: string | null | undefined): string {
+  if (!raw) return 'Inne';
+  return raw.replace(/\s*\(.*?\)/g, '').trim() || 'Inne';
+}
+
 // Grupuje entries sesji po grupie mięśniowej
 function groupByMuscle(entries: WorkoutSession['entries']): Record<string, WorkoutSession['entries']> {
   const groups: Record<string, WorkoutSession['entries']> = {};
   for (const entry of entries) {
-    const key = entry.exercise?.muscleGroup || 'Inne';
+    const key = normalizeMuscle(entry.exercise?.muscleGroup);
     if (!groups[key]) groups[key] = [];
     groups[key].push(entry);
   }

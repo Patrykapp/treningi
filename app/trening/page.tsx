@@ -46,6 +46,8 @@ function TreningPage() {
   const [saveAsUserId, setSaveAsUserId] = useState<string | null>(null);
   const [existingSessionId, setExistingSessionId] = useState<string | null>(null);
 
+  const DRAFT_KEY = 'treningFormDraft';
+
   const loadData = useCallback(async () => {
     const [exRes, tplRes, usersRes] = await Promise.all([
       fetch('/api/exercises').then(r => r.json()),
@@ -94,10 +96,32 @@ function TreningPage() {
         }));
       }
       sessionStorage.removeItem('editSessionId');
+      return;
+    }
+
+    // Restore draft from localStorage (only for new sessions)
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      if (saved) {
+        const draft = JSON.parse(saved);
+        if (draft.date) setDate(draft.date);
+        if (draft.notes !== undefined) setNotes(draft.notes);
+        if (Array.isArray(draft.entries) && draft.entries.length > 0) setEntries(draft.entries);
+      }
+    } catch {
+      // ignore parse errors
     }
   }, [searchParams]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Save draft to localStorage on every change (only when creating new session)
+  useEffect(() => {
+    if (editingSession) return;
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ date, notes, entries }));
+    } catch { /* ignore */ }
+  }, [date, notes, entries, editingSession]);
 
   // Sprawdź czy istnieje sesja z wybranej daty (dla wybranego użytkownika)
   useEffect(() => {
@@ -267,6 +291,7 @@ function TreningPage() {
         });
       }
       activeSession.clear();
+      localStorage.removeItem(DRAFT_KEY);
       setToast({ message: 'Ćwiczenia dodane do treningu z tego dnia!', type: 'success' });
       setTimeout(() => router.push('/'), 1500);
     } finally {
@@ -287,6 +312,7 @@ function TreningPage() {
         });
         if (res.ok) {
           activeSession.clear();
+          localStorage.removeItem(DRAFT_KEY);
           setToast({ message: 'Trening zaktualizowany!', type: 'success' });
           setTimeout(() => router.push('/'), 1500);
         } else {
@@ -312,6 +338,7 @@ function TreningPage() {
 
       if (allOk) {
         activeSession.clear();
+        localStorage.removeItem(DRAFT_KEY);
         const msg = saveAsUserId === 'all'
           ? `Trening zapisany dla ${users.map(u => u.name).join(' i ')}!`
           : 'Trening zapisany!';
