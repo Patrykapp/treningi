@@ -43,6 +43,7 @@ function TreningPage() {
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
   const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
   const [saveAsUserId, setSaveAsUserId] = useState('');
+  const [existingSessionId, setExistingSessionId] = useState<string | null>(null); // sesja z tej samej daty
 
   const loadData = useCallback(async () => {
     const [exRes, tplRes, usersRes] = await Promise.all([
@@ -94,6 +95,23 @@ function TreningPage() {
   }, [searchParams]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Sprawdź czy istnieje sesja z wybranej daty (dla wybranego użytkownika)
+  useEffect(() => {
+    if (editingSession) { setExistingSessionId(null); return; }
+    const targetId = saveAsUserId || authUserId;
+    if (!targetId || !date) return;
+    const check = async () => {
+      const res = await fetch(`/api/sessions?date=${date}&userId=${targetId}&limit=1`);
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        setExistingSessionId(data[0].id);
+      } else {
+        setExistingSessionId(null);
+      }
+    };
+    check();
+  }, [date, saveAsUserId, authUserId, editingSession]);
 
   const copyLastWorkout = async () => {
     const sessions = await fetch('/api/sessions?limit=1').then(r => r.json());
@@ -199,18 +217,57 @@ function TreningPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!date) { setToast({ message: 'Wybierz date', type: 'error' }); return; }
+  const validateEntries = (): boolean => {
+    if (!date) { setToast({ message: 'Wybierz date', type: 'error' }); return false; }
     for (const entry of entries) {
-      if (!entry.exerciseId) { setToast({ message: 'Wybierz cwiczenie', type: 'error' }); return; }
+      if (!entry.exerciseId) { setToast({ message: 'Wybierz cwiczenie', type: 'error' }); return false; }
       if (entry.customSets && (!entry.setsData || entry.setsData.length === 0)) {
-        setToast({ message: 'Dodaj co najmniej jedna serie', type: 'error' }); return;
+        setToast({ message: 'Dodaj co najmniej jedna serie', type: 'error' }); return false;
       }
       if (!entry.customSets && !entry.weight && !entry.bodyweight) {
-        setToast({ message: 'Podaj ciezar lub zaznacz "własna masa"', type: 'error' }); return;
+        setToast({ message: 'Podaj ciezar lub zaznacz "własna masa"', type: 'error' }); return false;
       }
     }
+    return true;
+  };
+
+  const buildEntryPayload = (entry: EntryRow) => {
+    const sd = entry.setsData && entry.setsData.length > 0 ? entry.setsData : [];
+    return {
+      exerciseId: entry.exerciseId,
+      sets: entry.customSets ? (sd.length || entry.sets) : entry.sets,
+      reps: entry.reps,
+      weight: entry.weight,
+      rpe: entry.rpe,
+      comment: entry.comment,
+      setsData: sd,
+    };
+  };
+
+  // Zapisz razem — dodaj ćwiczenia do istniejącej sesji tego dnia
+  const handleSaveTogether = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateEntries() || !existingSessionId) return;
+    setSaving(true);
+    try {
+      for (const entry of entries.filter(e => e.exerciseId)) {
+        await fetch(`/api/sessions/${existingSessionId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ entry: buildEntryPayload(entry) }),
+        });
+      }
+      activeSession.clear();
+      setToast({ message: 'Ćwiczenia dodane do treningu z tego dnia!', type: 'success' });
+      setTimeout(() => router.push('/'), 1500);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateEntries()) return;
     setSaving(true);
     try {
       const url = editingSession ? `/api/sessions/${editingSession}` : '/api/sessions';
@@ -426,10 +483,30 @@ function TreningPage() {
           </div>
         )}
 
-        <button type="submit" disabled={saving || !entries.some(e => e.exerciseId)}
-          className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-lg disabled:opacity-50">
-          {saving ? 'Zapisuje...' : editingSession ? 'Aktualizuj trening' : 'Zapisz trening'}
-        </button>
+        {existingSessionId && !editingSession ? (
+          <div className="space-y-2">
+            <p className="text-sm text-center text-amber-600 font-medium bg-amber-50 rounded-xl py-2 px-3">
+              ⚠️ Masz już trening z tego dnia
+            </p>
+            <div className="flex gap-2">
+              <button type="button" onClick={handleSaveTogether}
+                disabled={saving || !entries.some(e => e.exerciseId)}
+                className="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-bold text-base disabled:opacity-50">
+                {saving ? 'Zapisuje...' : '+ Dodaj do istniejącego'}
+              </button>
+              <button type="submit"
+                disabled={saving || !entries.some(e => e.exerciseId)}
+                className="flex-1 bg-gray-700 text-white py-4 rounded-2xl font-bold text-base disabled:opacity-50">
+                Zapisz osobno
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button type="submit" disabled={saving || !entries.some(e => e.exerciseId)}
+            className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-lg disabled:opacity-50">
+            {saving ? 'Zapisuje...' : editingSession ? 'Aktualizuj trening' : 'Zapisz trening'}
+          </button>
+        )}
       </form>
     </div>
   );

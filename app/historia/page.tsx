@@ -9,6 +9,14 @@ import { Toast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useAuth } from '@/hooks/useAuth';
 
+interface SessionRating {
+  score: number;
+  label: string;
+  emoji: string;
+  prCount: number;
+  details: string[];
+}
+
 export default function HistoriaPage() {
   const router = useRouter();
   const { isLoggedIn } = useAuth();
@@ -18,6 +26,8 @@ export default function HistoriaPage() {
   const [filterExerciseId, setFilterExerciseId] = useState('');
   const [filterFrom, setFilterFrom] = useState('');
   const [filterTo, setFilterTo] = useState('');
+  const [ratings, setRatings] = useState<Record<string, SessionRating>>({});
+  const [expandedRating, setExpandedRating] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
@@ -36,6 +46,18 @@ export default function HistoriaPage() {
       : (Array.isArray(data) ? data : []);
     setSessions(filtered);
     setLoading(false);
+    // Pobierz oceny dla załadowanych sesji (lazy, po jednej)
+    const sessionList = Array.isArray(data) ? data : [];
+    for (const s of sessionList.slice(0, 20)) {
+      fetch(`/api/sessions/${s.id}/rating`)
+        .then(r => r.json())
+        .then(rating => {
+          if (rating && !rating.error) {
+            setRatings(prev => ({ ...prev, [s.id]: rating }));
+          }
+        })
+        .catch(() => {});
+    }
   }, [filterExerciseId, filterFrom, filterTo]);
 
   useEffect(() => { loadSessions(); }, [loadSessions]);
@@ -117,13 +139,36 @@ export default function HistoriaPage() {
                     <span className="font-bold text-gray-900">{formatDate(session.date)}</span>
                     <span className="ml-2 text-sm text-blue-600 font-medium">{session.user?.name}</span>
                   </div>
-                  {isLoggedIn && (
-                    <div className="flex gap-2">
-                      <button onClick={() => handleEdit(session.id)} className="text-sm text-gray-500 px-2 py-1">Edit</button>
-                      <button onClick={() => setConfirmDelete(session.id)} className="text-sm text-red-400 px-2 py-1">Del</button>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {ratings[session.id] && (
+                      <button
+                        onClick={() => setExpandedRating(expandedRating === session.id ? null : session.id)}
+                        className="flex items-center gap-1 bg-gray-50 rounded-xl px-2 py-1 text-sm font-semibold"
+                        title="Ocena treningu"
+                      >
+                        <span>{ratings[session.id].emoji}</span>
+                        <span className="text-gray-700">{ratings[session.id].score}/10</span>
+                        {ratings[session.id].prCount > 0 && (
+                          <span className="ml-1 text-xs bg-yellow-100 text-yellow-700 rounded px-1">🏆×{ratings[session.id].prCount}</span>
+                        )}
+                      </button>
+                    )}
+                    {isLoggedIn && (
+                      <div className="flex gap-1">
+                        <button onClick={() => handleEdit(session.id)} className="text-sm text-gray-500 px-2 py-1">Edit</button>
+                        <button onClick={() => setConfirmDelete(session.id)} className="text-sm text-red-400 px-2 py-1">Del</button>
+                      </div>
+                    )}
+                  </div>
                 </div>
+                {expandedRating === session.id && ratings[session.id] && (
+                  <div className="bg-gray-50 rounded-xl p-3 mb-3 text-sm space-y-1">
+                    <p className="font-semibold text-gray-700">{ratings[session.id].emoji} {ratings[session.id].label} — {ratings[session.id].score}/10</p>
+                    {ratings[session.id].details.map((d, i) => (
+                      <p key={i} className="text-gray-600">{d}</p>
+                    ))}
+                  </div>
+                )}
                 {session.notes && <p className="text-sm text-gray-700 italic mb-2">{session.notes}</p>}
                 <div className="space-y-1">
                   {session.entries.map(entry => (

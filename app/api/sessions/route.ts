@@ -9,11 +9,24 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const from = searchParams.get('from');
     const to = searchParams.get('to');
+    const date = searchParams.get('date'); // exact day filter: YYYY-MM-DD
+    const targetUserId = searchParams.get('userId');
     const limit = parseInt(searchParams.get('limit') || '50');
+
+    // For date filter: match full day in local time stored as UTC midnight
+    let dateFilter = {};
+    if (date) {
+      const dayStart = new Date(date + 'T00:00:00.000Z');
+      const dayEnd = new Date(date + 'T23:59:59.999Z');
+      dateFilter = { date: { gte: dayStart, lte: dayEnd } };
+    } else if (from || to) {
+      dateFilter = { date: { ...(from ? { gte: new Date(from) } : {}), ...(to ? { lte: new Date(to) } : {}) } };
+    }
+
     const sessions = await prisma.workoutSession.findMany({
       where: {
-        userId,
-        ...(from || to ? { date: { ...(from ? { gte: new Date(from) } : {}), ...(to ? { lte: new Date(to) } : {}) } } : {}),
+        userId: targetUserId || userId,
+        ...dateFilter,
       },
       include: { user: true, entries: { include: { exercise: true } } },
       orderBy: { date: 'desc' },
