@@ -66,6 +66,7 @@ export default function HistoriaPage() {
   const [expandedRating, setExpandedRating] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [merging, setMerging] = useState<string | null>(null); // deleteId being merged
 
   useEffect(() => {
     fetch('/api/exercises').then(r => r.json()).then(setExercises);
@@ -113,6 +114,22 @@ export default function HistoriaPage() {
       setToast({ message: 'Błąd usuwania', type: 'error' });
     }
     setConfirmDelete(null);
+  };
+
+  const handleMerge = async (keepId: string, deleteId: string) => {
+    setMerging(deleteId);
+    const res = await fetch('/api/sessions/merge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keepId, deleteId }),
+    });
+    if (res.ok) {
+      setToast({ message: 'Treningi połączone!', type: 'success' });
+      setSessions(prev => prev.filter(s => s.id !== deleteId));
+    } else {
+      setToast({ message: 'Błąd łączenia', type: 'error' });
+    }
+    setMerging(null);
   };
 
   const clearFilters = () => {
@@ -178,8 +195,20 @@ export default function HistoriaPage() {
         ) : (
           <div className="space-y-3">
             <p className="text-sm text-gray-700 font-medium">{sessions.length} treningów</p>
-            {sessions.map(session => {
+            {(() => {
+              // Group sessions by date (YYYY-MM-DD) to detect same-day duplicates
+              const byDate: Record<string, WorkoutSession[]> = {};
+              for (const s of sessions) {
+                const day = s.date.slice(0, 10);
+                if (!byDate[day]) byDate[day] = [];
+                byDate[day].push(s);
+              }
+              return sessions.map(session => {
               const rating = ratings[session.id];
+              const dayKey = session.date.slice(0, 10);
+              const sameDaySessions = byDate[dayKey];
+              // The "main" session for this day is the one with the most entries
+              const mainSession = sameDaySessions.reduce((a, b) => a.entries.length >= b.entries.length ? a : b);
               const muscleGroups = groupByMuscle(session.entries);
               const isExpanded = expandedRating === session.id;
 
@@ -210,7 +239,17 @@ export default function HistoriaPage() {
                         </div>
                       )}
                       {isLoggedIn && (
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 items-center">
+                          {sameDaySessions.length > 1 && session.id !== mainSession.id && (
+                            <button
+                              onClick={() => handleMerge(mainSession.id, session.id)}
+                              disabled={merging === session.id}
+                              className="px-2 py-1.5 rounded-xl text-xs font-semibold text-orange-600 bg-orange-50 hover:bg-orange-100 transition-colors disabled:opacity-50"
+                              title="Połącz z głównym treningiem tego dnia"
+                            >
+                              {merging === session.id ? '...' : '🔗 Połącz'}
+                            </button>
+                          )}
                           <button
                             onClick={() => router.push(`/trening?sessionId=${session.id}`)}
                             className="p-2 rounded-xl text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
@@ -319,7 +358,8 @@ export default function HistoriaPage() {
                   </div>
                 </div>
               );
-            })}
+            });
+            })()}
           </div>
         )}
       </div>
