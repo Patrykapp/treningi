@@ -217,7 +217,17 @@ export default function HistoriaPage() {
                   {/* Nagłówek karty */}
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      <span className="font-bold text-gray-900">{formatDate(session.date)}</span>
+                      {session.notes?.startsWith('Challenge:') ? (
+                        <Link href={`/challenge/wynik/${session.id}`}
+                          className="font-bold text-gray-900 hover:text-blue-600">
+                          {formatDate(session.date)}
+                        </Link>
+                      ) : (
+                        <Link href={`/trening/podsumowanie/${session.id}`}
+                          className="font-bold text-gray-900 hover:text-blue-600">
+                          {formatDate(session.date)}
+                        </Link>
+                      )}
                       <span className="ml-2 text-sm text-blue-600 font-medium">{session.user?.name}</span>
                       {session.notes?.startsWith('Challenge:') && (
                         <Link href={`/challenge/wynik/${session.id}`}
