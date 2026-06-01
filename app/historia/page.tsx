@@ -219,6 +219,12 @@ export default function HistoriaPage() {
                     <div>
                       <span className="font-bold text-gray-900">{formatDate(session.date)}</span>
                       <span className="ml-2 text-sm text-blue-600 font-medium">{session.user?.name}</span>
+                      {session.notes?.startsWith('Challenge:') && (
+                        <Link href={`/challenge/wynik/${session.id}`}
+                          className="ml-2 text-xs font-semibold bg-blue-100 text-blue-700 rounded-lg px-2 py-0.5">
+                          ⚡ Challenge →
+                        </Link>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       {/* Gwiazdki oceny + PR badge */}

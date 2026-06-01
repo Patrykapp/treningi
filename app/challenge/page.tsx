@@ -218,7 +218,7 @@ export default function ChallengePage() {
           reps: Math.round(totalReps / results.length),
           weight: 0,
           setsData,
-          comment: `Challenge – łącznie ${totalReps} powt.`,
+          comment: JSON.stringify({ challenge: true, totalReps, durations: results.map(r => r.duration) }),
         }],
       }),
     });
