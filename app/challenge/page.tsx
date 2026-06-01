@@ -65,6 +65,7 @@ export default function ChallengePage() {
   const [results, setResults] = useState<SetResult[]>([]);
   const [pendingReps, setPendingReps] = useState('');
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const [elapsed, setElapsed] = useState(0);
   const [restRemaining, setRestRemaining] = useState(0);
@@ -223,14 +224,8 @@ export default function ChallengePage() {
     });
     if (res.ok) {
       clearState();
+      setSaved(true);
       setToast({ message: 'Challenge zapisany! 💪', type: 'success' });
-      setTimeout(() => {
-        setPhase('setup');
-        setResults([]);
-        setPendingReps('');
-        setStartedAtRef.current = null;
-        restStartedAtRef.current = null;
-      }, 1500);
     } else {
       setToast({ message: 'Błąd zapisu', type: 'error' });
     }
@@ -243,6 +238,7 @@ export default function ChallengePage() {
     setPhase('setup');
     setResults([]);
     setPendingReps('');
+    setSaved(false);
     setStartedAtRef.current = null;
     restStartedAtRef.current = null;
   };
@@ -482,10 +478,16 @@ export default function ChallengePage() {
         )}
 
         <div className="space-y-2">
-          <button onClick={saveChallenge} disabled={saving}
-            className="w-full bg-blue-600 text-white py-4 rounded-2xl text-lg font-bold disabled:opacity-50 shadow active:scale-95 transition-transform">
-            {saving ? 'Zapisuję...' : '💾 Zapisz wynik'}
-          </button>
+          {saved ? (
+            <div className="w-full bg-green-50 border border-green-200 text-green-700 py-4 rounded-2xl text-lg font-bold text-center">
+              ✓ Zapisano
+            </div>
+          ) : (
+            <button onClick={saveChallenge} disabled={saving}
+              className="w-full bg-blue-600 text-white py-4 rounded-2xl text-lg font-bold disabled:opacity-50 shadow active:scale-95 transition-transform">
+              {saving ? 'Zapisuję...' : '💾 Zapisz wynik'}
+            </button>
+          )}
           <button onClick={restartChallenge}
             className="w-full bg-white border border-gray-200 text-gray-600 py-3 rounded-2xl text-sm font-medium">
             Nowy challenge
