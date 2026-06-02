@@ -217,17 +217,7 @@ export default function HistoriaPage() {
                   {/* Nagłówek karty */}
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      {session.notes?.startsWith('Challenge:') ? (
-                        <Link href={`/challenge/wynik/${session.id}`}
-                          className="font-bold text-gray-900 hover:text-blue-600">
-                          {formatDate(session.date)}
-                        </Link>
-                      ) : (
-                        <Link href={`/trening/podsumowanie/${session.id}`}
-                          className="font-bold text-gray-900 hover:text-blue-600">
-                          {formatDate(session.date)}
-                        </Link>
-                      )}
+                      <span className="font-bold text-gray-900">{formatDate(session.date)}</span>
                       <span className="ml-2 text-sm text-blue-600 font-medium">{session.user?.name}</span>
                       {session.notes?.startsWith('Challenge:') && (
                         <Link href={`/challenge/wynik/${session.id}`}
@@ -256,30 +246,37 @@ export default function HistoriaPage() {
                           <Stars count={0} />
                         </div>
                       )}
-                      {isLoggedIn && (
-                        <div className="flex gap-1 items-center">
-                          {sameDaySessions.length > 1 && session.id !== mainSession.id && (
+                      <div className="flex gap-1 items-center">
+                        <Link
+                          href={session.notes?.startsWith('Challenge:') ? `/challenge/wynik/${session.id}` : `/trening/podsumowanie/${session.id}`}
+                          className="p-2 rounded-xl text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-colors"
+                          title="Podsumowanie"
+                        >📊</Link>
+                        {isLoggedIn && (
+                          <>
+                            {sameDaySessions.length > 1 && session.id !== mainSession.id && (
+                              <button
+                                onClick={() => handleMerge(mainSession.id, session.id)}
+                                disabled={merging === session.id}
+                                className="px-2 py-1.5 rounded-xl text-xs font-semibold text-orange-600 bg-orange-50 hover:bg-orange-100 transition-colors disabled:opacity-50"
+                                title="Połącz z głównym treningiem tego dnia"
+                              >
+                                {merging === session.id ? '...' : '🔗 Połącz'}
+                              </button>
+                            )}
                             <button
-                              onClick={() => handleMerge(mainSession.id, session.id)}
-                              disabled={merging === session.id}
-                              className="px-2 py-1.5 rounded-xl text-xs font-semibold text-orange-600 bg-orange-50 hover:bg-orange-100 transition-colors disabled:opacity-50"
-                              title="Połącz z głównym treningiem tego dnia"
-                            >
-                              {merging === session.id ? '...' : '🔗 Połącz'}
-                            </button>
-                          )}
-                          <button
-                            onClick={() => router.push(`/trening?sessionId=${session.id}`)}
-                            className="p-2 rounded-xl text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                            title="Edytuj trening"
-                          >✏️</button>
-                          <button
-                            onClick={() => setConfirmDelete(session.id)}
-                            className="p-2 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                            title="Usuń trening"
-                          >🗑️</button>
-                        </div>
-                      )}
+                              onClick={() => router.push(`/trening?sessionId=${session.id}`)}
+                              className="p-2 rounded-xl text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                              title="Edytuj trening"
+                            >✏️</button>
+                            <button
+                              onClick={() => setConfirmDelete(session.id)}
+                              className="p-2 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                              title="Usuń trening"
+                            >🗑️</button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
 
