@@ -107,11 +107,12 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
   const muscleKeys = MUSCLE_ORDER.filter(g => byMuscle[g])
     .concat(Object.keys(byMuscle).filter(g => !MUSCLE_ORDER.includes(g)));
 
-  const volumeByMuscle = muscleKeys.map(g => ({
+  const statsByMuscle = muscleKeys.map(g => ({
     name: g,
+    sets: byMuscle[g].reduce((s, e) => s + (e.setsData?.length || e.sets), 0),
     volume: byMuscle[g].reduce((s, e) => s + calcVolume(e), 0),
   }));
-  const maxMuscleVol = Math.max(...volumeByMuscle.map(m => m.volume), 1);
+  const maxMuscleSets = Math.max(...statsByMuscle.map(m => m.sets), 1);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
@@ -177,24 +178,23 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
           </div>
         </div>
 
-        {/* Wolumen per grupa mięśniowa */}
-        {volumeByMuscle.length > 1 && (
+        {/* Serie per grupa mięśniowa */}
+        {statsByMuscle.length > 1 && (
           <div className="bg-white rounded-2xl shadow-sm p-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Wolumen per partia</h3>
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Serie per partia</h3>
             <div className="space-y-2">
-              {volumeByMuscle.sort((a, b) => b.volume - a.volume).map(m => (
+              {[...statsByMuscle].sort((a, b) => b.sets - a.sets).map(m => (
                 <div key={m.name} className="flex items-center gap-3">
                   <span className="text-xs text-gray-500 w-24 shrink-0">{m.name}</span>
                   <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
                     <div className="bg-blue-500 h-full rounded-full flex items-center justify-end pr-2"
-                      style={{ width: `${(m.volume / maxMuscleVol) * 100}%` }}>
-                      {m.volume > 0 && (
-                        <span className="text-xs font-bold text-white">
-                          {m.volume >= 1000 ? `${Math.round(m.volume / 100) / 10}t` : `${Math.round(m.volume)}kg`}
-                        </span>
-                      )}
+                      style={{ width: `${(m.sets / maxMuscleSets) * 100}%` }}>
+                      <span className="text-xs font-bold text-white">{m.sets}</span>
                     </div>
                   </div>
+                  <span className="text-xs text-gray-400 w-16 shrink-0 text-right">
+                    {m.volume >= 1000 ? `${Math.round(m.volume / 100) / 10}t` : `${Math.round(m.volume)}kg`}
+                  </span>
                 </div>
               ))}
             </div>
