@@ -102,6 +102,7 @@ model RunSession {
   date      DateTime
   distance  Float    // km
   duration  Int      // seconds
+  splits    Json     @default("[]") // array of seconds per km segment
   notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

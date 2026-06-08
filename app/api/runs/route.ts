@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     const user = await getAuthUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { date, distance, duration, notes, userId } = await request.json();
+    const { date, distance, duration, splits, notes, userId } = await request.json();
 
     if (!date || distance === undefined || !duration) {
       return NextResponse.json({ error: 'Wymagane: data, dystans, czas' }, { status: 400 });
@@ -44,6 +44,7 @@ export async function POST(request: Request) {
         date: new Date(date),
         distance: parseFloat(distance),
         duration: parseInt(duration),
+        splits: Array.isArray(splits) ? splits : [],
         notes: notes || null,
       },
     });
