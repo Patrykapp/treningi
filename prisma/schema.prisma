@@ -21,6 +21,7 @@ model User {
   bodyWeights  BodyWeight[]
   favorites    UserFavorite[]
   templates    WorkoutTemplate[]
+  runs         RunSession[]
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
 }
@@ -90,6 +91,18 @@ model WorkoutTemplate {
   user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   name      String
   entries   Json     @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RunSession {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime
+  distance  Float    // km
+  duration  Int      // seconds
+  notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
