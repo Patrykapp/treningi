@@ -66,7 +66,7 @@ export default function HistoriaPage() {
   const [expandedRating, setExpandedRating] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-  const [merging, setMerging] = useState<string | null>(null); // deleteId being merged
+  const [merging, setMerging] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/exercises').then(r => r.json()).then(setExercises);

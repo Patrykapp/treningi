@@ -88,10 +88,14 @@ function splitDistance(index: number, distance: number): number {
 
 // ─── component ──────────────────────────────────────────────────────────────
 
+interface User { id: string; name: string; }
+
 export default function BieganiePage() {
   const router = useRouter();
   const { isLoggedIn, loading, userId } = useAuth();
 
+  const [users, setUsers] = useState<User[]>([]);
+  const [viewAsUserId, setViewAsUserId] = useState<string | null>(null);
   const [runs, setRuns] = useState<RunSession[]>([]);
   const [loadingRuns, setLoadingRuns] = useState(true);
 
@@ -148,11 +152,13 @@ export default function BieganiePage() {
 
   // ─── data loading ──────────────────────────────────────────────────────────
 
+  const activeUserId = viewAsUserId || userId;
+
   const loadRuns = useCallback(async () => {
-    if (!userId) return;
+    if (!activeUserId) return;
     setLoadingRuns(true);
     try {
-      const res = await fetch(`/api/runs?userId=${userId}`);
+      const res = await fetch(`/api/runs?userId=${activeUserId}`);
       if (res.ok) {
         const data = await res.json();
         setRuns(data.map((r: RunSession) => ({ ...r, splits: Array.isArray(r.splits) ? r.splits : [] })));
@@ -160,15 +166,23 @@ export default function BieganiePage() {
     } finally {
       setLoadingRuns(false);
     }
-  }, [userId]);
+  }, [activeUserId]);
 
   useEffect(() => {
     if (!loading && !isLoggedIn) router.push('/login');
   }, [isLoggedIn, loading, router]);
 
   useEffect(() => {
-    if (userId) loadRuns();
-  }, [userId, loadRuns]);
+    if (userId) {
+      fetch('/api/users').then(r => r.json()).then(data => {
+        if (Array.isArray(data)) setUsers(data);
+      }).catch(() => {});
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    if (activeUserId) loadRuns();
+  }, [activeUserId, loadRuns]);
 
   // ─── submit ────────────────────────────────────────────────────────────────
 
@@ -240,6 +254,25 @@ export default function BieganiePage() {
       </div>
 
       <div className="max-w-lg mx-auto px-4 pt-6 space-y-6">
+
+        {/* User switcher */}
+        {users.length > 1 && (
+          <div className="flex gap-2">
+            {users.map(u => (
+              <button
+                key={u.id}
+                onClick={() => setViewAsUserId(u.id === userId ? null : u.id)}
+                className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${
+                  activeUserId === u.id
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-gray-600 border-gray-200'
+                }`}
+              >
+                {u.name}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Stats row */}
         {runs.length > 0 && (
