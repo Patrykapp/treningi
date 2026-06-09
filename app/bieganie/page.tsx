@@ -321,7 +321,7 @@ export default function BieganiePage() {
                   {splitInputs.map((val, i) => {
                     const dist = splitDistance(i, distNum);
                     const parsed = parseSplitInput(val);
-                    const secPerKm = parsed && dist < 1 ? parsed / dist : parsed ?? 0;
+                    const isPartial = dist < 0.99;
                     return (
                       <div key={i} className="flex items-center gap-2">
                         <span className="text-sm text-gray-500 w-20 shrink-0">
@@ -342,9 +342,7 @@ export default function BieganiePage() {
                         />
                         {parsed !== null && (
                           <span className="text-xs text-blue-600 w-16 text-right shrink-0">
-                            {dist < 0.99
-                              ? `${formatPace(secPerKm)}/km`
-                              : formatPace(secPerKm) + '/km'}
+                            {isPartial ? formatDuration(parsed) : formatPace(parsed) + '/km'}
                           </span>
                         )}
                       </div>
@@ -478,10 +476,12 @@ export default function BieganiePage() {
                         <div className="space-y-2">
                           {run.splits.map((sec, i) => {
                             const dist = splitDistance(i, run.distance);
-                            const secPerKm = dist < 0.99 ? sec / dist : sec;
+                            const isPartialKm = dist < 0.99;
                             const barWidth = maxSplit > 0 ? (sec / maxSplit) * 100 : 50;
-                            const isFastest = run.splits.indexOf(Math.min(...run.splits)) === i;
-                            const isSlowest = run.splits.indexOf(Math.max(...run.splits)) === i;
+                            // Only compare full km splits for fastest/slowest
+                            const fullSplits = run.splits.filter((_, j) => splitDistance(j, run.distance) >= 0.99);
+                            const isFastest = !isPartialKm && fullSplits.length > 1 && sec === Math.min(...fullSplits);
+                            const isSlowest = !isPartialKm && fullSplits.length > 1 && sec === Math.max(...fullSplits);
                             return (
                               <div key={i} className="flex items-center gap-3">
                                 <span className="text-sm text-gray-500 w-14 shrink-0">
@@ -498,7 +498,7 @@ export default function BieganiePage() {
                                     {formatDuration(sec)}
                                   </span>
                                   <span className="text-xs text-gray-400 w-16 text-right shrink-0">
-                                    {formatPace(secPerKm)}/km
+                                    {isPartialKm ? `${(dist * 1000).toFixed(0)}m` : `${formatPace(sec)}/km`}
                                   </span>
                                 </div>
                                 {isFastest && <span className="text-xs">🟢</span>}
