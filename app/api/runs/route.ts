@@ -20,7 +20,8 @@ export async function GET(request: Request) {
     return NextResponse.json(runs, {
       headers: { 'Cache-Control': 'no-store' },
     });
-  } catch {
+  } catch (e) {
+    console.error('GET /api/runs error:', e);
     return NextResponse.json({ error: 'Błąd serwera' }, { status: 500 });
   }
 }
@@ -50,7 +51,9 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(run, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: 'Błąd serwera' }, { status: 500 });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error('POST /api/runs error:', msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
