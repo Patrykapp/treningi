@@ -10,12 +10,13 @@ interface RunSession {
   date: string;
   distance: number;
   duration: number;
-  splits: number[]; // seconds per km segment
+  splits: number[]; // pace in sec/km for each segment (same for full km and partial)
   notes: string | null;
 }
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
+// Format pace as min'ss"/km
 function formatPace(secPerKm: number): string {
   if (!secPerKm || secPerKm <= 0) return '—';
   const mins = Math.floor(secPerKm / 60);
@@ -23,43 +24,59 @@ function formatPace(secPerKm: number): string {
   return `${mins}'${secs.toString().padStart(2, '0')}"`;
 }
 
-function formatPaceFromDistDur(distance: number, duration: number): string {
+// km/h from pace in sec/km
+function paceToKmh(secPerKm: number): string {
+  if (!secPerKm || secPerKm <= 0) return '—';
+  return (3600 / secPerKm).toFixed(2);
+}
+
+// For display of total duration
+function formatDuration(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.round(seconds % 60);
+  if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+// splits[] stores pace (sec/km); actual segment time = pace × dist
+function segmentTime(paceSecPerKm: number, dist: number): number {
+  return paceSecPerKm * dist;
+}
+
+// Total run duration from splits (pace array + distances)
+function totalDurationFromSplits(splits: number[], distance: number): number {
+  return splits.reduce((sum, pace, i) => sum + segmentTime(pace, splitDistance(i, distance)), 0);
+}
+
+// Average pace from total duration and distance
+function avgPace(distance: number, duration: number): string {
   if (!distance || !duration) return '—';
   return formatPace(duration / distance);
 }
 
-function formatSpeed(distance: number, duration: number): string {
+function avgKmh(distance: number, duration: number): string {
   if (!distance || !duration) return '—';
   return (distance / (duration / 3600)).toFixed(2);
-}
-
-function formatDuration(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
 function parseSplitInput(value: string): number | null {
   const trimmed = value.trim();
   if (!trimmed) return null;
-  // accept: 5'24", 5:24, 524, 5m24s, just numbers as seconds
   const colonMatch = trimmed.match(/^(\d+)[:'"](\d{1,2})["]?$/);
   if (colonMatch) return parseInt(colonMatch[1]) * 60 + parseInt(colonMatch[2]);
   const numOnly = parseInt(trimmed);
   if (!isNaN(numOnly) && trimmed.match(/^\d+$/)) {
-    // treat as seconds if <= 999, else as mmss
     return numOnly <= 999 ? numOnly : Math.floor(numOnly / 100) * 60 + (numOnly % 100);
   }
   return null;
 }
 
-function splitLabel(index: number, total: number, distance: number): string {
+function splitLabel(index: number, _total: number, distance: number): string {
   const fullKms = Math.floor(distance);
   const partial = distance - fullKms;
   if (index < fullKms) return `km ${index + 1}`;
-  if (partial > 0.01) return `(${partial.toFixed(2)} km)`;
+  if (partial > 0.01) return `${(partial * 1000).toFixed(0)}m`;
   return `km ${index + 1}`;
 }
 
@@ -107,13 +124,13 @@ export default function BieganiePage() {
     });
   }, [splitCount]);
 
-  // Parse all splits
+  // Parse all splits — each value is pace in sec/km
   const parsedSplits = splitInputs.map(v => parseSplitInput(v));
   const allSplitsFilled = parsedSplits.length > 0 && parsedSplits.every(s => s !== null);
 
-  // Total duration: from splits if available, else manual input
-  const totalDurFromSplits = allSplitsFilled
-    ? parsedSplits.reduce((a, b) => (a ?? 0) + (b ?? 0), 0) ?? 0
+  // Total duration: pace × segment_distance for each split
+  const totalDurFromSplits = allSplitsFilled && distNum > 0
+    ? (parsedSplits as number[]).reduce((sum, pace, i) => sum + segmentTime(pace, splitDistance(i, distNum)), 0)
     : 0;
 
   const manualDurSec = useMemo(() => {
@@ -235,14 +252,14 @@ export default function BieganiePage() {
             </div>
             <div className="bg-white rounded-2xl p-4 shadow-sm text-center">
               <div className="text-2xl font-bold text-green-600">
-                {bestRun ? formatPaceFromDistDur(bestRun.distance, bestRun.duration) : '—'}
+                {bestRun ? avgPace(bestRun.distance, bestRun.duration) : '—'}
               </div>
               <div className="text-xs text-gray-500 mt-1">najlepsze tempo</div>
             </div>
             <div className="bg-white rounded-2xl p-4 shadow-sm text-center">
               <div className="text-2xl font-bold text-purple-600">
                 {runs.length > 0
-                  ? formatPaceFromDistDur(
+                  ? avgPace(
                       runs.reduce((s, r) => s + r.distance, 0),
                       runs.reduce((s, r) => s + r.duration, 0)
                     )
@@ -315,7 +332,7 @@ export default function BieganiePage() {
             {splitCount > 0 && (
               <div>
                 <label className="block text-sm text-gray-600 mb-2">
-                  Czas per km <span className="text-gray-400">(opcjonalnie, np. 5&apos;24&quot; lub 5:24)</span>
+                  Tempo per odcinek <span className="text-gray-400">(min:ss np. 5:24 lub 5&apos;24&quot;)</span>
                 </label>
                 <div className="space-y-2">
                   {splitInputs.map((val, i) => {
@@ -341,9 +358,10 @@ export default function BieganiePage() {
                           }`}
                         />
                         {parsed !== null && (
-                          <span className="text-xs text-blue-600 w-16 text-right shrink-0">
-                            {isPartial ? formatDuration(parsed) : formatPace(parsed) + '/km'}
-                          </span>
+                          <div className="text-right shrink-0 w-24">
+                            <div className="text-xs text-blue-600 font-medium">{formatPace(parsed)}/km</div>
+                            <div className="text-xs text-gray-400">{paceToKmh(parsed)} km/h</div>
+                          </div>
                         )}
                       </div>
                     );
@@ -375,18 +393,24 @@ export default function BieganiePage() {
 
             {/* Live preview */}
             {liveOk && (
-              <div className="bg-blue-50 rounded-xl p-3 grid grid-cols-2 gap-2 text-center">
+              <div className="bg-blue-50 rounded-xl p-3 grid grid-cols-3 gap-2 text-center">
                 <div>
-                  <div className="text-lg font-bold text-blue-700">
-                    {formatPaceFromDistDur(distNum, effectiveDuration)}/km
+                  <div className="text-base font-bold text-blue-700">
+                    {formatDuration(Math.round(effectiveDuration))}
                   </div>
-                  <div className="text-xs text-blue-500">tempo</div>
+                  <div className="text-xs text-blue-500">czas</div>
                 </div>
                 <div>
-                  <div className="text-lg font-bold text-blue-700">
-                    {formatSpeed(distNum, effectiveDuration)} km/h
+                  <div className="text-base font-bold text-blue-700">
+                    {avgPace(distNum, effectiveDuration)}/km
                   </div>
-                  <div className="text-xs text-blue-500">prędkość</div>
+                  <div className="text-xs text-blue-500">śr. tempo</div>
+                </div>
+                <div>
+                  <div className="text-base font-bold text-blue-700">
+                    {avgKmh(distNum, effectiveDuration)} km/h
+                  </div>
+                  <div className="text-xs text-blue-500">śr. prędkość</div>
                 </div>
               </div>
             )}
@@ -474,31 +498,36 @@ export default function BieganiePage() {
                     {hasSplits && isExpanded && (
                       <div className="border-t border-gray-100 px-4 pb-4 pt-3">
                         <div className="space-y-2">
-                          {run.splits.map((sec, i) => {
+                          {run.splits.map((pace, i) => {
+                            // pace = sec/km for this segment
                             const dist = splitDistance(i, run.distance);
                             const isPartialKm = dist < 0.99;
-                            const barWidth = maxSplit > 0 ? (sec / maxSplit) * 100 : 50;
-                            // Only compare full km splits for fastest/slowest
                             const fullSplits = run.splits.filter((_, j) => splitDistance(j, run.distance) >= 0.99);
-                            const isFastest = !isPartialKm && fullSplits.length > 1 && sec === Math.min(...fullSplits);
-                            const isSlowest = !isPartialKm && fullSplits.length > 1 && sec === Math.max(...fullSplits);
+                            const isFastest = !isPartialKm && fullSplits.length > 1 && pace === Math.min(...fullSplits);
+                            const isSlowest = !isPartialKm && fullSplits.length > 1 && pace === Math.max(...fullSplits);
+                            // Bar width: faster = wider (invert pace)
+                            const minP = Math.min(...fullSplits.length ? fullSplits : [pace]);
+                            const maxP = Math.max(...fullSplits.length ? fullSplits : [pace]);
+                            const barWidth = maxP > minP
+                              ? 30 + 70 * (1 - (pace - minP) / (maxP - minP))
+                              : 80;
                             return (
-                              <div key={i} className="flex items-center gap-3">
+                              <div key={i} className="flex items-center gap-2">
                                 <span className="text-sm text-gray-500 w-14 shrink-0">
                                   {splitLabel(i, run.splits.length, run.distance)}
                                 </span>
-                                <div className="flex-1 flex items-center gap-2">
-                                  <div className="flex-1 bg-gray-100 rounded-full h-2">
-                                    <div
-                                      className={`h-2 rounded-full ${isFastest ? 'bg-green-400' : isSlowest ? 'bg-orange-400' : 'bg-blue-300'}`}
-                                      style={{ width: `${barWidth}%` }}
-                                    />
-                                  </div>
-                                  <span className="text-sm font-medium text-gray-700 w-12 text-right shrink-0">
-                                    {formatDuration(sec)}
+                                <div className="flex-1 bg-gray-100 rounded-full h-2">
+                                  <div
+                                    className={`h-2 rounded-full ${isFastest ? 'bg-green-400' : isSlowest ? 'bg-orange-400' : 'bg-blue-300'}`}
+                                    style={{ width: `${isPartialKm ? 50 : barWidth}%` }}
+                                  />
+                                </div>
+                                <div className="text-right shrink-0 w-28">
+                                  <span className="text-sm font-medium text-gray-800">
+                                    {formatPace(pace)}/km
                                   </span>
-                                  <span className="text-xs text-gray-400 w-16 text-right shrink-0">
-                                    {isPartialKm ? `${(dist * 1000).toFixed(0)}m` : `${formatPace(sec)}/km`}
+                                  <span className="text-xs text-gray-400 ml-1">
+                                    {paceToKmh(pace)}
                                   </span>
                                 </div>
                                 {isFastest && <span className="text-xs">🟢</span>}
