@@ -23,12 +23,105 @@ interface Run {
 }
 
 function formatPace(secPerKm: number) {
-  if (!secPerKm) return '—';
+  if (!secPerKm || secPerKm <= 0) return '—';
   return `${Math.floor(secPerKm / 60)}'${Math.round(secPerKm % 60).toString().padStart(2, '0')}"`;
 }
 function formatDur(s: number) {
-  const m = Math.floor(s / 60), sec = Math.round(s % 60);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = Math.round(s % 60);
+  if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
   return `${m}:${sec.toString().padStart(2, '0')}`;
+}
+function paceToKmh(secPerKm: number): string {
+  if (!secPerKm || secPerKm <= 0) return '—';
+  return (3600 / secPerKm).toFixed(2);
+}
+function splitDistance(index: number, distance: number): number {
+  const fullKms = Math.floor(distance);
+  if (index < fullKms) return 1;
+  return distance - fullKms;
+}
+function splitLabel(index: number, distance: number): string {
+  const fullKms = Math.floor(distance);
+  const partial = distance - fullKms;
+  if (index < fullKms) return `km ${index + 1}`;
+  if (partial > 0.01) return `${(partial * 1000).toFixed(0)}m`;
+  return `km ${index + 1}`;
+}
+
+interface RunCardProps {
+  run: Run;
+  isPR: boolean;
+  expanded: boolean;
+  onToggle: () => void;
+}
+
+function RunCard({ run, isPR, expanded, onToggle }: RunCardProps) {
+  const hasSplits = run.splits && run.splits.length > 0;
+  const fullSplits: number[] = [];
+  if (hasSplits) {
+    run.splits.forEach((pace, j) => {
+      if (splitDistance(j, run.distance) > 0.98) fullSplits.push(pace);
+    });
+  }
+  const minP = fullSplits.length ? Math.min(...fullSplits) : 0;
+  const maxP = fullSplits.length ? Math.max(...fullSplits) : 0;
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+      <div className="p-4">
+        <div className="flex justify-between items-start">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-gray-900">{run.distance} km</span>
+              {isPR && <span className="text-xs font-bold bg-yellow-400 text-yellow-900 rounded-xl px-2 py-0.5">PR</span>}
+            </div>
+            <div className="text-sm text-gray-500">{formatDate(run.date)}</div>
+            {run.notes && <div className="text-xs text-gray-400 mt-1">{run.notes}</div>}
+          </div>
+          <div className="text-right">
+            <div className="font-semibold text-blue-600">{formatPace(run.duration / run.distance)}/km</div>
+            <div className="text-sm text-gray-500">{paceToKmh(run.duration / run.distance)} km/h</div>
+            <div className="text-sm text-gray-400">{formatDur(run.duration)}</div>
+          </div>
+        </div>
+        {hasSplits && (
+          <button onClick={onToggle} className="mt-3 text-xs text-blue-500 font-medium">
+            {expanded ? 'Ukryj splity' : `Splity per km (${run.splits.length})`}
+          </button>
+        )}
+      </div>
+      {hasSplits && expanded && (
+        <div className="border-t border-gray-100 px-4 pb-4 pt-3 space-y-2">
+          {run.splits.map((pace, i) => {
+            const dist = splitDistance(i, run.distance);
+            const isPartialKm = dist < 0.99;
+            const isFastest = !isPartialKm && fullSplits.length > 1 && pace === minP;
+            const isSlowest = !isPartialKm && fullSplits.length > 1 && pace === maxP;
+            const barWidth = maxP > minP ? 30 + 70 * (1 - (pace - minP) / (maxP - minP)) : 80;
+            return (
+              <div key={i} className="flex items-center gap-2">
+                <span className="text-sm text-gray-500 w-14 shrink-0">{splitLabel(i, run.distance)}</span>
+                <div className="flex-1 bg-gray-100 rounded-full h-2">
+                  <div
+                    className={`h-2 rounded-full ${isFastest ? 'bg-green-400' : isSlowest ? 'bg-orange-400' : 'bg-blue-300'}`}
+                    style={{ width: `${isPartialKm ? 50 : barWidth}%` }}
+                  />
+                </div>
+                <div className="text-right shrink-0 w-28">
+                  <span className="text-sm font-medium text-gray-800">{formatPace(pace)}/km</span>
+                  <span className="text-xs text-gray-400 ml-1">{paceToKmh(pace)}</span>
+                </div>
+                {isFastest && <span className="text-xs">🟢</span>}
+                {isSlowest && <span className="text-xs">🔴</span>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function ProfilPage() {
@@ -42,6 +135,7 @@ export default function ProfilPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [runs, setRuns] = useState<Run[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedRun, setExpandedRun] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isLoggedIn) router.push('/login');
@@ -84,7 +178,6 @@ export default function ProfilPage() {
 
   if (authLoading) return null;
 
-  // Redirect if viewing own profile
   if (!authLoading && authUserId === targetUserId) {
     router.replace('/historia');
     return null;
@@ -100,7 +193,6 @@ export default function ProfilPage() {
         </div>
       </div>
 
-      {/* Stats */}
       <div className="max-w-lg mx-auto px-4 pt-5 space-y-5">
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-white rounded-2xl p-4 shadow-sm text-center">
@@ -117,7 +209,6 @@ export default function ProfilPage() {
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="flex bg-gray-100 rounded-2xl p-1 gap-1">
           {(['treningi', 'biegi'] as const).map(t => (
             <button
@@ -127,16 +218,16 @@ export default function ProfilPage() {
                 tab === t ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'
               }`}
             >
-              {t === 'treningi' ? `💪 Treningi (${sessions.length})` : `🏃 Biegi (${runs.length})`}
+              {t === 'treningi' ? `Treningi (${sessions.length})` : `Biegi (${runs.length})`}
             </button>
           ))}
         </div>
 
         {loading ? (
-          <div className="text-center text-gray-400 py-10">Ładowanie...</div>
+          <div className="text-center text-gray-400 py-10">Ladowanie...</div>
         ) : tab === 'treningi' ? (
           sessions.length === 0 ? (
-            <div className="text-center text-gray-400 py-10 bg-white rounded-2xl">Brak treningów</div>
+            <div className="text-center text-gray-400 py-10 bg-white rounded-2xl">Brak treningow</div>
           ) : (
             <div className="space-y-3">
               {sessions.map(s => (
@@ -144,13 +235,10 @@ export default function ProfilPage() {
                   <div className="flex justify-between items-start">
                     <div>
                       <div className="font-semibold text-gray-800">{formatDate(s.date)}</div>
-                      <div className="text-sm text-gray-500 mt-0.5">{s.entries.length} ćwiczeń</div>
+                      <div className="text-sm text-gray-500 mt-0.5">{s.entries.length} cwiczen</div>
                       {s.notes && <div className="text-xs text-gray-400 mt-1">{s.notes}</div>}
                     </div>
-                    <Link
-                      href={`/trening/podsumowanie/${s.id}`}
-                      className="text-blue-500 text-sm font-medium"
-                    >
+                    <Link href={`/trening/podsumowanie/${s.id}`} className="text-blue-500 text-sm font-medium">
                       📊
                     </Link>
                   </div>
@@ -165,7 +253,7 @@ export default function ProfilPage() {
           )
         ) : (
           runs.length === 0 ? (
-            <div className="text-center text-gray-400 py-10 bg-white rounded-2xl">Brak biegów</div>
+            <div className="text-center text-gray-400 py-10 bg-white rounded-2xl">Brak biegow</div>
           ) : (
             <div className="space-y-3">
               {bestRun && runs.length > 1 && (
@@ -173,25 +261,18 @@ export default function ProfilPage() {
                   <span className="text-2xl">🏆</span>
                   <div>
                     <div className="text-sm font-semibold text-green-800">Najlepsze tempo</div>
-                    <div className="text-green-700">{formatPace(bestRun.duration / bestRun.distance)}/km · {(3600 / (bestRun.duration / bestRun.distance)).toFixed(2)} km/h</div>
+                    <div className="text-green-700">{formatPace(bestRun.duration / bestRun.distance)}/km · {paceToKmh(bestRun.duration / bestRun.distance)} km/h</div>
                   </div>
                 </div>
               )}
               {runs.map(r => (
-                <div key={r.id} className="bg-white rounded-2xl p-4 shadow-sm">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="font-bold text-gray-900">{r.distance} km</div>
-                      <div className="text-sm text-gray-500">{formatDate(r.date)}</div>
-                      {r.notes && <div className="text-xs text-gray-400 mt-1">{r.notes}</div>}
-                    </div>
-                    <div className="text-right">
-                      <div className="font-semibold text-blue-600">{formatPace(r.duration / r.distance)}/km</div>
-                      <div className="text-sm text-gray-500">{(3600 / (r.duration / r.distance)).toFixed(2)} km/h</div>
-                      <div className="text-sm text-gray-400">{formatDur(r.duration)}</div>
-                    </div>
-                  </div>
-                </div>
+                <RunCard
+                  key={r.id}
+                  run={r}
+                  isPR={bestRun?.id === r.id && runs.length > 1}
+                  expanded={expandedRun === r.id}
+                  onToggle={() => setExpandedRun(prev => prev === r.id ? null : r.id)}
+                />
               ))}
             </div>
           )
