@@ -510,9 +510,9 @@ export default function BieganiePage() {
                         </div>
                         <div className="text-right">
                           <div className="font-semibold text-blue-600">
-                            {formatPaceFromDistDur(run.distance, run.duration)}/km
+                            {avgPace(run.distance, run.duration)}/km
                           </div>
-                          <div className="text-sm text-gray-500">{formatSpeed(run.distance, run.duration)} km/h</div>
+                          <div className="text-sm text-gray-500">{avgKmh(run.distance, run.duration)} km/h</div>
                           <div className="text-sm text-gray-400">{formatDuration(run.duration)}</div>
                         </div>
                       </div>

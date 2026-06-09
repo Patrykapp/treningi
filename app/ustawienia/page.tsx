@@ -62,10 +62,10 @@ export default function UstawieniaPage() {
       const ex = await res.json();
       setExercises(prev => [...prev, ex].sort((a, b) => a.name.localeCompare(b.name)));
       setNewExName(''); setNewExGroup('');
-      showToast('Ćwiczenie dodane');
+      showToast('Cwiczenie dodane');
     } else {
       const err = await res.json();
-      showToast(err.error || 'Błąd', 'error');
+      showToast(err.error || 'Blad', 'error');
     }
   };
 
@@ -73,9 +73,9 @@ export default function UstawieniaPage() {
     const res = await fetch(`/api/exercises/${id}`, { method: 'DELETE' });
     if (res.ok) {
       setExercises(prev => prev.filter(e => e.id !== id));
-      showToast('Ćwiczenie usunięte');
+      showToast('Cwiczenie usuniete');
     } else {
-      showToast('Błąd usuwania', 'error');
+      showToast('Blad usuwania', 'error');
     }
     setConfirmDelete(null);
   };
@@ -90,9 +90,9 @@ export default function UstawieniaPage() {
       const updated = await res.json();
       setExercises(prev => prev.map(e => e.id === updated.id ? updated : e).sort((a, b) => a.name.localeCompare(b.name)));
       setEditingEx(null);
-      showToast('Ćwiczenie zaktualizowane');
+      showToast('Cwiczenie zaktualizowane');
     } else {
-      showToast('Błąd zapisu', 'error');
+      showToast('Blad zapisu', 'error');
     }
   };
 
@@ -113,18 +113,18 @@ export default function UstawieniaPage() {
           });
           const data = await res.json();
           if (res.ok) showToast(`Zaimportowano ${data.imported} wpisow`);
-          else showToast(data.error || 'Błąd importu', 'error');
+          else showToast(data.error || 'Blad importu', 'error');
         } finally {
           setImporting(false);
           if (fileInputRef.current) fileInputRef.current.value = '';
         }
       },
-      error: () => { showToast('Błąd parsowania CSV', 'error'); setImporting(false); },
+      error: () => { showToast('Blad parsowania CSV', 'error'); setImporting(false); },
     });
   };
 
   const handleLogout = async () => {
-    activeSession.clearAll(); // usuń aktywny trening z localStorage
+    activeSession.clearAll();
     await fetch('/api/auth', { method: 'DELETE' });
     router.push('/login');
     router.refresh();
@@ -136,7 +136,7 @@ export default function UstawieniaPage() {
       {confirmDelete && (
         <ConfirmDialog
           isOpen={true}
-          message="Usunąć ćwiczenie?"
+          message="Usunac cwiczenie?"
           onConfirm={() => deleteExercise(confirmDelete.id)}
           onCancel={() => setConfirmDelete(null)}
         />
@@ -147,22 +147,20 @@ export default function UstawieniaPage() {
       </div>
 
       <div className="px-4 py-4 space-y-6">
-        {/* Account info */}
         <section className="bg-white rounded-2xl p-4 shadow-sm">
           <h2 className="font-bold text-gray-800 mb-3">Konto</h2>
           <div className="space-y-1 mb-4">
-            <p className="text-sm text-gray-700"><span className="font-medium">Imię:</span> {authName || '...'}</p>
+            <p className="text-sm text-gray-700"><span className="font-medium">Imie:</span> {authName || '...'}</p>
             <p className="text-sm text-gray-700"><span className="font-medium">Email:</span> {authEmail || '...'}</p>
           </div>
           <button onClick={handleLogout} className="w-full bg-red-50 text-red-600 py-3 rounded-xl font-medium text-sm">
-            Wyloguj się
+            Wyloguj sie
           </button>
         </section>
 
-        {/* Other users */}
         {otherUsers.length > 0 && (
           <section className="bg-white rounded-2xl p-4 shadow-sm">
-            <h2 className="font-bold text-gray-800 mb-3">Użytkownicy</h2>
+            <h2 className="font-bold text-gray-800 mb-3">Uzytkownicy</h2>
             <div className="space-y-2">
               {otherUsers.map(u => (
                 <Link
@@ -170,18 +168,17 @@ export default function UstawieniaPage() {
                   href={`/profil/${u.id}`}
                   className="flex items-center justify-between py-2 px-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
                 >
-                  <span className="text-sm font-medium text-gray-800">👤 {u.name}</span>
-                  <span className="text-xs text-blue-600">Zobacz profil →</span>
+                  <span className="text-sm font-medium text-gray-800">{u.name}</span>
+                  <span className="text-xs text-blue-600">Zobacz profil</span>
                 </Link>
               ))}
             </div>
           </section>
         )}
 
-        {/* Dark mode */}
         <section className="bg-white rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between">
-            <h2 className="font-bold text-gray-800">Wygląd</h2>
+            <h2 className="font-bold text-gray-800">Wyglad</h2>
             <button onClick={toggleDark}
               className={`relative inline-flex h-6 w-12 items-center rounded-full transition-colors ${dark ? 'bg-blue-600' : 'bg-gray-200'}`}>
               <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${dark ? 'translate-x-6' : 'translate-x-1'}`} />
@@ -190,9 +187,8 @@ export default function UstawieniaPage() {
           <p className="text-sm text-gray-500 mt-1">{dark ? 'Ciemny motyw' : 'Jasny motyw'}</p>
         </section>
 
-        {/* Exercises */}
         <section className="bg-white rounded-2xl p-4 shadow-sm">
-          <h2 className="font-bold text-gray-800 mb-3">Ćwiczenia ({exercises.length})</h2>
+          <h2 className="font-bold text-gray-800 mb-3">Cwiczenia ({exercises.length})</h2>
           <div className="space-y-1 mb-3 max-h-72 overflow-y-auto">
             {exercises.map(ex => (
               <div key={ex.id} className="border-b border-gray-100 py-2">
@@ -225,18 +221,17 @@ export default function UstawieniaPage() {
             ))}
           </div>
           <div className="space-y-2">
-            <input type="text" value={newExName} onChange={e => setNewExName(e.target.value)} placeholder="Nazwa ćwiczenia"
+            <input type="text" value={newExName} onChange={e => setNewExName(e.target.value)} placeholder="Nazwa cwiczenia"
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm"
               onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addExercise())} />
             <input type="text" value={newExGroup} onChange={e => setNewExGroup(e.target.value)} placeholder="Grupa miesniowa (opcjonalnie)"
               className="w-full border border-gray-200 rounded-xl px-4 py-2 text-sm" />
             <button onClick={addExercise} className="w-full bg-blue-600 text-white py-2.5 rounded-xl font-medium text-sm">
-              Dodaj ćwiczenie
+              Dodaj cwiczenie
             </button>
           </div>
         </section>
 
-        {/* Export / Import */}
         <section className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
           <h2 className="font-bold text-gray-800">Dane</h2>
           <button onClick={handleExport} className="w-full bg-gray-100 text-gray-700 py-3 rounded-xl text-sm font-medium">
@@ -245,7 +240,7 @@ export default function UstawieniaPage() {
           <div>
             <input ref={fileInputRef} type="file" accept=".csv" onChange={handleImport} className="hidden" id="csv-import" />
             <label htmlFor="csv-import" className={`block w-full text-center bg-gray-100 text-gray-700 py-3 rounded-xl text-sm font-medium cursor-pointer ${importing ? 'opacity-50' : ''}`}>
-              {importing ? 'Importuję...' : 'Importuj dane (CSV)'}
+              {importing ? 'Importuje...' : 'Importuj dane (CSV)'}
             </label>
           </div>
         </section>
