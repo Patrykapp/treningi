@@ -23,11 +23,14 @@ function useDarkMode() {
   return { dark, toggle };
 }
 
+interface UserOption { id: string; name: string; }
+
 export default function UstawieniaPage() {
   const router = useRouter();
   const { dark, toggle: toggleDark } = useDarkMode();
-  const { name: authName, email: authEmail } = useAuth();
+  const { name: authName, email: authEmail, userId: authUserId } = useAuth();
   const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [otherUsers, setOtherUsers] = useState<UserOption[]>([]);
   const [newExName, setNewExName] = useState('');
   const [newExGroup, setNewExGroup] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -40,7 +43,12 @@ export default function UstawieniaPage() {
     fetch('/api/exercises').then(r => r.json()).then(data => {
       if (Array.isArray(data)) setExercises(data);
     });
-  }, []);
+    fetch('/api/users').then(r => r.json()).then(data => {
+      if (Array.isArray(data) && authUserId) {
+        setOtherUsers(data.filter((u: UserOption) => u.id !== authUserId));
+      }
+    }).catch(() => {});
+  }, [authUserId]);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => setToast({ message, type });
 
@@ -150,6 +158,25 @@ export default function UstawieniaPage() {
             Wyloguj się
           </button>
         </section>
+
+        {/* Other users */}
+        {otherUsers.length > 0 && (
+          <section className="bg-white rounded-2xl p-4 shadow-sm">
+            <h2 className="font-bold text-gray-800 mb-3">Użytkownicy</h2>
+            <div className="space-y-2">
+              {otherUsers.map(u => (
+                <Link
+                  key={u.id}
+                  href={`/profil/${u.id}`}
+                  className="flex items-center justify-between py-2 px-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
+                >
+                  <span className="text-sm font-medium text-gray-800">👤 {u.name}</span>
+                  <span className="text-xs text-blue-600">Zobacz profil →</span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Dark mode */}
         <section className="bg-white rounded-2xl p-4 shadow-sm">

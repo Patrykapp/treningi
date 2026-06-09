@@ -316,7 +316,7 @@ export default function BieganiePage() {
                 return (
                   <div key={r.id} className="flex-1 flex flex-col items-center gap-1">
                     <div className="text-gray-400 leading-none" style={{ fontSize: '9px' }}>
-                      {formatPaceFromDistDur(r.distance, r.duration)}
+                      {avgPace(r.distance, r.duration)}
                     </div>
                     <div
                       className={`w-full rounded-t-sm ${isBest ? 'bg-green-400' : 'bg-blue-300'}`}
