@@ -46,6 +46,8 @@ function TreningPage() {
   // null = zalogowany user, 'all' = wszyscy, string = konkretny userId
   const [saveAsUserId, setSaveAsUserId] = useState<string | null>(null);
   const [existingSessionId, setExistingSessionId] = useState<string | null>(null);
+  // Chroni szkic przed nadpisaniem pustym stanem początkowym przy odświeżeniu strony
+  const [draftLoaded, setDraftLoaded] = useState(false);
 
   const DRAFT_KEY = 'treningFormDraft';
 
@@ -114,15 +116,17 @@ function TreningPage() {
     }
   }, [searchParams]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => { loadData().finally(() => setDraftLoaded(true)); }, [loadData]);
 
-  // Save draft to localStorage on every change (only when creating new session)
+  // Save draft to localStorage on every change (only when creating new session).
+  // draftLoaded: bez tego zapis startował z pustym stanem PONIŻEJ wczytania szkicu
+  // i odświeżenie strony kasowało wpisywany trening.
   useEffect(() => {
-    if (editingSession) return;
+    if (!draftLoaded || editingSession) return;
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify({ date, notes, entries }));
     } catch { /* ignore */ }
-  }, [date, notes, entries, editingSession]);
+  }, [date, notes, entries, editingSession, draftLoaded]);
 
   // Sprawdź czy istnieje sesja z wybranej daty (dla wybranego użytkownika)
   useEffect(() => {
