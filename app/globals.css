@@ -14,6 +14,12 @@
     color: #111111;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
+    /* Bezpiecznik: żaden element nie może rozepchnąć strony w poziomie (mobile) */
+    overflow-x: clip;
+  }
+  select {
+    /* Natywny select nie zwęża się poniżej najdłuższej opcji — wymuś dopasowanie */
+    max-width: 100%;
   }
   h1, h2, h3, h4, h5, h6 {
     color: #111111;

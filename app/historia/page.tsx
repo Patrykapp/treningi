@@ -159,7 +159,7 @@ export default function HistoriaPage() {
           <select
             value={filterExerciseId}
             onChange={e => setFilterExerciseId(e.target.value)}
-            className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white"
+            className="flex-1 min-w-0 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white"
           >
             <option value="">Wszystkie ćwiczenia</option>
             {exercises.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}

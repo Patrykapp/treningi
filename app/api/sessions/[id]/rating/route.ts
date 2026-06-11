@@ -194,8 +194,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       breakdown,
     }, {
       headers: {
-        // Rating for a past session won't change — cache aggressively
-        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+        // no-store: ocena zależy od edytowalnych danych sesji i historii PR —
+        // cache CDN pokazywał nieaktualne gwiazdki/PR nawet godzinę po edycji
+        'Cache-Control': 'no-store',
       },
     });
   } catch (e) {

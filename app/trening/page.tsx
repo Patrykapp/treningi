@@ -185,6 +185,16 @@ function TreningPage() {
     setSavingTemplate(false);
   };
 
+  const deleteTemplate = async (id: string) => {
+    const res = await fetch(`/api/templates/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      setTemplates(prev => prev.filter(t => t.id !== id));
+      setToast({ message: 'Szablon usunięty', type: 'success' });
+    } else {
+      setToast({ message: 'Nie udało się usunąć szablonu', type: 'error' });
+    }
+  };
+
   const addEntry = () => setEntries(prev => [...prev, {
     key: String(Date.now()), exerciseId: '', sets: 3, reps: 10, weight: 0, customSets: false, setsData: [], bodyweight: false,
   }]);
@@ -434,7 +444,7 @@ function TreningPage() {
                 <button type="button" onClick={() => loadTemplate(tpl)} className="text-sm font-medium text-blue-600 flex-1 text-left">
                   {tpl.name}
                 </button>
-                <button type="button" onClick={() => setTemplates(prev => prev.filter(t => t.id !== tpl.id))}
+                <button type="button" onClick={() => deleteTemplate(tpl.id)}
                   className="text-red-400 text-xs px-2">usuń</button>
               </div>
             ))}

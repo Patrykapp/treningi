@@ -31,6 +31,7 @@ export default function UstawieniaPage() {
   const { name: authName, email: authEmail, userId: authUserId } = useAuth();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [otherUsers, setOtherUsers] = useState<UserOption[]>([]);
+  const [exSearch, setExSearch] = useState('');
   const [newExName, setNewExName] = useState('');
   const [newExGroup, setNewExGroup] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -75,7 +76,8 @@ export default function UstawieniaPage() {
       setExercises(prev => prev.filter(e => e.id !== id));
       showToast('Cwiczenie usuniete');
     } else {
-      showToast('Blad usuwania', 'error');
+      const err = await res.json().catch(() => ({}));
+      showToast(err.error || 'Blad usuwania', 'error');
     }
     setConfirmDelete(null);
   };
@@ -189,8 +191,25 @@ export default function UstawieniaPage() {
 
         <section className="bg-white rounded-2xl p-4 shadow-sm">
           <h2 className="font-bold text-gray-800 mb-3">Cwiczenia ({exercises.length})</h2>
+          <div className="relative mb-2">
+            <input
+              type="text"
+              value={exSearch}
+              onChange={e => setExSearch(e.target.value)}
+              placeholder="Szukaj cwiczenia..."
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 pr-9 text-sm bg-gray-50"
+            />
+            {exSearch && (
+              <button onClick={() => setExSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg leading-none">×</button>
+            )}
+          </div>
           <div className="space-y-1 mb-3 max-h-72 overflow-y-auto">
-            {exercises.map(ex => (
+            {exercises.filter(ex => {
+              const q = exSearch.trim().toLowerCase();
+              if (!q) return true;
+              return ex.name.toLowerCase().includes(q) || (ex.muscleGroup || '').toLowerCase().includes(q);
+            }).map(ex => (
               <div key={ex.id} className="border-b border-gray-100 py-2">
                 {editingEx?.id === ex.id ? (
                   <div className="space-y-2">

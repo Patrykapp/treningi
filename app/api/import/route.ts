@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getAuthUserId } from '@/lib/auth';
 
 interface CsvRow {
   data?: string;
@@ -16,6 +17,8 @@ interface CsvRow {
 
 export async function POST(request: Request) {
   try {
+    const authUserId = await getAuthUserId();
+    if (!authUserId) return NextResponse.json({ error: 'Nieautoryzowany' }, { status: 401 });
     const { rows } = await request.json() as { rows: CsvRow[] };
     if (!rows?.length) return NextResponse.json({ error: 'Brak danych' }, { status: 400 });
 
