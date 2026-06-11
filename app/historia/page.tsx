@@ -343,27 +343,28 @@ export default function HistoriaPage() {
                         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">{muscle}</p>
                         <div className="space-y-1">
                           {entries.map(entry => (
-                            <div key={entry.id} className="flex items-center justify-between py-0.5">
-                              <Link href={`/cwiczenie/${entry.exerciseId}`} className="text-sm font-medium text-gray-900 flex items-center gap-1">
+                            <div key={entry.id} className="flex items-start justify-between gap-3 py-1">
+                              <Link href={`/cwiczenie/${entry.exerciseId}`}
+                                className="text-sm font-medium text-gray-900 flex-1 min-w-0 break-words leading-snug">
                                 {entry.exercise?.name}
                                 {rating?.prExerciseIds?.includes(entry.exerciseId) && (
-                                  <span title="Nowy rekord!">🏆</span>
+                                  <span className="ml-1" title="Nowy rekord!">🏆</span>
                                 )}
                               </Link>
-                              <div className="text-sm text-gray-700 text-right">
+                              <div className="text-sm text-gray-700 text-right shrink-0 max-w-[55%] leading-snug">
                                 {Array.isArray(entry.setsData) && entry.setsData.length > 0 ? (
-                                  <span>
+                                  <span className="inline-flex flex-wrap justify-end gap-x-0.5">
                                     {(entry.setsData as { reps: number; weight: number }[]).map((s, i) => (
-                                      <span key={i}>
+                                      <span key={i} className="whitespace-nowrap">
                                         {i > 0 && <span className="text-gray-400 mx-0.5">·</span>}
                                         {s.reps}x<strong>{s.weight}kg</strong>
                                       </span>
                                     ))}
                                   </span>
                                 ) : (
-                                  <span>{entry.sets}x{entry.reps} @ <strong>{entry.weight}kg</strong></span>
+                                  <span className="whitespace-nowrap">{entry.sets}x{entry.reps} @ <strong>{entry.weight}kg</strong></span>
                                 )}
-                                {entry.rpe && <span className="ml-1 text-xs text-gray-500">RPE {entry.rpe}</span>}
+                                {entry.rpe && <span className="ml-1 text-xs text-gray-500 whitespace-nowrap">RPE {entry.rpe}</span>}
                               </div>
                             </div>
                           ))}

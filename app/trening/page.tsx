@@ -235,6 +235,24 @@ function TreningPage() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: newExName.trim() }),
     });
+    if (res.status === 409) {
+      // Ćwiczenie o tej nazwie już istnieje — wybierz je zamiast tworzyć duplikat
+      const data = await res.json();
+      const ex = data.existing;
+      if (ex) {
+        setExercises(prev => prev.some(p => p.id === ex.id) ? prev : [...prev, ex].sort((a, b) => a.name.localeCompare(b.name)));
+        setEntries(prev => {
+          const lastEmpty = [...prev].reverse().find(e => !e.exerciseId);
+          if (lastEmpty) return prev.map(e => e.key === lastEmpty.key ? { ...e, exerciseId: ex.id } : e);
+          return [...prev, { key: String(Date.now()), exerciseId: ex.id, sets: 3, reps: 10, weight: 0, customSets: false, setsData: [], bodyweight: false }];
+        });
+        setToast({ message: `"${ex.name}" już istnieje — wybrano je w formularzu`, type: 'success' });
+        setNewExName(''); setShowNewEx(false);
+      } else {
+        setToast({ message: data.error || 'Ćwiczenie już istnieje', type: 'error' });
+      }
+      return;
+    }
     if (res.ok) {
       const ex = await res.json();
       invalidateExerciseCache();
@@ -249,6 +267,9 @@ function TreningPage() {
       });
       setToast({ message: `Dodano "${ex.name}" i wybrano w formularzu`, type: 'success' });
       setNewExName(''); setShowNewEx(false);
+    } else {
+      const err = await res.json().catch(() => ({}));
+      setToast({ message: err.error || 'Nie udało się dodać ćwiczenia', type: 'error' });
     }
   };
 
@@ -279,23 +300,37 @@ function TreningPage() {
     };
   };
 
-  // Zapisz razem — dodaj ćwiczenia do istniejącej sesji tego dnia
+  // Lista użytkowników, dla których zapisujemy
+  const getTargetUserIds = (): string[] =>
+    saveAsUserId === 'all' ? users.map(u => u.id) : [saveAsUserId || authUserId || ''];
+
+  // Zapisz razem — dopisz ćwiczenia do istniejącej sesji tego dnia
+  // (jeden atomowy request; przy "Oboje" dopisuje/tworzy dla każdego użytkownika)
   const handleSaveTogether = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateEntries() || !existingSessionId) return;
+    if (!validateEntries()) return;
     setSaving(true);
     try {
-      for (const entry of entries.filter(e => e.exerciseId)) {
-        await fetch(`/api/sessions/${existingSessionId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ entry: buildEntryPayload(entry) }),
-        });
+      const res = await fetch('/api/sessions', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date, notes,
+          entries: entries.filter(e => e.exerciseId).map(buildEntryPayload),
+          targetUserIds: getTargetUserIds(),
+          appendToExisting: true,
+        }),
+      });
+      if (res.ok) {
+        activeSession.clear();
+        localStorage.removeItem(DRAFT_KEY);
+        setToast({ message: 'Ćwiczenia dodane do treningu z tego dnia!', type: 'success' });
+        setTimeout(() => router.push('/'), 1500);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setToast({ message: err.error || 'Błąd zapisu — nic nie zostało zapisane', type: 'error' });
       }
-      activeSession.clear();
-      localStorage.removeItem(DRAFT_KEY);
-      setToast({ message: 'Ćwiczenia dodane do treningu z tego dnia!', type: 'success' });
-      setTimeout(() => router.push('/'), 1500);
+    } catch {
+      setToast({ message: 'Błąd połączenia — nic nie zostało zapisane', type: 'error' });
     } finally {
       setSaving(false);
     }
@@ -324,21 +359,18 @@ function TreningPage() {
         return;
       }
 
-      // Nowy trening — ustal listę użytkowników do zapisu
-      const targetUserIds: string[] = saveAsUserId === 'all'
-        ? users.map(u => u.id)
-        : [saveAsUserId || authUserId || ''];
+      // Nowy trening — jeden atomowy request dla wszystkich użytkowników
+      // (zapis dla obojga: albo zapisze się dla obu, albo dla nikogo)
+      const res = await fetch('/api/sessions', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date, notes,
+          entries: entries.filter(e => e.exerciseId).map(buildEntryPayload),
+          targetUserIds: getTargetUserIds(),
+        }),
+      });
 
-      let allOk = true;
-      for (const uid of targetUserIds) {
-        const res = await fetch('/api/sessions', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ date, notes, entries, targetUserId: uid }),
-        });
-        if (!res.ok) { allOk = false; }
-      }
-
-      if (allOk) {
+      if (res.ok) {
         activeSession.clear();
         localStorage.removeItem(DRAFT_KEY);
         const msg = saveAsUserId === 'all'
@@ -347,8 +379,11 @@ function TreningPage() {
         setToast({ message: msg, type: 'success' });
         setTimeout(() => router.push('/'), 1500);
       } else {
-        setToast({ message: 'Błąd zapisu', type: 'error' });
+        const err = await res.json().catch(() => ({}));
+        setToast({ message: err.error || 'Błąd zapisu — nic nie zostało zapisane', type: 'error' });
       }
+    } catch {
+      setToast({ message: 'Błąd połączenia — nic nie zostało zapisane', type: 'error' });
     } finally {
       setSaving(false);
     }
