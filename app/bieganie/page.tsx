@@ -63,11 +63,16 @@ function avgKmh(distance: number, duration: number): string {
 function parseSplitInput(value: string): number | null {
   const trimmed = value.trim();
   if (!trimmed) return null;
-  const colonMatch = trimmed.match(/^(\d+)[:'"](\d{1,2})["]?$/);
+  const colonMatch = trimmed.match(/^(\d+)[:.'"](\d{1,2})["]?$/);
   if (colonMatch) return parseInt(colonMatch[1]) * 60 + parseInt(colonMatch[2]);
-  const numOnly = parseInt(trimmed);
-  if (!isNaN(numOnly) && trimmed.match(/^\d+$/)) {
-    return numOnly <= 999 ? numOnly : Math.floor(numOnly / 100) * 60 + (numOnly % 100);
+  if (/^\d+$/.test(trimmed)) {
+    const n = parseInt(trimmed);
+    // Gołe liczby = tempo min/km: "6" → 6:00, "524" → 5:24, "1024" → 10:24.
+    // (Wcześniej "524" było traktowane jako 524 sekundy → zaniżone km/h.)
+    if (trimmed.length <= 2) return n * 60;
+    const mins = Math.floor(n / 100);
+    const secs = n % 100;
+    return secs < 60 ? mins * 60 + secs : null;
   }
   return null;
 }
@@ -206,7 +211,8 @@ export default function BieganiePage() {
           duration: effectiveDuration,
           splits: allSplitsFilled ? parsedSplits : [],
           notes,
-          userId,
+          // Zapisz dla użytkownika wybranego w przełączniku (np. Adriana), nie zawsze dla zalogowanego
+          userId: activeUserId,
         }),
       });
       if (!res.ok) throw new Error();

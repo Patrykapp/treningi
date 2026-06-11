@@ -44,7 +44,7 @@ export async function POST(request: Request) {
         userId: targetUserId,
         date: new Date(date),
         distance: parseFloat(distance),
-        duration: parseInt(duration),
+        duration: Math.round(Number(duration)),
         splits: Array.isArray(splits) ? splits : [],
         notes: notes || null,
       },
