@@ -260,6 +260,11 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
 
   const bestWeight = entries.length ? Math.max(...entries.map(calcMax)) : 0;
   const isBodyweightExercise = entries.length > 0 && bestWeight === 0;
+  // Najlepsze szacowane 1RM z historii (Epley, per seria)
+  const best1RM = entries.length ? Math.max(...entries.map(e => {
+    if (e.setsData && e.setsData.length > 0) return Math.max(...e.setsData.map(s => calc1RM(s.weight, s.reps)));
+    return calc1RM(e.weight, e.reps);
+  })) : 0;
   const lastEntry = entries[0];
   const chartData = buildChart(entries, compareEntries, chartType);
   const compareName = users.find(u => u.id === compareUserId)?.name || 'Porownanie';
@@ -385,17 +390,23 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
       <div className="px-4 py-4 space-y-4">
 
         {entries.length > 0 && (
-          <div className="grid grid-cols-3 gap-3">
+          <div className={`grid gap-2 ${isBodyweightExercise ? 'grid-cols-3' : 'grid-cols-4'}`}>
             <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
-              <div className="text-2xl font-bold text-gray-900">{bestWeight}</div>
+              <div className="text-xl font-bold text-gray-900">{bestWeight}</div>
               <div className="text-xs text-gray-500">rekord kg</div>
             </div>
+            {!isBodyweightExercise && (
+              <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
+                <div className="text-xl font-bold text-blue-600">{best1RM}</div>
+                <div className="text-xs text-gray-500">szac. 1RM</div>
+              </div>
+            )}
             <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
-              <div className="text-2xl font-bold text-gray-900">{entries.length}</div>
+              <div className="text-xl font-bold text-gray-900">{entries.length}</div>
               <div className="text-xs text-gray-500">sesji</div>
             </div>
             <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
-              <div className="text-2xl font-bold text-gray-900">{lastEntry ? calcMax(lastEntry) : '-'}</div>
+              <div className="text-xl font-bold text-gray-900">{lastEntry ? calcMax(lastEntry) : '-'}</div>
               <div className="text-xs text-gray-500">ostatnio kg</div>
             </div>
           </div>

@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Exercise, NewEntryForm, SetData } from '@/types';
 import { formatDateInput } from '@/lib/utils';
 import { fetchExercises, invalidateExerciseCache } from '@/lib/exerciseCache';
 import { Toast } from '@/components/ui/Toast';
 import { ExerciseSearch } from '@/components/ui/ExerciseSearch';
+import { RestTimer } from '@/components/ui/RestTimer';
 import { activeSession } from '@/hooks/useActiveSession';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -20,6 +21,30 @@ interface Template {
   id: string;
   name: string;
   entries: { exerciseId: string; sets: number; reps: number; weight: number }[];
+}
+
+interface LastResult {
+  sets: number;
+  reps: number;
+  weight: number;
+  rpe: number | null;
+  date: string;
+  setsData: SetData[];
+}
+
+// Sugestia progresji na podstawie ostatniego wyniku
+function progressionHint(last: LastResult): string {
+  const maxW = last.setsData.length > 0 ? Math.max(...last.setsData.map(s => s.weight)) : last.weight;
+  if (maxW <= 0) return 'spróbuj +1 powtórzenie';
+  if (last.rpe != null && last.rpe > 8.5) return `zostań przy ${maxW}kg (RPE ${last.rpe})`;
+  return `spróbuj ${(maxW + 2.5).toLocaleString('pl-PL')}kg`;
+}
+
+function formatLastResult(last: LastResult): string {
+  if (last.setsData.length > 0) {
+    return last.setsData.map(s => `${s.reps}x${s.weight}kg`).join(' · ');
+  }
+  return `${last.sets}x${last.reps} @ ${last.weight}kg`;
 }
 
 function TreningPage() {
@@ -48,6 +73,12 @@ function TreningPage() {
   const [existingSessionId, setExistingSessionId] = useState<string | null>(null);
   // Chroni szkic przed nadpisaniem pustym stanem początkowym przy odświeżeniu strony
   const [draftLoaded, setDraftLoaded] = useState(false);
+  // Ostatnie wyniki per ćwiczenie — podpowiedź progresji
+  const [lastResults, setLastResults] = useState<Record<string, LastResult | null>>({});
+  // Tryb live: odhaczanie serii + timer przerwy
+  const [doneSets, setDoneSets] = useState<Record<string, boolean>>({});
+  const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
+  const [restSecs, setRestSecs] = useState(90);
 
   const DRAFT_KEY = 'treningFormDraft';
 
@@ -117,6 +148,38 @@ function TreningPage() {
   }, [searchParams]);
 
   useEffect(() => { loadData().finally(() => setDraftLoaded(true)); }, [loadData]);
+
+  // Użytkownik, dla którego pokazujemy podpowiedzi progresji
+  const hintUserId = saveAsUserId && saveAsUserId !== 'all' ? saveAsUserId : authUserId;
+
+  // Pobierz ostatni wynik dla każdego wybranego ćwiczenia.
+  // Cache kluczowany "userId:exerciseId" (zmiana użytkownika nie wymaga resetu),
+  // ref chroni przed podwójnym pobraniem bez setState w efekcie.
+  const hintsInFlight = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!hintUserId) return;
+    const exIds = [...new Set(entries.map(e => e.exerciseId).filter(Boolean))];
+    for (const exId of exIds) {
+      const key = `${hintUserId}:${exId}`;
+      if (key in lastResults || hintsInFlight.current.has(key)) continue;
+      hintsInFlight.current.add(key);
+      fetch(`/api/entries?exerciseId=${exId}&userId=${hintUserId}&limit=1`)
+        .then(r => r.json())
+        .then(data => {
+          const e = Array.isArray(data) && data.length > 0 ? data[0] : null;
+          setLastResults(prev => ({
+            ...prev,
+            [key]: e ? {
+              sets: e.sets, reps: e.reps, weight: e.weight, rpe: e.rpe ?? null,
+              date: e.session?.date || '',
+              setsData: Array.isArray(e.setsData) ? e.setsData : [],
+            } : null,
+          }));
+        })
+        .catch(() => setLastResults(prev => ({ ...prev, [key]: null })))
+        .finally(() => hintsInFlight.current.delete(key));
+    }
+  }, [entries, hintUserId, lastResults]);
 
   // Save draft to localStorage on every change (only when creating new session).
   // draftLoaded: bez tego zapis startował z pustym stanem PONIŻEJ wczytania szkicu
@@ -241,6 +304,16 @@ function TreningPage() {
       if (e.key !== entryKey) return e;
       return { ...e, setsData: (e.setsData || []).filter((_, i) => i !== setIdx) };
     }));
+  };
+
+  // Odhacz serię — zaznaczenie startuje timer przerwy
+  const toggleSetDone = (entryKey: string, setIdx: number) => {
+    const k = `${entryKey}-${setIdx}`;
+    setDoneSets(prev => {
+      const marking = !prev[k];
+      if (marking) setRestEndsAt(Date.now() + restSecs * 1000);
+      return { ...prev, [k]: marking };
+    });
   };
 
   const addNewExercise = async () => {
@@ -406,6 +479,13 @@ function TreningPage() {
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      <RestTimer
+        endsAt={restEndsAt}
+        secs={restSecs}
+        onChangeSecs={setRestSecs}
+        onExtend={ms => setRestEndsAt(prev => (prev ? prev + ms : prev))}
+        onClose={() => setRestEndsAt(null)}
+      />
 
       <div className="bg-white border-b px-4 py-4 sticky top-0 z-10">
         <div className="flex items-center justify-between">
@@ -484,6 +564,18 @@ function TreningPage() {
               onChange={val => updateEntry(entry.key, 'exerciseId', val)}
               onAddNew={() => setShowNewEx(true)}
             />
+            {(() => {
+              const hint = entry.exerciseId && hintUserId ? lastResults[`${hintUserId}:${entry.exerciseId}`] : null;
+              if (!hint) return null;
+              return (
+                <div className="text-xs bg-blue-50 text-blue-800 rounded-lg px-3 py-2 leading-snug">
+                  Ostatnio{hint.date ? ` (${new Date(hint.date).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' })})` : ''}:{' '}
+                  {formatLastResult(hint)}
+                  {hint.rpe != null && ` · RPE ${hint.rpe}`}
+                  {' → '}<strong>{progressionHint(hint)}</strong>
+                </div>
+              );
+            })()}
             <div className="flex gap-4 items-center">
               <div className="flex gap-2 items-center">
                 <label className="text-xs text-gray-500">Rozpisz serie osobno</label>
@@ -522,6 +614,13 @@ function TreningPage() {
               <div className="space-y-2">
                 {(entry.setsData || []).map((s, si) => (
                   <div key={si} className="flex items-center gap-2">
+                    <button type="button" onClick={() => toggleSetDone(entry.key, si)}
+                      title="Odhacz serię i odpal timer przerwy"
+                      className={`w-7 h-7 rounded-full border text-xs shrink-0 transition-colors ${
+                        doneSets[`${entry.key}-${si}`]
+                          ? 'bg-green-500 border-green-500 text-white'
+                          : 'border-gray-300 text-gray-300'
+                      }`}>✓</button>
                     <span className="text-xs text-gray-400 w-6">{si + 1}.</span>
                     <input type="number" min="1" inputMode="numeric"
                       value={s.reps === 0 ? '' : s.reps} placeholder="0"

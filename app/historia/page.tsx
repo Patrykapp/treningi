@@ -83,23 +83,21 @@ export default function HistoriaPage() {
       : (Array.isArray(data) ? data : []);
     setSessions(filtered);
     setLoading(false);
-    // Load ratings in batches of 5 to avoid hammering the DB
+    // Oceny zbiorczo — jeden request zamiast osobnego na każdą sesję
     const sessionList = Array.isArray(data) ? data : [];
-    const toRate = sessionList.slice(0, 10);
-    const batchSize = 5;
-    for (let i = 0; i < toRate.length; i += batchSize) {
-      const batch = toRate.slice(i, i + batchSize);
-      await Promise.allSettled(
-        batch.map((s: WorkoutSession) =>
-          fetch(`/api/sessions/${s.id}/rating`)
-            .then(r => r.json())
-            .then(rating => {
-              if (rating && !rating.error) {
-                setRatings(prev => ({ ...prev, [s.id]: rating }));
-              }
-            })
-        )
-      );
+    const ids = sessionList.slice(0, 10).map((s: WorkoutSession) => s.id);
+    if (ids.length > 0) {
+      try {
+        const res = await fetch('/api/sessions/ratings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids }),
+        });
+        if (res.ok) {
+          const map = await res.json();
+          if (map && !map.error) setRatings(prev => ({ ...prev, ...map }));
+        }
+      } catch { /* oceny są opcjonalne */ }
     }
   }, [filterExerciseId, filterFrom, filterTo]);
 

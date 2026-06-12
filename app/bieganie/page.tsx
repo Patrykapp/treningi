@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDateInput } from '@/lib/utils';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 interface RunSession {
   id: string;
@@ -114,6 +115,8 @@ export default function BieganiePage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [expandedRun, setExpandedRun] = useState<string | null>(null);
+  const [editingRunId, setEditingRunId] = useState<string | null>(null);
+  const [confirmDeleteRun, setConfirmDeleteRun] = useState<string | null>(null);
 
   // Derive number of split slots from distance
   const distNum = parseFloat(distance);
@@ -189,6 +192,42 @@ export default function BieganiePage() {
     if (activeUserId) loadRuns();
   }, [activeUserId, loadRuns]);
 
+  // ─── edit / delete ─────────────────────────────────────────────────────────
+
+  const startEditRun = (run: RunSession) => {
+    setEditingRunId(run.id);
+    setDate(formatDateInput(run.date));
+    setDistance(String(run.distance));
+    setNotes(run.notes || '');
+    if (run.splits.length > 0) {
+      setSplitInputs(run.splits.map(p => `${Math.floor(p / 60)}:${String(Math.round(p % 60)).padStart(2, '0')}`));
+      setManualDuration('');
+    } else {
+      setSplitInputs([]);
+      setManualDuration(formatDuration(run.duration));
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const cancelEdit = () => {
+    setEditingRunId(null);
+    setDistance(''); setSplitInputs([]); setManualDuration(''); setNotes('');
+    setDate(formatDateInput(new Date()));
+  };
+
+  const deleteRun = async (id: string) => {
+    setConfirmDeleteRun(null);
+    const res = await fetch(`/api/runs/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      setRuns(prev => prev.filter(r => r.id !== id));
+      if (editingRunId === id) cancelEdit();
+      setSuccess('Bieg usunięty');
+      setTimeout(() => setSuccess(''), 3000);
+    } else {
+      setError('Błąd usuwania biegu');
+    }
+  };
+
   // ─── submit ────────────────────────────────────────────────────────────────
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -202,21 +241,29 @@ export default function BieganiePage() {
 
     setSaving(true);
     try {
-      const res = await fetch('/api/runs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          date,
-          distance: distNum,
-          duration: effectiveDuration,
-          splits: allSplitsFilled ? parsedSplits : [],
-          notes,
-          // Zapisz dla użytkownika wybranego w przełączniku (np. Adriana), nie zawsze dla zalogowanego
-          userId: activeUserId,
-        }),
-      });
+      const payload = {
+        date,
+        distance: distNum,
+        duration: effectiveDuration,
+        splits: allSplitsFilled ? parsedSplits : [],
+        notes,
+        // Zapisz dla użytkownika wybranego w przełączniku (np. Adriana), nie zawsze dla zalogowanego
+        userId: activeUserId,
+      };
+      const res = editingRunId
+        ? await fetch(`/api/runs/${editingRunId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          })
+        : await fetch('/api/runs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
       if (!res.ok) throw new Error();
-      setSuccess('Bieg zapisany!');
+      setSuccess(editingRunId ? 'Bieg zaktualizowany!' : 'Bieg zapisany!');
+      setEditingRunId(null);
       setDistance('');
       setSplitInputs([]);
       setManualDuration('');
@@ -250,6 +297,14 @@ export default function BieganiePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
+      {confirmDeleteRun && (
+        <ConfirmDialog
+          isOpen={true}
+          message="Usunąć ten bieg? Nie można cofnąć."
+          onConfirm={() => deleteRun(confirmDeleteRun)}
+          onCancel={() => setConfirmDeleteRun(null)}
+        />
+      )}
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-4 py-4 flex items-center gap-3">
         <button onClick={() => router.back()} className="text-gray-500 hover:text-gray-700 text-xl">←</button>
@@ -341,7 +396,14 @@ export default function BieganiePage() {
 
         {/* Form */}
         <div className="bg-white rounded-2xl p-5 shadow-sm">
-          <h2 className="font-semibold text-gray-800 mb-4">Zapisz bieg</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-gray-800">{editingRunId ? 'Edytuj bieg' : 'Zapisz bieg'}</h2>
+            {editingRunId && (
+              <button type="button" onClick={cancelEdit} className="text-sm text-gray-400 hover:text-gray-600">
+                ✕ Anuluj edycję
+              </button>
+            )}
+          </div>
           <form onSubmit={handleSubmit} className="space-y-4">
 
             <div>
@@ -473,7 +535,7 @@ export default function BieganiePage() {
               disabled={saving}
               className="w-full bg-blue-600 text-white rounded-xl py-3 font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
-              {saving ? 'Zapisywanie...' : 'Zapisz bieg'}
+              {saving ? 'Zapisywanie...' : editingRunId ? 'Aktualizuj bieg' : 'Zapisz bieg'}
             </button>
           </form>
         </div>
@@ -523,14 +585,27 @@ export default function BieganiePage() {
                         </div>
                       </div>
 
-                      {hasSplits && (
+                      <div className="mt-3 flex items-center gap-3">
+                        {hasSplits && (
+                          <button
+                            onClick={() => setExpandedRun(isExpanded ? null : run.id)}
+                            className="text-xs text-blue-500 hover:text-blue-700 font-medium"
+                          >
+                            {isExpanded ? '▲ Ukryj splity' : `▼ Splity per km (${run.splits.length})`}
+                          </button>
+                        )}
+                        <span className="flex-1" />
                         <button
-                          onClick={() => setExpandedRun(isExpanded ? null : run.id)}
-                          className="mt-3 text-xs text-blue-500 hover:text-blue-700 font-medium"
-                        >
-                          {isExpanded ? '▲ Ukryj splity' : `▼ Splity per km (${run.splits.length})`}
-                        </button>
-                      )}
+                          onClick={() => startEditRun(run)}
+                          className="text-xs text-gray-400 hover:text-blue-600 font-medium"
+                          title="Edytuj bieg"
+                        >✏️ Edytuj</button>
+                        <button
+                          onClick={() => setConfirmDeleteRun(run.id)}
+                          className="text-xs text-gray-400 hover:text-red-500 font-medium"
+                          title="Usuń bieg"
+                        >🗑️ Usuń</button>
+                      </div>
                     </div>
 
                     {/* Splits detail */}

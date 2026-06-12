@@ -1,0 +1,40 @@
+name: Cotygodniowy backup bazy
+
+on:
+  schedule:
+    - cron: '0 4 * * 1' # poniedziałek 04:00 UTC
+  workflow_dispatch: {}   # możliwość ręcznego uruchomienia
+
+permissions:
+  contents: write
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pobierz zrzut danych
+        env:
+          BACKUP_URL: ${{ secrets.BACKUP_URL }}
+          BACKUP_TOKEN: ${{ secrets.BACKUP_TOKEN }}
+        run: |
+          mkdir -p backups
+          FILE="backups/backup-$(date +%F).json"
+          HTTP=$(curl -sS -w '%{http_code}' -o "$FILE" "$BACKUP_URL/api/backup?token=$BACKUP_TOKEN")
+          if [ "$HTTP" != "200" ]; then
+            echo "Backup nieudany, HTTP $HTTP"; cat "$FILE"; exit 1
+          fi
+          python3 -c "import json,sys; d=json.load(open('$FILE')); print('OK:', d['counts'])"
+
+      - name: Zachowaj tylko 12 ostatnich backupów
+        run: ls -1t backups/backup-*.json | tail -n +13 | xargs -r rm --
+
+      - name: Commit backupu
+        run: |
+          git config user.name "backup-bot"
+          git config user.email "actions@github.com"
+          git add backups
+          git diff --cached --quiet && echo "Brak zmian" && exit 0
+          git commit -m "backup: $(date +%F)"
+          git push

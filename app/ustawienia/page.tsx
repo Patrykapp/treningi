@@ -38,6 +38,9 @@ export default function UstawieniaPage() {
   const [confirmDelete, setConfirmDelete] = useState<{ type: 'exercise'; id: string } | null>(null);
   const [importing, setImporting] = useState(false);
   const [editingEx, setEditingEx] = useState<{ id: string; name: string; muscleGroup: string } | null>(null);
+  const [mergeFrom, setMergeFrom] = useState('');
+  const [mergeTo, setMergeTo] = useState('');
+  const [merging, setMerging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -96,6 +99,25 @@ export default function UstawieniaPage() {
     } else {
       showToast('Blad zapisu', 'error');
     }
+  };
+
+  const mergeExercises = async () => {
+    if (!mergeFrom || !mergeTo || mergeFrom === mergeTo) return;
+    setMerging(true);
+    const res = await fetch('/api/exercises/merge', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keepId: mergeTo, deleteId: mergeFrom }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setExercises(prev => prev.filter(e => e.id !== mergeFrom));
+      setMergeFrom(''); setMergeTo('');
+      showToast(`Scalono "${data.deletedName}" → "${data.keptName}" (${data.movedEntries} wpisów)`);
+    } else {
+      const err = await res.json().catch(() => ({}));
+      showToast(err.error || 'Blad scalania', 'error');
+    }
+    setMerging(false);
   };
 
   const handleExport = () => window.open('/api/export', '_blank');
@@ -247,6 +269,39 @@ export default function UstawieniaPage() {
               className="w-full border border-gray-200 rounded-xl px-4 py-2 text-sm" />
             <button onClick={addExercise} className="w-full bg-blue-600 text-white py-2.5 rounded-xl font-medium text-sm">
               Dodaj cwiczenie
+            </button>
+          </div>
+        </section>
+
+        <section className="bg-white rounded-2xl p-4 shadow-sm">
+          <h2 className="font-bold text-gray-800 mb-1">Scal duplikaty ćwiczeń</h2>
+          <p className="text-xs text-gray-500 mb-3">
+            Historia, ulubione i szablony zostaną przeniesione do ćwiczenia docelowego, a duplikat usunięty.
+          </p>
+          <div className="space-y-2">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Duplikat (do usunięcia)</label>
+              <select value={mergeFrom} onChange={e => setMergeFrom(e.target.value)}
+                className="w-full min-w-0 border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white">
+                <option value="">— wybierz —</option>
+                {exercises.filter(e => e.id !== mergeTo).map(e => (
+                  <option key={e.id} value={e.id}>{e.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Ćwiczenie docelowe (zostaje)</label>
+              <select value={mergeTo} onChange={e => setMergeTo(e.target.value)}
+                className="w-full min-w-0 border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white">
+                <option value="">— wybierz —</option>
+                {exercises.filter(e => e.id !== mergeFrom).map(e => (
+                  <option key={e.id} value={e.id}>{e.name}</option>
+                ))}
+              </select>
+            </div>
+            <button onClick={mergeExercises} disabled={!mergeFrom || !mergeTo || merging}
+              className="w-full bg-orange-500 text-white py-2.5 rounded-xl font-medium text-sm disabled:opacity-40">
+              {merging ? 'Scalanie...' : '🔗 Scal ćwiczenia'}
             </button>
           </div>
         </section>

@@ -12,6 +12,7 @@ export async function GET(request: Request) {
     const userId = searchParams.get('userId');
     const from = searchParams.get('from');
     const to = searchParams.get('to');
+    const limitParam = parseInt(searchParams.get('limit') || '0');
 
     // userId param dozwolony — używany do porównania z innymi użytkownikami w wykresach,
     // ale tylko zalogowany użytkownik może w ogóle przeglądać dane.
@@ -33,6 +34,7 @@ export async function GET(request: Request) {
         session: { include: { user: true } },
       },
       orderBy: { session: { date: 'desc' } },
+      ...(limitParam > 0 ? { take: limitParam } : {}),
     });
     return NextResponse.json(entries);
   } catch {

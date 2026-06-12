@@ -46,6 +46,8 @@ model WorkoutSession {
   entries   WorkoutEntry[]
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
+
+  @@index([userId, date])
 }
 
 model WorkoutEntry {
@@ -62,6 +64,9 @@ model WorkoutEntry {
   setsData   Json           @default("[]")
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
+
+  @@index([sessionId])
+  @@index([exerciseId])
 }
 
 model BodyWeight {
@@ -72,6 +77,8 @@ model BodyWeight {
   weight    Float
   notes     String?
   createdAt DateTime @default(now())
+
+  @@index([userId, date])
 }
 
 model UserFavorite {
@@ -106,4 +113,6 @@ model RunSession {
   notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([userId, date])
 }
