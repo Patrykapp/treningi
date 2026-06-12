@@ -173,18 +173,28 @@ export default function DashboardPage() {
     const weekKcal =
       weekSessions.reduce((sum, s) => sum + strengthCalories(weightKg, countSets(s.entries || [])), 0) +
       weekRuns.reduce((sum, r) => sum + runCalories(weightKg, r.distance), 0);
+    // Punktacja rankingu tygodniowego:
+    //   100 pkt za trening (siłowy lub bieg)
+    //   +30 pkt za każdy DZIEŃ z treningiem (premiuje regularność, nie kumulowanie w 1 dzień)
+    //   +1 pkt za każde 10 kcal (premiuje cięższe/dłuższe treningi)
+    const weekDays = new Set([...weekSessions, ...weekRuns].map(x => {
+      const d = new Date(x.date); d.setHours(0, 0, 0, 0); return d.getTime();
+    })).size;
+    const weekCount = weekSessions.length + weekRuns.length;
+    const score = weekCount * 100 + weekDays * 30 + Math.round(weekKcal / 10);
     return {
       id: u.id,
       name: u.id === userId ? 'Ty' : u.name,
       isMe: u.id === userId,
-      weekCount: weekSessions.length + weekRuns.length,
+      weekCount,
       weekVolume: calcWeeklyVolume(us).total,
       weekKcal,
+      score,
       streak: calcStreak([...us, ...runs]),
     };
   });
-  const maxWeekCount = Math.max(0, ...comparison.map(c => c.weekCount));
-  const leader = comparison.filter(c => c.weekCount === maxWeekCount && maxWeekCount > 0);
+  const maxScore = Math.max(0, ...comparison.map(c => c.score));
+  const leader = comparison.filter(c => c.score === maxScore && maxScore > 0);
 
   // Wspólny feed — treningi siłowe i biegi wszystkich, posortowane po dacie
   type FeedItem =
@@ -233,9 +243,10 @@ export default function DashboardPage() {
                       <div className="text-sm font-bold text-gray-800 mb-1">
                         {isLeader && '👑 '}{c.name}
                       </div>
-                      <div className="text-2xl font-bold text-blue-600">{c.weekCount}</div>
-                      <div className="text-xs text-gray-500">
-                        {c.weekCount === 1 ? 'trening' : 'treningi'} w tym tyg.
+                      <div className="text-2xl font-bold text-blue-600">{c.score}</div>
+                      <div className="text-xs text-gray-500">pkt</div>
+                      <div className="text-xs text-gray-600 font-medium mt-1">
+                        {c.weekCount} {c.weekCount === 1 ? 'trening' : c.weekCount < 5 ? 'treningi' : 'treningów'} w tym tyg.
                       </div>
                       {c.weekVolume > 0 && (
                         <div className="text-xs text-gray-600 font-medium mt-1">
@@ -256,6 +267,9 @@ export default function DashboardPage() {
               })}
             </div>
             <p className="text-xs text-gray-400 text-center mt-2">
+              Punkty: 100 za trening · +30 za każdy dzień treningowy · +1 za 10 kcal
+            </p>
+            <p className="text-xs text-gray-400 text-center mt-0.5">
               Kliknij osobę, aby zobaczyć jej statystyki poniżej
             </p>
           </div>
