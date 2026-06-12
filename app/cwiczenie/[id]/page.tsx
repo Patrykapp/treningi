@@ -301,67 +301,44 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
       rpe: formRpe ? parseFloat(formRpe) : undefined, comment: formComment || undefined, setsData: sd };
   };
 
-  const handleAddToExisting = async () => {
-    if (!existingSessionId) return;
+  // Jeden atomowy request — dopisuje do istniejących sesji danego dnia
+  // (lub tworzy nowe) dla wszystkich wybranych użytkowników. Wcześniejsza pętla
+  // PATCH-ów kończyła się 403 przy sesji partnera.
+  const saveEntry = async (appendToExisting: boolean) => {
     setSaving(true);
-    const entry = buildEntry();
-    const targetIds: string[] = saveAsUserId === 'all' ? users.map(u => u.id) : [saveAsUserId || authUserId || ''];
-    // For "all" we need to find each user's session for this date
-    let allOk = true;
-    if (saveAsUserId === 'all') {
-      for (const uid of targetIds) {
-        const sessRes = await fetch(`/api/sessions?date=${formDate}&userId=${uid}&limit=1`).then(r => r.json());
-        const sid = Array.isArray(sessRes) && sessRes.length > 0 ? sessRes[0].id : null;
-        if (sid) {
-          const res = await fetch(`/api/sessions/${sid}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entry }) });
-          if (!res.ok) allOk = false;
-        } else {
-          const res = await fetch('/api/sessions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: formDate, notes: '', targetUserId: uid, entries: [entry] }) });
-          if (!res.ok) allOk = false;
-        }
-      }
-    } else {
-      const res = await fetch(`/api/sessions/${existingSessionId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entry }) });
-      if (!res.ok) allOk = false;
-    }
-    if (allOk) {
-      setToast({ message: 'Dodano do treningu z tego dnia!', type: 'success' });
-      setShowForm(false);
-      loadData();
-    } else {
-      setToast({ message: 'Błąd zapisu', type: 'error' });
-    }
-    setSaving(false);
-  };
-
-  const handleSaveAlone = async () => {
-    setSaving(true);
-    const entry = buildEntry();
-    const targetIds: string[] = saveAsUserId === 'all'
-      ? users.map(u => u.id)
-      : [saveAsUserId || authUserId || ''];
-
-    let allOk = true;
-    for (const uid of targetIds) {
+    try {
+      const targetIds: string[] = saveAsUserId === 'all'
+        ? users.map(u => u.id)
+        : [saveAsUserId || authUserId || ''];
       const res = await fetch('/api/sessions', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: formDate, notes: '', targetUserId: uid, entries: [entry] })
+        body: JSON.stringify({
+          date: formDate, notes: '',
+          entries: [buildEntry()],
+          targetUserIds: targetIds,
+          appendToExisting,
+        }),
       });
-      if (!res.ok) allOk = false;
+      if (res.ok) {
+        const msg = saveAsUserId === 'all'
+          ? `Zapisano dla ${users.map(u => u.name).join(' i ')}!`
+          : appendToExisting ? 'Dodano do treningu z tego dnia!' : 'Zapisano!';
+        setToast({ message: msg, type: 'success' });
+        setShowForm(false);
+        loadData();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setToast({ message: err.error || 'Błąd zapisu — nic nie zostało zapisane', type: 'error' });
+      }
+    } catch {
+      setToast({ message: 'Błąd połączenia — nic nie zostało zapisane', type: 'error' });
+    } finally {
+      setSaving(false);
     }
-
-    if (allOk) {
-      const msg = saveAsUserId === 'all'
-        ? `Zapisano dla ${users.map(u => u.name).join(' i ')}!`
-        : 'Zapisano!';
-      setToast({ message: msg, type: 'success' });
-      setShowForm(false);
-      loadData();
-    } else {
-      setToast({ message: 'Błąd zapisu', type: 'error' });
-    }
-    setSaving(false);
   };
+
+  const handleAddToExisting = () => saveEntry(true);
+  const handleSaveAlone = () => saveEntry(false);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Ładowanie...</div>;
   if (!exercise) return <div className="min-h-screen flex items-center justify-center text-gray-500">Nie znaleziono ćwiczenia</div>;
