@@ -12,7 +12,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       include: { user: true, entries: { include: { exercise: true } } },
     });
     if (!session) return NextResponse.json({ error: 'Nie znaleziono' }, { status: 404 });
-    if (session.userId !== userId) return NextResponse.json({ error: 'Brak dostepu' }, { status: 403 });
+    // Odczyt dostępny dla każdego zalogowanego — wspólna aplikacja, podgląd
+    // treningów partnera jest pożądany. Edycja/usuwanie nadal tylko właściciel.
     return NextResponse.json(session);
   } catch {
     return NextResponse.json({ error: 'Blad serwera' }, { status: 500 });

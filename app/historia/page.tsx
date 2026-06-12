@@ -55,8 +55,10 @@ function Stars({ count, max = 5 }: { count: number; max?: number }) {
 
 export default function HistoriaPage() {
   const router = useRouter();
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, userId: authUserId } = useAuth();
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
+  const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
+  const [viewUserId, setViewUserId] = useState<string | null>(null); // null = własne
   const [exercises, setExercises] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterExerciseId, setFilterExerciseId] = useState('');
@@ -70,11 +72,13 @@ export default function HistoriaPage() {
 
   useEffect(() => {
     fetch('/api/exercises').then(r => r.json()).then(setExercises);
+    fetch('/api/users').then(r => r.json()).then(d => { if (Array.isArray(d)) setUsers(d); }).catch(() => {});
   }, []);
 
   const loadSessions = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({ limit: '100' });
+    if (viewUserId) params.set('userId', viewUserId);
     if (filterFrom) params.set('from', filterFrom);
     if (filterTo) params.set('to', filterTo);
     const data = await fetch(`/api/sessions?${params}`).then(r => r.json());
@@ -99,7 +103,7 @@ export default function HistoriaPage() {
         }
       } catch { /* oceny są opcjonalne */ }
     }
-  }, [filterExerciseId, filterFrom, filterTo]);
+  }, [filterExerciseId, filterFrom, filterTo, viewUserId]);
 
   useEffect(() => { loadSessions(); }, [loadSessions]);
 
@@ -153,6 +157,24 @@ export default function HistoriaPage() {
       </div>
 
       <div className="bg-white border-b px-4 py-3 space-y-2">
+        {users.length > 1 && (
+          <div className="flex gap-2">
+            {users.map(u => {
+              const active = u.id === authUserId ? viewUserId === null : viewUserId === u.id;
+              return (
+                <button
+                  key={u.id}
+                  onClick={() => setViewUserId(u.id === authUserId ? null : u.id)}
+                  className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${
+                    active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200'
+                  }`}
+                >
+                  {u.id === authUserId ? 'Ty' : u.name}
+                </button>
+              );
+            })}
+          </div>
+        )}
         <div className="flex gap-2">
           <select
             value={filterExerciseId}
@@ -250,7 +272,7 @@ export default function HistoriaPage() {
                           className="p-2 rounded-xl text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-colors"
                           title="Podsumowanie"
                         >📊</Link>
-                        {isLoggedIn && (
+                        {isLoggedIn && session.userId === authUserId && (
                           <>
                             {sameDaySessions.length > 1 && session.id !== mainSession.id && (
                               <button

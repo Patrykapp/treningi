@@ -82,39 +82,73 @@ function calcWeeklyVolume(sessions: WorkoutSession[]): { total: number; groups: 
   return { total, groups: Object.entries(groups).sort((a, b) => b[1] - a[1]) };
 }
 
+interface AppUser { id: string; name: string; }
+
 export default function DashboardPage() {
-  const [sessions, setSessions] = useState<WorkoutSession[]>([]);
   const [allSessions, setAllSessions] = useState<WorkoutSession[]>([]);
+  const [partnerSessions, setPartnerSessions] = useState<Record<string, WorkoutSession[]>>({});
+  const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const { isLoggedIn, name } = useAuth();
+  const { isLoggedIn, name, userId } = useAuth();
 
   const loadSessions = useCallback(async () => {
     setLoading(true);
     try {
-      const [recent, all] = await Promise.all([
-        fetch('/api/sessions?limit=5').then(r => r.json()),
+      const [all, usersRes] = await Promise.all([
         fetch('/api/sessions?limit=200').then(r => r.json()),
+        fetch('/api/users').then(r => r.json()),
       ]);
-      setSessions(Array.isArray(recent) ? recent : []);
       setAllSessions(Array.isArray(all) ? all : []);
+      const userList: AppUser[] = Array.isArray(usersRes) ? usersRes : [];
+      setUsers(userList);
+      // Treningi pozostałych użytkowników — do porównania i wspólnego feedu
+      const others = userList.filter(u => u.id !== userId);
+      const results = await Promise.all(
+        others.map(u => fetch(`/api/sessions?userId=${u.id}&limit=200`).then(r => r.json()).catch(() => []))
+      );
+      const map: Record<string, WorkoutSession[]> = {};
+      others.forEach((u, i) => { map[u.id] = Array.isArray(results[i]) ? results[i] : []; });
+      setPartnerSessions(map);
     } catch {
-      setSessions([]);
       setAllSessions([]);
+      setPartnerSessions({});
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
-    if (isLoggedIn) loadSessions();
-    else setLoading(false);
-  }, [isLoggedIn, loadSessions]);
+    if (isLoggedIn && userId) loadSessions();
+    else if (isLoggedIn === false) setLoading(false);
+  }, [isLoggedIn, userId, loadSessions]);
 
   const streak = calcStreak(allSessions);
   const weeklyCount = calcWeeklyCount(allSessions);
   const totalCount = allSessions.length;
   const weekStreak = calcWeekStreak(allSessions);
   const weekVol = calcWeeklyVolume(allSessions);
+
+  // Porównanie tygodniowe wszystkich użytkowników (motywacja!)
+  const comparison = users.map(u => {
+    const us = u.id === userId ? allSessions : (partnerSessions[u.id] || []);
+    return {
+      id: u.id,
+      name: u.id === userId ? 'Ty' : u.name,
+      isMe: u.id === userId,
+      weekCount: calcWeeklyCount(us),
+      weekVolume: calcWeeklyVolume(us).total,
+      streak: calcStreak(us),
+      lastDate: us[0]?.date || null,
+    };
+  });
+  const maxWeekCount = Math.max(0, ...comparison.map(c => c.weekCount));
+  const leader = comparison.filter(c => c.weekCount === maxWeekCount && maxWeekCount > 0);
+
+  // Wspólny feed — treningi wszystkich, posortowane po dacie
+  const feed = [
+    ...allSessions,
+    ...Object.values(partnerSessions).flat(),
+  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 6);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -134,6 +168,44 @@ export default function DashboardPage() {
           <Link href="/login" className="block w-full bg-gray-100 text-gray-700 text-center py-4 rounded-2xl font-medium text-base">
             Zaloguj się aby dodawać treningi
           </Link>
+        )}
+
+        {/* Porównanie tygodnia — widoczne od razu, motywacja dla obojga */}
+        {isLoggedIn && !loading && comparison.length > 1 && (
+          <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <h2 className="text-sm font-bold text-gray-700 mb-3">Ten tydzień — kto prowadzi? 🏁</h2>
+            <div className="grid grid-cols-2 gap-3">
+              {comparison.map(c => {
+                const isLeader = leader.some(l => l.id === c.id) && leader.length === 1;
+                const inner = (
+                  <div className={`rounded-xl p-3 text-center border-2 transition-colors ${
+                    isLeader ? 'border-yellow-400 bg-yellow-50' : 'border-gray-100 bg-gray-50'
+                  }`}>
+                    <div className="text-sm font-bold text-gray-800 mb-1">
+                      {isLeader && '👑 '}{c.name}
+                    </div>
+                    <div className="text-2xl font-bold text-blue-600">{c.weekCount}</div>
+                    <div className="text-xs text-gray-500">
+                      {c.weekCount === 1 ? 'trening' : 'treningi'} w tym tyg.
+                    </div>
+                    {c.weekVolume > 0 && (
+                      <div className="text-xs text-gray-600 font-medium mt-1">
+                        {Math.round(c.weekVolume).toLocaleString('pl-PL')} kg
+                      </div>
+                    )}
+                    {c.streak > 1 && (
+                      <div className="text-xs text-orange-500 font-medium mt-0.5">🔥 {c.streak} dni z rzędu</div>
+                    )}
+                  </div>
+                );
+                return c.isMe ? (
+                  <div key={c.id}>{inner}</div>
+                ) : (
+                  <Link key={c.id} href={`/profil/${c.id}`}>{inner}</Link>
+                );
+              })}
+            </div>
+          </div>
         )}
 
         {isLoggedIn && !loading && (
@@ -196,10 +268,10 @@ export default function DashboardPage() {
 
         {isLoggedIn && (
           <div>
-            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2">Ostatnie treningi</h2>
+            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2">Ostatnia aktywność</h2>
             {loading ? (
               <div className="bg-white rounded-2xl p-6 text-center text-gray-400 text-sm">Ładowanie...</div>
-            ) : sessions.length === 0 ? (
+            ) : feed.length === 0 ? (
               <div className="bg-white rounded-2xl p-6 text-center">
                 <p className="text-gray-400 text-sm mb-3">Brak treningów. Zacznij pierwszy!</p>
                 <Link href="/trening" className="inline-block bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold">
@@ -208,21 +280,32 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                {sessions.map((session, i) => (
-                  <Link
-                    key={session.id}
-                    href={`/historia`}
-                    className={`flex items-center justify-between px-4 py-3.5 ${i > 0 ? 'border-t border-gray-100' : ''}`}
-                  >
-                    <div>
-                      <div className="font-medium text-gray-900 text-sm">{formatDate(session.date)}</div>
-                      <div className="text-xs text-gray-500 mt-0.5">
-                        {session.entries?.length || 0} ćwiczeń
+                {feed.map((session, i) => {
+                  const mine = session.userId === userId;
+                  return (
+                    <Link
+                      key={session.id}
+                      href={`/trening/podsumowanie/${session.id}`}
+                      className={`flex items-center justify-between gap-2 px-4 py-3 ${i > 0 ? 'border-t border-gray-100' : ''}`}
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs font-bold rounded-lg px-2 py-0.5 ${
+                            mine ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                          }`}>
+                            {mine ? 'Ty' : session.user?.name}
+                          </span>
+                          <span className="font-medium text-gray-900 text-sm">{formatDate(session.date)}</span>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          {session.entries?.length || 0} ćwiczeń
+                          {session.notes && <span className="italic"> · {session.notes}</span>}
+                        </div>
                       </div>
-                    </div>
-                    <span className="text-gray-400">›</span>
-                  </Link>
-                ))}
+                      <span className="text-gray-400 shrink-0">›</span>
+                    </Link>
+                  );
+                })}
               </div>
             )}
           </div>
