@@ -59,9 +59,12 @@ export default function CwiczeniaPage() {
   });
 
   const groups = sorted.reduce((acc, ex) => {
+    // Grupa mięśniowa ma pierwszeństwo; prefiks z nazwy ("Grupa - nazwa") to
+    // stara konwencja — używana tylko, gdy grupa nie jest ustawiona
+    const namePrefix = ex.name.includes(' - ') ? ex.name.split(' - ')[0] : null;
     const prefix = showOnlyFavorites || favorites.includes(ex.id)
       ? 'Ulubione'
-      : ex.name.includes(' - ') ? ex.name.split(' - ')[0] : (ex.muscleGroup || 'Inne');
+      : (ex.muscleGroup || namePrefix || 'Inne');
     if (!acc[prefix]) acc[prefix] = [];
     acc[prefix].push(ex);
     return acc;
@@ -114,7 +117,12 @@ export default function CwiczeniaPage() {
             {!isCollapsed && (
               <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
                 {exs.map((ex, i) => {
-                  const shortName = ex.name.includes(' - ') ? ex.name.split(' - ').slice(1).join(' - ') : ex.name;
+                  // Skracaj nazwę tylko przy starej konwencji "Grupa - nazwa"
+                  // (prefiks zgodny z grupą mięśniową lub brak grupy)
+                  const namePrefix = ex.name.includes(' - ') ? ex.name.split(' - ')[0] : null;
+                  const stripPrefix = namePrefix &&
+                    (!ex.muscleGroup || namePrefix.toLowerCase() === ex.muscleGroup.toLowerCase());
+                  const shortName = stripPrefix ? ex.name.split(' - ').slice(1).join(' - ') : ex.name;
                   const isFav = favorites.includes(ex.id);
                   return (
                     <button
