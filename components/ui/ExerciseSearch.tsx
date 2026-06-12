@@ -21,6 +21,32 @@ const GROUP_ORDER = [
   'Nogi', 'Brzuch', 'Cardio', 'Inne',
 ];
 
+// Miniatura z ExerciseDB — URL jest deterministyczny względem exerciseDbId
+function gifUrl(ex: Exercise): string | null {
+  return ex.exerciseDbId ? `https://static.exercisedb.dev/media/${ex.exerciseDbId}.gif` : null;
+}
+
+function Thumb({ ex }: { ex: Exercise }) {
+  const url = gifUrl(ex);
+  if (!url) {
+    return (
+      <span className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-300 text-base shrink-0">
+        🏋️
+      </span>
+    );
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt=""
+      loading="lazy"
+      className="w-10 h-10 rounded-lg object-cover bg-gray-100 shrink-0"
+      onError={e => { e.currentTarget.style.visibility = 'hidden'; }}
+    />
+  );
+}
+
 export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybierz ćwiczenie...', onAddNew }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -103,6 +129,16 @@ export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybi
     }
   }, [focusedIdx]);
 
+  // Po otwarciu listy przewiń do aktualnie wybranego ćwiczenia —
+  // przy pomyłce nie trzeba scrollować od początku
+  useEffect(() => {
+    if (!open || search || !value) return;
+    const t = setTimeout(() => {
+      listRef.current?.querySelector('[data-selected="true"]')?.scrollIntoView({ block: 'center' });
+    }, 50);
+    return () => clearTimeout(t);
+  }, [open, search, value]);
+
   // Build grouped structure
   const grouped: Record<string, Exercise[]> = {};
   for (const ex of exercises) {
@@ -184,9 +220,10 @@ export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybi
                   <button
                     key={ex.id}
                     data-exercise-item
+                    data-selected={ex.id === value}
                     type="button"
                     onClick={() => handleSelect(ex.id)}
-                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors border-t border-gray-50 first:border-t-0 ${
+                    className={`w-full text-left px-3 py-2 text-sm transition-colors border-t border-gray-50 first:border-t-0 flex items-center gap-2.5 ${
                       i === focusedIdx
                         ? 'bg-blue-100 text-blue-800'
                         : ex.id === value
@@ -194,11 +231,14 @@ export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybi
                           : 'text-gray-900 hover:bg-gray-50'
                     }`}
                   >
-                    {ex.id === value && <span className="mr-1.5">✓</span>}
-                    {ex.name}
-                    {ex.muscleGroup && (
-                      <span className="ml-1.5 text-xs text-gray-400">{normalizeMuscle(ex.muscleGroup)}</span>
-                    )}
+                    <Thumb ex={ex} />
+                    <span className="min-w-0 flex-1 leading-snug">
+                      {ex.id === value && <span className="mr-1.5">✓</span>}
+                      {ex.name}
+                      {ex.muscleGroup && (
+                        <span className="ml-1.5 text-xs text-gray-400">{normalizeMuscle(ex.muscleGroup)}</span>
+                      )}
+                    </span>
                   </button>
                 ))
               )
@@ -226,16 +266,20 @@ export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybi
                       <button
                         key={ex.id}
                         data-exercise-item
+                        data-selected={ex.id === value}
                         type="button"
                         onClick={() => handleSelect(ex.id)}
-                        className={`w-full text-left px-4 py-2.5 text-sm border-t border-gray-50 transition-colors ${
+                        className={`w-full text-left px-3 py-2 text-sm border-t border-gray-50 transition-colors flex items-center gap-2.5 ${
                           ex.id === value
                             ? 'bg-blue-50 text-blue-700 font-semibold'
                             : 'text-gray-900 hover:bg-gray-50'
                         }`}
                       >
-                        {ex.id === value && <span className="mr-1.5">✓</span>}
-                        {ex.name}
+                        <Thumb ex={ex} />
+                        <span className="min-w-0 flex-1 leading-snug">
+                          {ex.id === value && <span className="mr-1.5">✓</span>}
+                          {ex.name}
+                        </span>
                       </button>
                     ))}
                   </div>
