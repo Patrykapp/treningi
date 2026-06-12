@@ -8,6 +8,7 @@ import { formatDate } from '@/lib/utils';
 import { Toast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useAuth } from '@/hooks/useAuth';
+import { strengthCalories, countSets, latestWeight } from '@/lib/calories';
 
 interface SessionRating {
   score: number;
@@ -60,6 +61,7 @@ function HistoriaPage() {
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
   const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
   const [viewUserId, setViewUserId] = useState<string | null>(null); // null = własne
+  const [weightKg, setWeightKg] = useState(0); // waga ciała przeglądanej osoby (kcal)
   const [exercises, setExercises] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterExerciseId, setFilterExerciseId] = useState('');
@@ -81,6 +83,16 @@ function HistoriaPage() {
     const u = searchParams.get('userId');
     if (u && authUserId && u !== authUserId) setViewUserId(u);
   }, [searchParams, authUserId]);
+
+  // Waga ciała przeglądanej osoby — do szacowania kcal
+  useEffect(() => {
+    const target = viewUserId || authUserId;
+    if (!target) return;
+    fetch(`/api/body-weight?userId=${target}&limit=1`)
+      .then(r => r.json())
+      .then(d => setWeightKg(latestWeight(Array.isArray(d) ? d : [])))
+      .catch(() => {});
+  }, [viewUserId, authUserId]);
 
   const loadSessions = useCallback(async () => {
     setLoading(true);
@@ -246,6 +258,11 @@ function HistoriaPage() {
                     <div>
                       <span className="font-bold text-gray-900">{formatDate(session.date)}</span>
                       <span className="ml-2 text-sm text-blue-600 font-medium">{session.user?.name}</span>
+                      {weightKg > 0 && (
+                        <span className="ml-2 text-xs text-red-500 font-medium whitespace-nowrap">
+                          🔥 ~{strengthCalories(weightKg, countSets(session.entries || []))} kcal
+                        </span>
+                      )}
                       {session.notes?.startsWith('Challenge:') && (
                         <Link href={`/challenge/wynik/${session.id}`}
                           className="ml-2 text-xs font-semibold bg-blue-100 text-blue-700 rounded-lg px-2 py-0.5">

@@ -49,14 +49,15 @@ function calcStreak(sessions: Dated[]): number {
   return streak;
 }
 
+// "Ten tydzień" = tydzień kalendarzowy od PONIEDZIAŁKU (nie kroczące 7 dni)
 function calcWeeklyCount(sessions: Dated[]): number {
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  return sessions.filter(s => new Date(s.date) >= weekAgo).length;
+  const start = weekStart(new Date());
+  return sessions.filter(s => new Date(s.date).getTime() >= start).length;
 }
 
 function lastWeek<T extends Dated>(items: T[]): T[] {
-  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  return items.filter(i => new Date(i.date).getTime() >= weekAgo);
+  const start = weekStart(new Date());
+  return items.filter(i => new Date(i.date).getTime() >= start);
 }
 
 // Początek tygodnia (poniedziałek, 00:00) dla danej daty
@@ -85,13 +86,13 @@ function calcWeekStreak(sessions: Dated[]): number {
   return streak;
 }
 
-// Objętość z ostatnich 7 dni pogrupowana po grupie mięśniowej
+// Objętość z bieżącego tygodnia (od poniedziałku) pogrupowana po grupie mięśniowej
 function calcWeeklyVolume(sessions: WorkoutSession[]): { total: number; groups: [string, number][] } {
-  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const start = weekStart(new Date());
   const groups: Record<string, number> = {};
   let total = 0;
   for (const s of sessions) {
-    if (new Date(s.date).getTime() < weekAgo) continue;
+    if (new Date(s.date).getTime() < start) continue;
     for (const e of s.entries || []) {
       const sd = Array.isArray(e.setsData) && e.setsData.length > 0 ? e.setsData : null;
       const vol = sd
@@ -291,7 +292,7 @@ export default function DashboardPage() {
             {weekVol.total > 0 && (
               <div className="bg-white rounded-2xl p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-sm font-bold text-gray-700">Objętość — ostatnie 7 dni</h2>
+                  <h2 className="text-sm font-bold text-gray-700">Objętość — ten tydzień</h2>
                   <span className="text-sm font-bold text-blue-600">{Math.round(weekVol.total).toLocaleString('pl-PL')} kg</span>
                 </div>
                 <div className="space-y-1.5">
