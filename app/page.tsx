@@ -250,10 +250,12 @@ export default function DashboardPage() {
                     )}
                   </div>
                 );
-                return c.isMe ? (
-                  <div key={c.id}>{inner}</div>
-                ) : (
-                  <Link key={c.id} href={`/profil/${c.id}`}>{inner}</Link>
+                // Oba kafelki prowadzą do tego samego widoku Historii
+                // (z przełącznikiem ustawionym na klikniętą osobę)
+                return (
+                  <Link key={c.id} href={c.isMe ? '/historia' : `/historia?userId=${c.id}`}>
+                    {inner}
+                  </Link>
                 );
               })}
             </div>

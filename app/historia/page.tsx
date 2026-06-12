@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { WorkoutSession } from '@/types';
 import { formatDate } from '@/lib/utils';
@@ -53,8 +53,9 @@ function Stars({ count, max = 5 }: { count: number; max?: number }) {
   );
 }
 
-export default function HistoriaPage() {
+function HistoriaPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { isLoggedIn, userId: authUserId } = useAuth();
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
   const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
@@ -74,6 +75,12 @@ export default function HistoriaPage() {
     fetch('/api/exercises').then(r => r.json()).then(setExercises);
     fetch('/api/users').then(r => r.json()).then(d => { if (Array.isArray(d)) setUsers(d); }).catch(() => {});
   }, []);
+
+  // Wejście z linku ?userId=... (np. kafelek partnera na pulpicie)
+  useEffect(() => {
+    const u = searchParams.get('userId');
+    if (u && authUserId && u !== authUserId) setViewUserId(u);
+  }, [searchParams, authUserId]);
 
   const loadSessions = useCallback(async () => {
     setLoading(true);
@@ -400,5 +407,13 @@ export default function HistoriaPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function HistoriaPageWrapper() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-500">Ładowanie...</div>}>
+      <HistoriaPage />
+    </Suspense>
   );
 }
