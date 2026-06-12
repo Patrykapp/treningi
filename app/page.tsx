@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { WorkoutSession } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
-import { runCalories, strengthCalories, countSets, latestWeight } from '@/lib/calories';
+import { runCalories, strengthCalories, countSets } from '@/lib/calories';
 
 interface Run {
   id: string;
@@ -15,8 +15,19 @@ interface Run {
   duration: number;
 }
 
+interface AppUser { id: string; name: string; }
+
+interface DashboardData {
+  users: AppUser[];
+  sessionsByUser: Record<string, WorkoutSession[]>;
+  runsByUser: Record<string, Run[]>;
+  weightByUser: Record<string, number>;
+}
+
 // Dowolna aktywność z datą (trening siłowy lub bieg)
 interface Dated { date: string }
+
+const CACHE_KEY = 'dashboardCacheV1';
 
 function calcStreak(sessions: Dated[]): number {
   if (!sessions.length) return 0;
@@ -27,9 +38,6 @@ function calcStreak(sessions: Dated[]): number {
   }));
   const prevDay = (d: Date) => { const n = new Date(d); n.setDate(n.getDate() - 1); return n; };
   // Start: dziś, a jeśli dziś (jeszcze) nie było treningu — wczoraj.
-  // Dalej wymagane są kolejne dni BEZ przerw (wcześniej warunek
-  // akceptował 1 dzień przerwy na każdym kroku i treningi co drugi
-  // dzień liczyły się jako "dni z rzędu").
   let cursor = new Date();
   cursor.setHours(0, 0, 0, 0);
   if (!days.has(cursor.getTime())) cursor = prevDay(cursor);
@@ -65,7 +73,6 @@ function calcWeekStreak(sessions: Dated[]): number {
   const weeks = new Set(sessions.map(s => weekStart(new Date(s.date))));
   let cursor = weekStart(new Date());
   let streak = 0;
-  // bieżący tydzień może być jeszcze pusty — wtedy licz od poprzedniego
   if (!weeks.has(cursor)) {
     const d = new Date(cursor); d.setDate(d.getDate() - 7);
     cursor = weekStart(d);
@@ -99,76 +106,69 @@ function calcWeeklyVolume(sessions: WorkoutSession[]): { total: number; groups: 
   return { total, groups: Object.entries(groups).sort((a, b) => b[1] - a[1]) };
 }
 
-interface AppUser { id: string; name: string; }
-
 export default function DashboardPage() {
-  const [allSessions, setAllSessions] = useState<WorkoutSession[]>([]);
-  const [partnerSessions, setPartnerSessions] = useState<Record<string, WorkoutSession[]>>({});
-  const [runsByUser, setRunsByUser] = useState<Record<string, Run[]>>({});
-  const [weightByUser, setWeightByUser] = useState<Record<string, number>>({});
-  const [users, setUsers] = useState<AppUser[]>([]);
+  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [viewUserId, setViewUserId] = useState<string | null>(null); // null = zalogowany
   const { isLoggedIn, name, userId } = useAuth();
 
-  const loadSessions = useCallback(async () => {
-    setLoading(true);
+  const loadDashboard = useCallback(async () => {
+    // 1. Natychmiast pokaż ostatnie dane z cache (jeśli są), odśwież w tle
     try {
-      const [all, usersRes] = await Promise.all([
-        fetch('/api/sessions?limit=200').then(r => r.json()),
-        fetch('/api/users').then(r => r.json()),
-      ]);
-      setAllSessions(Array.isArray(all) ? all : []);
-      const userList: AppUser[] = Array.isArray(usersRes) ? usersRes : [];
-      setUsers(userList);
-      // Treningi siłowe pozostałych + biegi i waga ciała WSZYSTKICH (kcal, statystyki)
-      const others = userList.filter(u => u.id !== userId);
-      const [sessionResults, runResults, weightResults] = await Promise.all([
-        Promise.all(others.map(u => fetch(`/api/sessions?userId=${u.id}&limit=200`).then(r => r.json()).catch(() => []))),
-        Promise.all(userList.map(u => fetch(`/api/runs?userId=${u.id}&limit=200`).then(r => r.json()).catch(() => []))),
-        Promise.all(userList.map(u => fetch(`/api/body-weight?userId=${u.id}&limit=1`).then(r => r.json()).catch(() => []))),
-      ]);
-      const map: Record<string, WorkoutSession[]> = {};
-      others.forEach((u, i) => { map[u.id] = Array.isArray(sessionResults[i]) ? sessionResults[i] : []; });
-      setPartnerSessions(map);
-      const rMap: Record<string, Run[]> = {};
-      const wMap: Record<string, number> = {};
-      userList.forEach((u, i) => {
-        rMap[u.id] = Array.isArray(runResults[i]) ? runResults[i] : [];
-        wMap[u.id] = latestWeight(Array.isArray(weightResults[i]) ? weightResults[i] : []);
-      });
-      setRunsByUser(rMap);
-      setWeightByUser(wMap);
-    } catch {
-      setAllSessions([]);
-      setPartnerSessions({});
-      setRunsByUser({});
-    } finally {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached) as DashboardData;
+        if (parsed?.users?.length) {
+          setData(parsed);
+          setLoading(false);
+        }
+      }
+    } catch { /* uszkodzony cache — pomiń */ }
+
+    // 2. Świeże dane jednym requestem
+    try {
+      const res = await fetch('/api/dashboard');
+      if (res.ok) {
+        const fresh = await res.json() as DashboardData;
+        if (fresh && !('error' in fresh)) {
+          setData(fresh);
+          try { localStorage.setItem(CACHE_KEY, JSON.stringify(fresh)); } catch { /* pełny storage */ }
+        }
+      }
+    } catch { /* offline — zostają dane z cache */ } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, []);
 
   useEffect(() => {
-    if (isLoggedIn && userId) loadSessions();
+    if (isLoggedIn) loadDashboard();
     else if (isLoggedIn === false) setLoading(false);
-  }, [isLoggedIn, userId, loadSessions]);
+  }, [isLoggedIn, loadDashboard]);
 
-  const myRuns = (userId && runsByUser[userId]) || [];
-  const myActivities: Dated[] = [...allSessions, ...myRuns];
-  const streak = calcStreak(myActivities);
-  const weeklyCount = calcWeeklyCount(myActivities);
-  const totalCount = allSessions.length + myRuns.length;
-  const weekStreak = calcWeekStreak(myActivities);
-  const weekVol = calcWeeklyVolume(allSessions);
+  const users = data?.users || [];
+  const sessionsByUser = data?.sessionsByUser || {};
+  const runsByUser = data?.runsByUser || {};
+  const weightByUser = data?.weightByUser || {};
+
+  // Osoba, której pulpit oglądamy (statystyki, objętość)
+  const activeId = viewUserId || userId || '';
+  const activeSessions = sessionsByUser[activeId] || [];
+  const activeRuns = runsByUser[activeId] || [];
+  const activeActivities: Dated[] = [...activeSessions, ...activeRuns];
+
+  const streak = calcStreak(activeActivities);
+  const weeklyCount = calcWeeklyCount(activeActivities);
+  const totalCount = activeSessions.length + activeRuns.length;
+  const weekStreakVal = calcWeekStreak(activeActivities);
+  const weekVol = calcWeeklyVolume(activeSessions);
 
   // Porównanie tygodniowe wszystkich użytkowników (motywacja!)
-  // Biegi liczą się jako treningi; kcal = siłownia (z liczby serii) + biegi (z dystansu)
   const comparison = users.map(u => {
-    const us = u.id === userId ? allSessions : (partnerSessions[u.id] || []);
+    const us = sessionsByUser[u.id] || [];
     const runs = runsByUser[u.id] || [];
     const weightKg = weightByUser[u.id] || 0;
     const weekSessions = lastWeek(us);
     const weekRuns = lastWeek(runs);
-    // kcal: siłownia (z liczby serii) + biegi (z dystansu)
     const weekKcal =
       weekSessions.reduce((sum, s) => sum + strengthCalories(weightKg, countSets(s.entries || [])), 0) +
       weekRuns.reduce((sum, r) => sum + runCalories(weightKg, r.distance), 0);
@@ -190,12 +190,11 @@ export default function DashboardPage() {
     | { kind: 'workout'; date: string; session: WorkoutSession }
     | { kind: 'run'; date: string; run: Run };
   const feed: FeedItem[] = [
-    ...[...allSessions, ...Object.values(partnerSessions).flat()]
-      .map(s => ({ kind: 'workout' as const, date: s.date, session: s })),
-    ...Object.values(runsByUser).flat()
-      .map(r => ({ kind: 'run' as const, date: r.date, run: r })),
+    ...Object.values(sessionsByUser).flat().map(s => ({ kind: 'workout' as const, date: s.date, session: s })),
+    ...Object.values(runsByUser).flat().map(r => ({ kind: 'run' as const, date: r.date, run: r })),
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 8);
   const userName = (id: string) => users.find(u => u.id === id)?.name || '?';
+  const activeName = activeId === userId ? 'Ty' : userName(activeId);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -218,93 +217,103 @@ export default function DashboardPage() {
         )}
 
         {/* Porównanie tygodnia — widoczne od razu, motywacja dla obojga */}
-        {isLoggedIn && !loading && comparison.length > 1 && (
+        {isLoggedIn && comparison.length > 1 && (
           <div className="bg-white rounded-2xl p-4 shadow-sm">
             <h2 className="text-sm font-bold text-gray-700 mb-3">Ten tydzień — kto prowadzi? 🏁</h2>
             <div className="grid grid-cols-2 gap-3">
               {comparison.map(c => {
                 const isLeader = leader.some(l => l.id === c.id) && leader.length === 1;
-                const inner = (
-                  <div className={`rounded-xl p-3 text-center border-2 transition-colors ${
-                    isLeader ? 'border-yellow-400 bg-yellow-50' : 'border-gray-100 bg-gray-50'
-                  }`}>
-                    <div className="text-sm font-bold text-gray-800 mb-1">
-                      {isLeader && '👑 '}{c.name}
-                    </div>
-                    <div className="text-2xl font-bold text-blue-600">{c.weekCount}</div>
-                    <div className="text-xs text-gray-500">
-                      {c.weekCount === 1 ? 'trening' : 'treningi'} w tym tyg.
-                    </div>
-                    {c.weekVolume > 0 && (
-                      <div className="text-xs text-gray-600 font-medium mt-1">
-                        {Math.round(c.weekVolume).toLocaleString('pl-PL')} kg
-                      </div>
-                    )}
-                    {c.weekKcal > 0 && (
-                      <div className="text-xs text-red-500 font-medium mt-0.5">
-                        🔥 ~{c.weekKcal.toLocaleString('pl-PL')} kcal
-                      </div>
-                    )}
-                    {c.streak > 1 && (
-                      <div className="text-xs text-orange-500 font-medium mt-0.5">⚡ {c.streak} dni z rzędu</div>
-                    )}
-                  </div>
-                );
-                // Oba kafelki prowadzą do tego samego widoku Historii
-                // (z przełącznikiem ustawionym na klikniętą osobę)
                 return (
-                  <Link key={c.id} href={c.isMe ? '/historia' : `/historia?userId=${c.id}`}>
-                    {inner}
-                  </Link>
+                  <button key={c.id} type="button" onClick={() => setViewUserId(c.isMe ? null : c.id)}
+                    className="text-left w-full">
+                    <div className={`rounded-xl p-3 text-center border-2 transition-colors ${
+                      isLeader ? 'border-yellow-400 bg-yellow-50' : 'border-gray-100 bg-gray-50'
+                    } ${activeId === c.id ? 'ring-2 ring-blue-400' : ''}`}>
+                      <div className="text-sm font-bold text-gray-800 mb-1">
+                        {isLeader && '👑 '}{c.name}
+                      </div>
+                      <div className="text-2xl font-bold text-blue-600">{c.weekCount}</div>
+                      <div className="text-xs text-gray-500">
+                        {c.weekCount === 1 ? 'trening' : 'treningi'} w tym tyg.
+                      </div>
+                      {c.weekVolume > 0 && (
+                        <div className="text-xs text-gray-600 font-medium mt-1">
+                          {Math.round(c.weekVolume).toLocaleString('pl-PL')} kg
+                        </div>
+                      )}
+                      {c.weekKcal > 0 && (
+                        <div className="text-xs text-red-500 font-medium mt-0.5">
+                          🔥 ~{c.weekKcal.toLocaleString('pl-PL')} kcal
+                        </div>
+                      )}
+                      {c.streak > 1 && (
+                        <div className="text-xs text-orange-500 font-medium mt-0.5">⚡ {c.streak} dni z rzędu</div>
+                      )}
+                    </div>
+                  </button>
                 );
               })}
             </div>
+            <p className="text-xs text-gray-400 text-center mt-2">
+              Kliknij osobę, aby zobaczyć jej statystyki poniżej
+            </p>
           </div>
         )}
 
-        {isLoggedIn && !loading && (
-          <div className="grid grid-cols-3 gap-3">
-            <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
-              <div className="text-2xl font-bold text-blue-600">{totalCount}</div>
-              <div className="text-xs text-gray-600 font-medium mt-0.5">Treningów</div>
-            </div>
-            <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
-              <div className="text-2xl font-bold text-orange-500">{weeklyCount}</div>
-              <div className="text-xs text-gray-600 font-medium mt-0.5">Ten tydzień</div>
-            </div>
-            <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
-              <div className="text-2xl font-bold text-green-600">{streak}</div>
-              <div className="text-xs text-gray-600 font-medium mt-0.5">
-                {streak === 1 ? 'Dzień z rzędu' : 'Dni z rzędu'}
+        {/* Statystyki wybranej osoby — ten sam widok dla każdego */}
+        {isLoggedIn && !loading && data && (
+          <>
+            {activeId !== userId && (
+              <p className="text-sm font-semibold text-purple-700 bg-purple-50 rounded-xl px-3 py-2">
+                Oglądasz statystyki: {activeName}
+                <button type="button" onClick={() => setViewUserId(null)} className="ml-2 text-purple-500 underline">
+                  wróć do swoich
+                </button>
+              </p>
+            )}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
+                <div className="text-2xl font-bold text-blue-600">{totalCount}</div>
+                <div className="text-xs text-gray-600 font-medium mt-0.5">Treningów</div>
+              </div>
+              <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
+                <div className="text-2xl font-bold text-orange-500">{weeklyCount}</div>
+                <div className="text-xs text-gray-600 font-medium mt-0.5">Ten tydzień</div>
+              </div>
+              <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
+                <div className="text-2xl font-bold text-green-600">{streak}</div>
+                <div className="text-xs text-gray-600 font-medium mt-0.5">
+                  {streak === 1 ? 'Dzień z rzędu' : 'Dni z rzędu'}
+                </div>
               </div>
             </div>
-          </div>
-        )}
 
-        {isLoggedIn && !loading && weekVol.total > 0 && (
-          <div className="bg-white rounded-2xl p-4 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-sm font-bold text-gray-700">Objętość — ostatnie 7 dni</h2>
-              <span className="text-sm font-bold text-blue-600">{Math.round(weekVol.total).toLocaleString('pl-PL')} kg</span>
-            </div>
-            <div className="space-y-1.5">
-              {weekVol.groups.map(([g, v]) => (
-                <div key={g} className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500 w-24 shrink-0 truncate">{g}</span>
-                  <div className="flex-1 bg-gray-100 rounded-full h-2">
-                    <div
-                      className="h-2 rounded-full bg-blue-400"
-                      style={{ width: `${Math.max(8, 100 * v / weekVol.groups[0][1])}%` }}
-                    />
-                  </div>
-                  <span className="text-xs text-gray-600 w-16 text-right shrink-0">{Math.round(v).toLocaleString('pl-PL')} kg</span>
+            {weekVol.total > 0 && (
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className="text-sm font-bold text-gray-700">Objętość — ostatnie 7 dni</h2>
+                  <span className="text-sm font-bold text-blue-600">{Math.round(weekVol.total).toLocaleString('pl-PL')} kg</span>
                 </div>
-              ))}
-            </div>
-            {weekStreak > 1 && (
-              <p className="text-xs text-green-600 font-medium mt-2">🔥 {weekStreak} tygodni treningowych z rzędu</p>
+                <div className="space-y-1.5">
+                  {weekVol.groups.map(([g, v]) => (
+                    <div key={g} className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500 w-24 shrink-0 truncate">{g}</span>
+                      <div className="flex-1 bg-gray-100 rounded-full h-2">
+                        <div
+                          className="h-2 rounded-full bg-blue-400"
+                          style={{ width: `${Math.max(8, 100 * v / weekVol.groups[0][1])}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-gray-600 w-16 text-right shrink-0">{Math.round(v).toLocaleString('pl-PL')} kg</span>
+                    </div>
+                  ))}
+                </div>
+                {weekStreakVal > 1 && (
+                  <p className="text-xs text-green-600 font-medium mt-2">🔥 {weekStreakVal} tygodni treningowych z rzędu</p>
+                )}
+              </div>
             )}
-          </div>
+          </>
         )}
 
         <div className="grid grid-cols-3 gap-3">
@@ -323,7 +332,7 @@ export default function DashboardPage() {
         {isLoggedIn && (
           <div>
             <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2">Ostatnia aktywność</h2>
-            {loading ? (
+            {loading && !data ? (
               <div className="bg-white rounded-2xl p-6 text-center text-gray-400 text-sm">Ładowanie...</div>
             ) : feed.length === 0 ? (
               <div className="bg-white rounded-2xl p-6 text-center">
