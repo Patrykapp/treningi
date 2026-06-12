@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDateInput } from '@/lib/utils';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { runCalories, latestWeight } from '@/lib/calories';
 
 interface RunSession {
   id: string;
@@ -104,6 +105,7 @@ export default function BieganiePage() {
   const [viewAsUserId, setViewAsUserId] = useState<string | null>(null);
   const [runs, setRuns] = useState<RunSession[]>([]);
   const [loadingRuns, setLoadingRuns] = useState(true);
+  const [weightKg, setWeightKg] = useState(0); // waga ciała przeglądanego użytkownika (kcal)
 
   // Form
   const [date, setDate] = useState(formatDateInput(new Date()));
@@ -191,6 +193,15 @@ export default function BieganiePage() {
   useEffect(() => {
     if (activeUserId) loadRuns();
   }, [activeUserId, loadRuns]);
+
+  // Najświeższa waga ciała — do szacowania kcal
+  useEffect(() => {
+    if (!activeUserId) return;
+    fetch(`/api/body-weight?userId=${activeUserId}&limit=1`)
+      .then(r => r.json())
+      .then(d => setWeightKg(latestWeight(Array.isArray(d) ? d : [])))
+      .catch(() => {});
+  }, [activeUserId]);
 
   // ─── edit / delete ─────────────────────────────────────────────────────────
 
@@ -582,6 +593,9 @@ export default function BieganiePage() {
                           </div>
                           <div className="text-sm text-gray-500">{avgKmh(run.distance, run.duration)} km/h</div>
                           <div className="text-sm text-gray-400">{formatDuration(run.duration)}</div>
+                          {weightKg > 0 && (
+                            <div className="text-xs text-red-400 font-medium">🔥 ~{runCalories(weightKg, run.distance)} kcal</div>
+                          )}
                         </div>
                       </div>
 

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { WorkoutSession } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
-import { strengthCalories, countSets, latestWeight } from '@/lib/calories';
+import { runCalories, strengthCalories, countSets, latestWeight } from '@/lib/calories';
 
 interface Run {
   id: string;
@@ -168,8 +168,10 @@ export default function DashboardPage() {
     const weightKg = weightByUser[u.id] || 0;
     const weekSessions = lastWeek(us);
     const weekRuns = lastWeek(runs);
-    // kcal tylko z treningów siłowych
-    const weekKcal = weekSessions.reduce((sum, s) => sum + strengthCalories(weightKg, countSets(s.entries || [])), 0);
+    // kcal: siłownia (z liczby serii) + biegi (z dystansu)
+    const weekKcal =
+      weekSessions.reduce((sum, s) => sum + strengthCalories(weightKg, countSets(s.entries || [])), 0) +
+      weekRuns.reduce((sum, r) => sum + runCalories(weightKg, r.distance), 0);
     return {
       id: u.id,
       name: u.id === userId ? 'Ty' : u.name,
@@ -342,6 +344,7 @@ export default function DashboardPage() {
                     </span>
                   );
                   if (item.kind === 'run') {
+                    const kcal = runCalories(weightKg, item.run.distance);
                     const paceSec = item.run.distance > 0 ? item.run.duration / item.run.distance : 0;
                     const pace = paceSec > 0 ? `${Math.floor(paceSec / 60)}'${String(Math.round(paceSec % 60)).padStart(2, '0')}"/km` : '';
                     return (
@@ -353,7 +356,7 @@ export default function DashboardPage() {
                             <span className="font-medium text-gray-900 text-sm">{formatDate(item.run.date)}</span>
                           </div>
                           <div className="text-xs text-gray-500 mt-0.5">
-                            🏃 {item.run.distance} km{pace && ` · ${pace}`}
+                            🏃 {item.run.distance} km{pace && ` · ${pace}`}{kcal > 0 && ` · ~${kcal} kcal`}
                           </div>
                         </div>
                         <span className="text-gray-400 shrink-0">›</span>
