@@ -10,10 +10,13 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+import fs from 'fs';
+import path from 'path';
 
 const prisma = new PrismaClient();
 const BASE = 'https://oss.exercisedb.dev';
 const FREE_DB_URL = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json';
+const CACHE_FILE = path.join(__dirname, '.exercisedb-cache.json');
 
 interface ApiExercise {
   exerciseId: string;
@@ -36,18 +39,54 @@ interface FreeExercise {
 }
 
 // ─── Pobierz WSZYSTKIE ćwiczenia z ExerciseDB (cursor pagination) ─────────────
+// Z cache na dysku i ponawianiem przy limicie zapytań (HTTP 429).
+async function fetchPage(url: string, attempt = 0): Promise<Response> {
+  const res = await fetch(url, { headers: { Accept: 'application/json' } });
+  if (res.status === 429 && attempt < 6) {
+    const waitMs = 20000 + attempt * 15000;
+    process.stdout.write(`\n  ⏳ Limit zapytań (429) — czekam ${Math.round(waitMs / 1000)}s i ponawiam...`);
+    await new Promise(r => setTimeout(r, waitMs));
+    return fetchPage(url, attempt + 1);
+  }
+  return res;
+}
+
+function uniqueById(list: ApiExercise[]): ApiExercise[] {
+  const seen = new Set<string>();
+  return list.filter(e => {
+    if (!e?.exerciseId || seen.has(e.exerciseId)) return false;
+    seen.add(e.exerciseId);
+    return true;
+  });
+}
+
 async function fetchAllExerciseDb(): Promise<ApiExercise[]> {
+  // Cache: pełne pobranie zapisujemy na dysku — kolejne uruchomienia są natychmiastowe.
+  // Walidacja po UNIKALNYCH id (stary błąd paginacji potrafił zapisać duplikaty).
+  try {
+    if (fs.existsSync(CACHE_FILE)) {
+      const cached = uniqueById(JSON.parse(fs.readFileSync(CACHE_FILE, 'utf8')) as ApiExercise[]);
+      if (cached.length >= 1400) {
+        console.log(`  (użyto cache: ${CACHE_FILE} — usuń plik, by pobrać na nowo)`);
+        return cached;
+      }
+      console.log(`  (cache niekompletny: ${cached.length} unikalnych — pobieram na nowo)`);
+    }
+  } catch { /* uszkodzony cache — pobierz na nowo */ }
+
   const all: ApiExercise[] = [];
+  const seen = new Set<string>();
   let cursor: string | null = null;
   let page = 0;
 
   do {
-    const url = cursor
-      ? `${BASE}/api/v1/exercises?limit=100&cursor=${cursor}`
+    // UWAGA: API przyjmuje kursor w parametrze "after" (nie "cursor"!)
+    const url: string = cursor
+      ? `${BASE}/api/v1/exercises?limit=100&after=${encodeURIComponent(cursor)}`
       : `${BASE}/api/v1/exercises?limit=100`;
 
     try {
-      const res = await fetch(url, { headers: { Accept: 'application/json' } });
+      const res = await fetchPage(url);
       if (!res.ok) { console.error(`\nBłąd HTTP ${res.status} na stronie ${page + 1}`); break; }
 
       const json = await res.json() as {
@@ -56,7 +95,13 @@ async function fetchAllExerciseDb(): Promise<ApiExercise[]> {
         data: ApiExercise[];
       };
 
-      const pageData = json.data || [];
+      const pageData = (json.data || []).filter(e => e?.exerciseId && !seen.has(e.exerciseId));
+      if (pageData.length === 0 && page > 0) {
+        // Strona bez nowych ćwiczeń = paginacja się zapętliła — przerwij
+        console.error(`\n  ⚠️ Strona ${page + 1} nie przyniosła nowych ćwiczeń — przerywam.`);
+        break;
+      }
+      pageData.forEach(e => seen.add(e.exerciseId));
       all.push(...pageData);
       cursor = json.meta?.hasNextPage && json.meta?.nextCursor ? json.meta.nextCursor : null;
       page++;
@@ -64,13 +109,20 @@ async function fetchAllExerciseDb(): Promise<ApiExercise[]> {
       const total = json.meta?.total || '?';
       process.stdout.write(`\r  ExerciseDB: pobrano ${all.length}/${total} (strona ${page})...   `);
 
-      // Małe opóźnienie żeby nie przeciążyć API
-      if (cursor) await new Promise(r => setTimeout(r, 80));
+      // Odstęp między stronami — unika limitu zapytań
+      if (cursor) await new Promise(r => setTimeout(r, 700));
     } catch (e) {
       console.error(`\nBłąd na stronie ${page + 1}:`, e);
       break;
     }
   } while (cursor);
+
+  if (all.length >= 1400) {
+    try {
+      fs.writeFileSync(CACHE_FILE, JSON.stringify(all));
+      console.log(`\n  💾 Zapisano cache: ${CACHE_FILE}`);
+    } catch { /* cache opcjonalny */ }
+  }
 
   return all;
 }
@@ -95,7 +147,7 @@ function getBodyPart(muscleGroup: string): string {
   if (mg.includes('nogi') || mg.includes('uda')) return 'upper legs';
   if (mg.includes('brzuch') || mg.includes('abs')) return 'waist';
   if (mg.includes('przedrami')) return 'lower arms';
-  if (mg.includes('lydka') || mg.includes('calves')) return 'lower legs';
+  if (mg.includes('lydka') || mg.includes('łydk') || mg.includes('lydk') || mg.includes('calves')) return 'lower legs';
   if (mg.includes('kalistenst') || mg.includes('kalenist')) return 'upper arms';
   if (mg.includes('extra') || mg.includes('cardio')) return 'cardio';
   return 'back';
@@ -104,6 +156,86 @@ function getBodyPart(muscleGroup: string): string {
 // ─── Mapa: polska nazwa → angielskie słowa kluczowe do szukania ──────────────
 // Kluczem jest fragment shortName (lowercase), wartością angielskie terminy
 const MANUAL_MAP: [string, string[]][] = [
+  // ── Dopasowania do dokładnych nazw z naszej bazy (pierwszeństwo) ──
+  // Barki
+  ['wyciskanie hantli nad głowę',  ['dumbbell seated shoulder press', 'dumbbell shoulder press']],
+  ['wyciskanie żołnierskie',       ['barbell standing military press', 'military press', 'overhead press']],
+  ['wznosy bokiem z hantlami',     ['dumbbell lateral raise']],
+  ['wznosy przodem z hantlami',    ['dumbbell front raise']],
+  ['rear delt fly',                ['dumbbell rear lateral raise', 'rear delt fly', 'reverse fly']],
+  ['wznosy ramion w górę na wyciągu', ['face pull', 'cable face pull']],
+  // Biceps
+  ['uginanie ramion ławka',        ['dumbbell incline curl', 'incline curl']],
+  ['uginanie ramion na wyciągu dolnym', ['cable curl', 'cable biceps curl']],
+  ['uginanie ramion z hantlami (jednocześnie)', ['dumbbell biceps curl', 'dumbbell curl']],
+  ['uginanie ramion z hantlami naprzemiennie', ['dumbbell alternate biceps curl', 'alternate curl']],
+  ['hammer curl',                  ['dumbbell hammer curl', 'hammer curl']],
+  ['uginanie ramion ze sztangą',   ['barbell curl', 'barbell biceps curl']],
+  // Brzuch
+  ['brzuszki (crunch)',            ['crunch floor', 'crunch']],
+  ['plank boczny',                 ['side plank']],
+  ['plank (deska)',                ['plank', 'front plank']],
+  ['ab wheel',                     ['wheel rollout', 'wheel rollerout', 'ab wheel rollout']],
+  ['hip thrust',                   ['barbell hip thrust', 'barbell glute bridge', 'glute bridge', 'hip thrusts']],
+  ['odwrotne rozpiętki na maszynie', ['lever seated reverse fly', 'machine reverse fly', 'rear delt fly machine', 'reverse fly']],
+  ['wiosłowanie na maszynie',      ['lever seated row', 'lever narrow grip seated row', 'machine row', 'seated row']],
+  ['rotary torso',                 ['torso rotation', 'seated twist', 'twist machine']],
+  ['ściąganie liny na wyciągu górnym do brzucha', ['cable kneeling crunch', 'cable crunch']],
+  ['skłony boczne tułowia',        ['dumbbell side bend', 'side bend']],
+  ['unoszenie kolan',              ['hanging knee raise', 'captains chair knee raise']],
+  // Cardio
+  ['bieżnia',                      ['run on treadmill', 'treadmill', 'walking treadmill']],
+  ['orbitrek',                     ['elliptical', 'cross trainer']],
+  ['przysiady z wyskokiem',        ['jump squat']],
+  ['rower stacjonarny',            ['stationary bike', 'cycle', 'bike']],
+  ['skakanka',                     ['jump rope', 'rope jumping', 'skipping']],
+  ['wiosłowanie na ergometrze',    ['rowing machine', 'stationary rower', 'rower']],
+  ['bieg 3km',                     ['run', 'treadmill']],
+  // Klatka
+  ['wyciskanie sztangi na ławce poziomej', ['barbell bench press']],
+  ['sztangi na ławce skośnej (górnej)', ['barbell incline bench press', 'incline bench press']],
+  ['sztangi na ławce skośnej (dolnej)', ['barbell decline bench press', 'decline bench press']],
+  ['sztangi na ławce skośnej w dół', ['barbell decline bench press', 'decline bench press']],
+  ['wyciskanie hantli na ławce poziomej', ['dumbbell bench press']],
+  ['wyciskanie hantli na ławce skośnej', ['dumbbell incline bench press', 'incline dumbbell press']],
+  ['rozpiętki na wyciągu',         ['cable crossover', 'cable fly', 'cable cross-over']],
+  ['rozpiętki z hantlami',         ['dumbbell fly', 'dumbbell flyes']],
+  // Nogi
+  ['abdukcja',                     ['hip abduction', 'abduction machine']],
+  ['addukcja',                     ['hip adduction', 'adduction machine']],
+  ['hip extension',                ['hip extension', 'cable hip extension']],
+  ['przysiad bułgarski',           ['bulgarian split squat', 'split squat']],
+  ['przysiad z hantlami (goblet',  ['goblet squat', 'dumbbell goblet squat']],
+  ['przysiad ze sztangą',          ['barbell full squat', 'barbell squat']],
+  ['sumo deadlift',                ['barbell sumo deadlift', 'sumo deadlift']],
+  ['uginanie nóg na maszynie (stojąc)', ['standing leg curl', 'leg curl standing']],
+  ['uginanie nóg na maszynie',     ['lying leg curl', 'seated leg curl', 'leg curl']],
+  ['wspięcia na palce na maszynie', ['seated calf raise', 'machine calf raise']],
+  ['wspięcia na palce',            ['standing calf raise', 'calf raise']],
+  ['wykroki z hantlami',           ['dumbbell lunge', 'dumbbell walking lunge']],
+  ['wykroki ze sztangą',           ['barbell lunge', 'barbell walking lunge']],
+  // Plecy
+  ['hyperextension',               ['hyperextension', 'back extension', '45 degree hyperextension']],
+  ['martwy ciąg rumuński',         ['barbell romanian deadlift', 'romanian deadlift']],
+  ['martwy ciąg',                  ['barbell deadlift']],
+  ['podciąganie na drążku (nachwytem)', ['pull-up', 'pull up']],
+  ['podciąganie na drążku (podchwytem)', ['chin-up', 'chin up']],
+  ['do klatki (podchwytem)',       ['underhand pulldown', 'reverse grip lat pulldown', 'underhand lat pulldown']],
+  ['do klatki (szerokim nachwytem)', ['wide grip lat pulldown', 'lat pulldown']],
+  ['szrugi z hantlami',            ['dumbbell shrug']],
+  ['szrugi ze sztangą',            ['barbell shrug']],
+  ['wiosłowanie hantlem jednoręcznie', ['one arm dumbbell row', 'dumbbell bent over row']],
+  ['wiosłowanie sztangą',          ['barbell bent over row', 'bent over row']],
+  // Triceps
+  ['french press (hantle)',        ['dumbbell lying triceps extension', 'dumbbell triceps extension']],
+  ['french press (sztanga)',       ['barbell lying triceps extension', 'ez barbell lying triceps extension', 'skull crusher']],
+  ['prostowanie ramion hantlami leżąc', ['dumbbell lying triceps extension']],
+  ['prostowanie ramion na wyciągu', ['cable pushdown', 'triceps pushdown']],
+  ['prostowanie ramion nad głową', ['cable overhead triceps extension', 'overhead triceps extension']],
+  ['seated dip',                   ['seated dip machine', 'machine triceps dip', 'triceps dip']],
+  ['wąskie wyciskanie',            ['barbell close grip bench press', 'close grip bench press']],
+
+  // ── Oryginalne mapowania ──
   // Barki
   ['face pull',                    ['face pull']],
   ['unoszenie hantli przodem',     ['front raise', 'front dumbbell raise']],
@@ -293,7 +425,17 @@ async function main() {
   const exercises = await prisma.exercise.findMany({
     orderBy: [{ muscleGroup: 'asc' }, { name: 'asc' }],
   });
-  const toLink = exercises.filter(e => !e.exerciseDbId || e.exerciseDbId.trim() === '');
+  // Powiązania zapisane przez zepsutą wersję skryptu (paginacja na 25 ćwiczeniach)
+  // — dopasuj je ponownie, nawet jeśli mają już exerciseDbId
+  const RELINK = [
+    'Uginanie ramion na wyciągu dolnym', 'Uginanie ramion z hantlami (jednocześnie)',
+    'Unoszenie kolan do klatki w zwisie', 'Rozpiętki na wyciągu', 'Abdukcja na maszynie',
+    'Uginanie nóg na maszynie (Leg curl)', 'Wspięcia na palce', 'Podciąganie na drążku',
+    'Ściąganie drążka wyciągu do klatki', 'Bieg 3km',
+  ];
+  const toLink = exercises.filter(e =>
+    !e.exerciseDbId || e.exerciseDbId.trim() === '' || RELINK.some(n => e.name.includes(n))
+  );
   console.log(`Do linkowania: ${toLink.length} / ${exercises.length}\n`);
 
   // ─── Pobierz dane ───────────────────────────────────────────────────────────
@@ -356,8 +498,8 @@ async function main() {
       if (s > bestScore) { bestScore = s; bestMatch = c; }
     }
 
-    // Fallback: przeszukaj CAŁY zbiór jeśli wynik słaby
-    if (bestScore < 40) {
+    // Fallback: przeszukaj CAŁY zbiór jeśli wynik nie jest pewny
+    if (bestScore < 50) {
       for (const c of dbExercises) {
         const s = score(queries, c.name);
         if (s > bestScore) { bestScore = s; bestMatch = c; }
