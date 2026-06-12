@@ -1,5 +1,8 @@
 // Parser plików TCX z zegarka (Zepp/Amazfit, Garmin itp.) — działa w przeglądarce.
-// Wyciąga podsumowanie: czas trwania, kcal, tętno śr./maks., datę startu.
+// Wyciąga podsumowanie (czas, kcal, tętno śr./maks.) oraz przebieg tętna
+// uśredniony w kubełkach 30-sekundowych (kompaktowy zapis w bazie).
+
+export const HR_BUCKET_SEC = 30;
 
 export interface TcxSummary {
   sport: string;          // "Other" (siłowy), "Running", "Biking"...
@@ -9,6 +12,7 @@ export interface TcxSummary {
   avgHr: number | null;
   maxHr: number | null;
   distanceKm: number;     // 0 dla treningu siłowego
+  hrSeries: number[];     // śr. tętno per 30 s (0 = brak próbek w kubełku)
 }
 
 export function parseTcx(xmlText: string): TcxSummary | null {
@@ -39,6 +43,32 @@ export function parseTcx(xmlText: string): TcxSummary | null {
       if (max > 0) maxHr = Math.max(maxHr ?? 0, max);
     }
 
+    // Przebieg tętna z trackpointów → kubełki 30 s
+    const points = [...activity.querySelectorAll('Trackpoint')];
+    const hrSeries: number[] = [];
+    if (points.length > 0) {
+      const firstTime = Date.parse(points[0].querySelector('Time')?.textContent || '');
+      if (!isNaN(firstTime)) {
+        const sums: Record<number, { sum: number; n: number }> = {};
+        let lastBucket = 0;
+        for (const p of points) {
+          const hr = parseFloat(p.querySelector('HeartRateBpm > Value')?.textContent || '0');
+          if (hr <= 0) continue;
+          const t = Date.parse(p.querySelector('Time')?.textContent || '');
+          if (isNaN(t)) continue;
+          const bucket = Math.floor((t - firstTime) / 1000 / HR_BUCKET_SEC);
+          if (bucket < 0) continue;
+          if (!sums[bucket]) sums[bucket] = { sum: 0, n: 0 };
+          sums[bucket].sum += hr;
+          sums[bucket].n++;
+          lastBucket = Math.max(lastBucket, bucket);
+        }
+        for (let b = 0; b <= lastBucket; b++) {
+          hrSeries.push(sums[b] ? Math.round(sums[b].sum / sums[b].n) : 0);
+        }
+      }
+    }
+
     return {
       sport: activity.getAttribute('Sport') || 'Other',
       startTime: activity.querySelector('Id')?.textContent?.trim()
@@ -48,6 +78,7 @@ export function parseTcx(xmlText: string): TcxSummary | null {
       avgHr: hrTime > 0 ? Math.round(hrWeighted / hrTime) : null,
       maxHr,
       distanceKm: Math.round(distanceM / 10) / 100,
+      hrSeries,
     };
   } catch {
     return null;

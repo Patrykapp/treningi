@@ -55,7 +55,7 @@ function mapEntry(e: EntryInput) {
   };
 }
 
-type WatchData = { durationSec?: number; kcal?: number; avgHr?: number; maxHr?: number };
+type WatchData = { durationSec?: number; kcal?: number; avgHr?: number; maxHr?: number; hrSeries?: number[] };
 
 function watchFields(watch: WatchData | undefined | null) {
   if (!watch) return {};
@@ -64,6 +64,7 @@ function watchFields(watch: WatchData | undefined | null) {
     kcal: watch.kcal ? Math.round(Number(watch.kcal)) : null,
     avgHr: watch.avgHr ? Math.round(Number(watch.avgHr)) : null,
     maxHr: watch.maxHr ? Math.round(Number(watch.maxHr)) : null,
+    hrSeries: Array.isArray(watch.hrSeries) ? watch.hrSeries.map(Number) : [],
   };
 }
 

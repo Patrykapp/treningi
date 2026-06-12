@@ -26,6 +26,7 @@ export interface WorkoutSession {
   kcal?: number | null;
   avgHr?: number | null;
   maxHr?: number | null;
+  hrSeries?: number[];
   createdAt: string;
   updatedAt: string;
 }

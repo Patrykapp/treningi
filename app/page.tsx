@@ -328,6 +328,38 @@ export default function DashboardPage() {
                 )}
               </div>
             )}
+
+            {/* Trend formy — średnie tętno treningów z zegarka */}
+            {(() => {
+              const withHr = [...activeSessions].filter(s => s.avgHr).reverse().slice(-10);
+              if (withHr.length < 3) return null;
+              const vals = withHr.map(s => s.avgHr as number);
+              const min = Math.min(...vals) - 3;
+              const max = Math.max(...vals) + 3;
+              const W = 600, H = 60;
+              const pts = vals.map((v, i) => `${(i / (vals.length - 1)) * W},${H - ((v - min) / (max - min)) * H}`).join(' ');
+              const trend = vals[vals.length - 1] - vals[0];
+              return (
+                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-1">
+                    <h2 className="text-sm font-bold text-gray-700">❤️ Forma — śr. tętno treningów</h2>
+                    <span className={`text-xs font-bold ${trend <= 0 ? 'text-green-600' : 'text-orange-500'}`}>
+                      {trend <= 0 ? '▼' : '▲'} {Math.abs(trend)} bpm
+                    </span>
+                  </div>
+                  <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-14" preserveAspectRatio="none">
+                    <polyline points={pts} fill="none" stroke="#ef4444" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+                  </svg>
+                  <div className="flex justify-between text-xs text-gray-400">
+                    <span>{vals[0]} bpm</span>
+                    <span>{vals[vals.length - 1]} bpm</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Niższe tętno przy podobnym wysiłku = lepsza forma. Ostatnie {withHr.length} treningów z zegarka.
+                  </p>
+                </div>
+              );
+            })()}
           </>
         )}
 

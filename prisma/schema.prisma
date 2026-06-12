@@ -49,6 +49,7 @@ model WorkoutSession {
   kcal        Int?
   avgHr       Int?
   maxHr       Int?
+  hrSeries    Json           @default("[]") // śr. tętno per 30 s
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 

@@ -77,6 +77,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           kcal: watch.kcal ? Math.round(Number(watch.kcal)) : null,
           avgHr: watch.avgHr ? Math.round(Number(watch.avgHr)) : null,
           maxHr: watch.maxHr ? Math.round(Number(watch.maxHr)) : null,
+          hrSeries: Array.isArray(watch.hrSeries) ? watch.hrSeries.map(Number) : [],
         },
         include: { user: true, entries: { include: { exercise: true } } },
       });

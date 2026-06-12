@@ -5,13 +5,38 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { formatDate } from '@/lib/utils';
 import { strengthCalories, latestWeight } from '@/lib/calories';
-import { parseTcx } from '@/lib/tcx';
+import { parseTcx, HR_BUCKET_SEC } from '@/lib/tcx';
+import { computeHrZones, estimateHrMax, formatZoneTime } from '@/lib/hr';
 import { useAuth } from '@/hooks/useAuth';
 
 function formatDur(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   return h > 0 ? `${h}h ${m}min` : `${m} min`;
+}
+
+// Lekki wykres tętna (SVG, bez bibliotek)
+function HrChart({ series }: { series: number[] }) {
+  const vals = series.filter(v => v > 0);
+  if (vals.length < 3) return null;
+  const min = Math.min(...vals) - 5;
+  const max = Math.max(...vals) + 5;
+  const W = 600, H = 80;
+  const pts = series
+    .map((v, i) => v > 0 ? `${(i / (series.length - 1)) * W},${H - ((v - min) / (max - min)) * H}` : null)
+    .filter(Boolean)
+    .join(' ');
+  return (
+    <div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-20" preserveAspectRatio="none">
+        <polyline points={pts} fill="none" stroke="#ef4444" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+      </svg>
+      <div className="flex justify-between text-xs text-gray-400">
+        <span>start</span>
+        <span>{Math.round(series.length * HR_BUCKET_SEC / 60)} min</span>
+      </div>
+    </div>
+  );
 }
 
 interface SetData { reps: number; weight: number; }
@@ -36,6 +61,7 @@ interface Session {
   kcal?: number | null;
   avgHr?: number | null;
   maxHr?: number | null;
+  hrSeries?: number[];
 }
 interface Rating {
   score: number;
@@ -101,6 +127,7 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ watch: {
         durationSec: parsed.durationSec, kcal: parsed.kcal, avgHr: parsed.avgHr, maxHr: parsed.maxHr,
+        hrSeries: parsed.hrSeries,
       } }),
     });
     if (res.ok) {
@@ -234,19 +261,51 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
 
         {/* Dane z zegarka */}
         {(session.durationSec || session.avgHr) ? (
-          <div className="bg-white rounded-2xl shadow-sm p-4 flex items-center justify-around text-center">
-            {session.durationSec && (
-              <div>
-                <p className="text-base font-bold text-gray-900">⏱ {formatDur(session.durationSec)}</p>
-                <p className="text-xs text-gray-500">czas treningu</p>
-              </div>
+          <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
+            <div className="flex items-center justify-around text-center">
+              {session.durationSec && (
+                <div>
+                  <p className="text-base font-bold text-gray-900">⏱ {formatDur(session.durationSec)}</p>
+                  <p className="text-xs text-gray-500">czas treningu</p>
+                </div>
+              )}
+              {session.avgHr && (
+                <div>
+                  <p className="text-base font-bold text-gray-900">❤️ {session.avgHr}{session.maxHr ? ` / ${session.maxHr}` : ''}</p>
+                  <p className="text-xs text-gray-500">tętno śr. / maks.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Wykres tętna */}
+            {Array.isArray(session.hrSeries) && session.hrSeries.length > 2 && (
+              <HrChart series={session.hrSeries} />
             )}
-            {session.avgHr && (
-              <div>
-                <p className="text-base font-bold text-gray-900">❤️ {session.avgHr}{session.maxHr ? ` / ${session.maxHr}` : ''}</p>
-                <p className="text-xs text-gray-500">tętno śr. / maks.</p>
-              </div>
-            )}
+
+            {/* Strefy tętna */}
+            {Array.isArray(session.hrSeries) && session.hrSeries.length > 2 && (() => {
+              const zones = computeHrZones(session.hrSeries, estimateHrMax(session.maxHr));
+              const total = zones.reduce((s, z) => s + z.seconds, 0);
+              if (total <= 0) return null;
+              return (
+                <div>
+                  <div className="flex h-3 rounded-full overflow-hidden mb-2">
+                    {zones.filter(z => z.seconds > 0).map(z => (
+                      <div key={z.name} className={z.color} style={{ width: `${(z.seconds / total) * 100}%` }} />
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-5 gap-1 text-center">
+                    {zones.map(z => (
+                      <div key={z.name}>
+                        <div className={`w-2.5 h-2.5 rounded-full mx-auto mb-0.5 ${z.color}`} />
+                        <p className="text-xs font-semibold text-gray-700">{z.seconds > 0 ? formatZoneTime(z.seconds) : '—'}</p>
+                        <p className="text-[10px] text-gray-400">{z.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         ) : authUserId === session.user.id && (
           <label className="block w-full text-center text-sm text-blue-600 font-medium bg-white rounded-2xl shadow-sm py-3 cursor-pointer">
