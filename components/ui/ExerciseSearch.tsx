@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Exercise } from '@/types';
+import { ExerciseThumb } from '@/components/ui/ExerciseThumb';
 
 interface Props {
   exercises: Exercise[];
@@ -21,31 +22,7 @@ const GROUP_ORDER = [
   'Nogi', 'Brzuch', 'Cardio', 'Inne',
 ];
 
-// Miniatura z ExerciseDB — URL jest deterministyczny względem exerciseDbId
-function gifUrl(ex: Exercise): string | null {
-  return ex.exerciseDbId ? `https://static.exercisedb.dev/media/${ex.exerciseDbId}.gif` : null;
-}
-
-function Thumb({ ex }: { ex: Exercise }) {
-  const url = gifUrl(ex);
-  if (!url) {
-    return (
-      <span className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-300 text-base shrink-0">
-        🏋️
-      </span>
-    );
-  }
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={url}
-      alt=""
-      loading="lazy"
-      className="w-10 h-10 rounded-lg object-cover bg-gray-100 shrink-0"
-      onError={e => { e.currentTarget.style.visibility = 'hidden'; }}
-    />
-  );
-}
+const Thumb = ExerciseThumb;
 
 export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybierz ćwiczenie...', onAddNew }: Props) {
   const [open, setOpen] = useState(false);

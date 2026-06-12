@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Exercise } from '@/types';
+import { ExerciseThumb } from '@/components/ui/ExerciseThumb';
 
 export default function CwiczeniaPage() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -119,9 +120,10 @@ export default function CwiczeniaPage() {
                     <button
                       key={ex.id}
                       onClick={() => router.push(`/cwiczenie/${ex.id}`)}
-                      className={`w-full flex items-center justify-between px-4 py-3.5 text-left active:bg-gray-50 ${i > 0 ? 'border-t border-gray-100' : ''}`}
+                      className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 text-left active:bg-gray-50 ${i > 0 ? 'border-t border-gray-100' : ''}`}
                     >
-                      <span className="font-medium text-gray-900 text-sm flex-1">{shortName}</span>
+                      <ExerciseThumb ex={ex} className="w-11 h-11" />
+                      <span className="font-medium text-gray-900 text-sm flex-1 min-w-0 leading-snug">{shortName}</span>
                       <button
                         onClick={(e) => toggleFavorite(ex.id, e)}
                         className={`text-xl mr-2 transition-transform active:scale-125 ${isFav ? 'opacity-100' : 'opacity-30'}`}
@@ -146,7 +148,7 @@ export default function CwiczeniaPage() {
                 onClick={() => router.push('/trening')}
                 className="text-sm text-blue-600 font-medium hover:underline"
               >
-                + Dodaj „{search}" jako nowe ćwiczenie w treningu
+                + Dodaj „{search}&quot; jako nowe ćwiczenie w treningu
               </button>
             )}
           </div>
