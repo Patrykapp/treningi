@@ -8,20 +8,23 @@ import { useAuth } from '@/hooks/useAuth';
 
 function calcStreak(sessions: WorkoutSession[]): number {
   if (!sessions.length) return 0;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const dates = [...new Set(sessions.map(s => {
+  const days = new Set(sessions.map(s => {
     const d = new Date(s.date);
     d.setHours(0, 0, 0, 0);
     return d.getTime();
-  }))].sort((a, b) => b - a);
+  }));
+  const prevDay = (d: Date) => { const n = new Date(d); n.setDate(n.getDate() - 1); return n; };
+  // Start: dziś, a jeśli dziś (jeszcze) nie było treningu — wczoraj.
+  // Dalej wymagane są kolejne dni BEZ przerw (wcześniej warunek
+  // akceptował 1 dzień przerwy na każdym kroku i treningi co drugi
+  // dzień liczyły się jako "dni z rzędu").
+  let cursor = new Date();
+  cursor.setHours(0, 0, 0, 0);
+  if (!days.has(cursor.getTime())) cursor = prevDay(cursor);
   let streak = 0;
-  let expected = today.getTime();
-  for (const d of dates) {
-    if (d === expected || d === expected - 86400000) {
-      streak++;
-      expected = d - 86400000;
-    } else { break; }
+  while (days.has(cursor.getTime())) {
+    streak++;
+    cursor = prevDay(cursor);
   }
   return streak;
 }
