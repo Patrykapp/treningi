@@ -55,8 +55,21 @@ function mapEntry(e: EntryInput) {
   };
 }
 
+type WatchData = { durationSec?: number; kcal?: number; avgHr?: number; maxHr?: number };
+
+function watchFields(watch: WatchData | undefined | null) {
+  if (!watch) return {};
+  return {
+    durationSec: watch.durationSec ? Math.round(Number(watch.durationSec)) : null,
+    kcal: watch.kcal ? Math.round(Number(watch.kcal)) : null,
+    avgHr: watch.avgHr ? Math.round(Number(watch.avgHr)) : null,
+    maxHr: watch.maxHr ? Math.round(Number(watch.maxHr)) : null,
+  };
+}
+
 // POST /api/sessions
-// Body: { date, notes, entries, targetUserIds?: string[], targetUserId?: string, appendToExisting?: boolean }
+// Body: { date, notes, entries, targetUserIds?: string[], targetUserId?: string, appendToExisting?: boolean,
+//         watch?: { durationSec, kcal, avgHr, maxHr } } — dane z zegarka trafiają TYLKO do sesji autora
 // Zapis dla wielu użytkowników odbywa się w JEDNEJ transakcji — albo zapisze się
 // dla wszystkich, albo dla nikogo (wcześniej osobne requesty mogły zapisać częściowo
 // i pokazać błąd mimo zapisania ćwiczenia w historii).
@@ -65,7 +78,7 @@ export async function POST(request: Request) {
   try {
     const authUserId = await getAuthUserId();
     if (!authUserId) return NextResponse.json({ error: 'Nieautoryzowany' }, { status: 401 });
-    const { date, notes, entries, targetUserId, targetUserIds, appendToExisting } = await request.json();
+    const { date, notes, entries, targetUserId, targetUserIds, appendToExisting, watch } = await request.json();
     if (!date) return NextResponse.json({ error: 'Data jest wymagana' }, { status: 400 });
     if (!entries?.length) return NextResponse.json({ error: 'Dodaj co najmniej jedno ćwiczenie' }, { status: 400 });
 
@@ -93,12 +106,16 @@ export async function POST(request: Request) {
             })
           : null;
 
+        // Dane z zegarka tylko dla sesji zalogowanego autora (to jego zegarek)
+        const watchData = uid === authUserId ? watchFields(watch) : {};
+
         if (existing) {
           results.push(await tx.workoutSession.update({
             where: { id: existing.id },
             data: {
               notes: existing.notes || notes || null,
               entries: { create: mapped },
+              ...watchData,
             },
             include: { user: true, entries: { include: { exercise: true } } },
           }));
@@ -109,6 +126,7 @@ export async function POST(request: Request) {
               userId: uid,
               notes: notes || null,
               entries: { create: mapped },
+              ...watchData,
             },
             include: { user: true, entries: { include: { exercise: true } } },
           }));

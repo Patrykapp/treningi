@@ -8,7 +8,7 @@ import { formatDate } from '@/lib/utils';
 import { Toast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useAuth } from '@/hooks/useAuth';
-import { strengthCalories, countSets, latestWeight } from '@/lib/calories';
+import { sessionCalories, latestWeight } from '@/lib/calories';
 
 interface SessionRating {
   score: number;
@@ -258,11 +258,15 @@ function HistoriaPage() {
                     <div>
                       <span className="font-bold text-gray-900">{formatDate(session.date)}</span>
                       <span className="ml-2 text-sm text-blue-600 font-medium">{session.user?.name}</span>
-                      {weightKg > 0 && (
-                        <span className="ml-2 text-xs text-red-500 font-medium whitespace-nowrap">
-                          🔥 ~{strengthCalories(weightKg, countSets(session.entries || []))} kcal
-                        </span>
-                      )}
+                      {(() => {
+                        const sc = sessionCalories(session, weightKg);
+                        if (sc.kcal <= 0) return null;
+                        return (
+                          <span className="ml-2 text-xs text-red-500 font-medium whitespace-nowrap">
+                            🔥 {sc.estimated ? '~' : ''}{sc.kcal} kcal{!sc.estimated && ' ⌚'}
+                          </span>
+                        );
+                      })()}
                       {session.notes?.startsWith('Challenge:') && (
                         <Link href={`/challenge/wynik/${session.id}`}
                           className="ml-2 text-xs font-semibold bg-blue-100 text-blue-700 rounded-lg px-2 py-0.5">

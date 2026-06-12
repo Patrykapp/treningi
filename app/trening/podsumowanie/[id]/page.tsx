@@ -5,6 +5,14 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { formatDate } from '@/lib/utils';
 import { strengthCalories, latestWeight } from '@/lib/calories';
+import { parseTcx } from '@/lib/tcx';
+import { useAuth } from '@/hooks/useAuth';
+
+function formatDur(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  return h > 0 ? `${h}h ${m}min` : `${m} min`;
+}
 
 interface SetData { reps: number; weight: number; }
 interface Exercise { id: string; name: string; muscleGroup?: string | null; }
@@ -24,6 +32,10 @@ interface Session {
   notes?: string | null;
   user: { id: string; name: string };
   entries: Entry[];
+  durationSec?: number | null;
+  kcal?: number | null;
+  avgHr?: number | null;
+  maxHr?: number | null;
 }
 interface Rating {
   score: number;
@@ -76,6 +88,26 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
   const [rating, setRating] = useState<Rating | null>(null);
   const [weightKg, setWeightKg] = useState(0);
   const [loading, setLoading] = useState(true);
+  const { userId: authUserId } = useAuth();
+
+  const attachTcx = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !session) return;
+    const parsed = parseTcx(await file.text());
+    e.target.value = '';
+    if (!parsed) return;
+    const res = await fetch(`/api/sessions/${session.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ watch: {
+        durationSec: parsed.durationSec, kcal: parsed.kcal, avgHr: parsed.avgHr, maxHr: parsed.maxHr,
+      } }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      if (updated && !updated.error) setSession(updated);
+    }
+  };
 
   useEffect(() => {
     Promise.all([
@@ -174,7 +206,7 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
         )}
 
         {/* Statystyki ogólne */}
-        <div className={`grid gap-2 ${weightKg > 0 ? 'grid-cols-4' : 'grid-cols-3'}`}>
+        <div className={`grid gap-2 ${(session.kcal || weightKg > 0) ? 'grid-cols-4' : 'grid-cols-3'}`}>
           <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
             <p className="text-xl font-black text-blue-600">{session.entries.length}</p>
             <p className="text-xs text-gray-500 mt-0.5">ćwiczeń</p>
@@ -187,13 +219,41 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
             <p className="text-xl font-black text-gray-900">{Math.round(totalVolume / 1000 * 10) / 10}t</p>
             <p className="text-xs text-gray-500 mt-0.5">wolumen</p>
           </div>
-          {weightKg > 0 && (
+          {session.kcal ? (
+            <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
+              <p className="text-xl font-black text-red-500">{session.kcal}</p>
+              <p className="text-xs text-gray-500 mt-0.5">kcal ⌚</p>
+            </div>
+          ) : weightKg > 0 && (
             <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
               <p className="text-xl font-black text-red-500">~{strengthCalories(weightKg, totalSets)}</p>
               <p className="text-xs text-gray-500 mt-0.5">kcal 🔥</p>
             </div>
           )}
         </div>
+
+        {/* Dane z zegarka */}
+        {(session.durationSec || session.avgHr) ? (
+          <div className="bg-white rounded-2xl shadow-sm p-4 flex items-center justify-around text-center">
+            {session.durationSec && (
+              <div>
+                <p className="text-base font-bold text-gray-900">⏱ {formatDur(session.durationSec)}</p>
+                <p className="text-xs text-gray-500">czas treningu</p>
+              </div>
+            )}
+            {session.avgHr && (
+              <div>
+                <p className="text-base font-bold text-gray-900">❤️ {session.avgHr}{session.maxHr ? ` / ${session.maxHr}` : ''}</p>
+                <p className="text-xs text-gray-500">tętno śr. / maks.</p>
+              </div>
+            )}
+          </div>
+        ) : authUserId === session.user.id && (
+          <label className="block w-full text-center text-sm text-blue-600 font-medium bg-white rounded-2xl shadow-sm py-3 cursor-pointer">
+            ⌚ Importuj dane z zegarka (TCX)
+            <input type="file" accept=".tcx,.xml" onChange={attachTcx} className="hidden" />
+          </label>
+        )}
 
         {/* Serie per grupa mięśniowa */}
         {statsByMuscle.length > 1 && (

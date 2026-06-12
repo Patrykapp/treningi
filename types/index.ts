@@ -21,6 +21,11 @@ export interface WorkoutSession {
   user: User;
   notes?: string | null;
   entries: WorkoutEntry[];
+  // Dane z zegarka (import TCX) — opcjonalne
+  durationSec?: number | null;
+  kcal?: number | null;
+  avgHr?: number | null;
+  maxHr?: number | null;
   createdAt: string;
   updatedAt: string;
 }

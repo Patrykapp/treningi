@@ -28,3 +28,13 @@ export const DEFAULT_WEIGHT_KG = 75;
 export function latestWeight(weights: { weight: number }[] | undefined | null): number {
   return weights && weights.length > 0 ? weights[0].weight : DEFAULT_WEIGHT_KG;
 }
+
+// Kcal sesji siłowej: prawdziwe z zegarka, jeśli są — inaczej szacunek z serii.
+// estimated=true → w UI pokazujemy "~"
+export function sessionCalories(
+  session: { kcal?: number | null; entries?: { sets: number; setsData?: unknown }[] },
+  weightKg: number
+): { kcal: number; estimated: boolean } {
+  if (session.kcal && session.kcal > 0) return { kcal: session.kcal, estimated: false };
+  return { kcal: strengthCalories(weightKg, countSets(session.entries || [])), estimated: true };
+}

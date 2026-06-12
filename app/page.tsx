@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { WorkoutSession } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
-import { runCalories, strengthCalories, countSets } from '@/lib/calories';
+import { runCalories, sessionCalories } from '@/lib/calories';
 
 interface Run {
   id: string;
@@ -171,7 +171,7 @@ export default function DashboardPage() {
     const weekSessions = lastWeek(us);
     const weekRuns = lastWeek(runs);
     const weekKcal =
-      weekSessions.reduce((sum, s) => sum + strengthCalories(weightKg, countSets(s.entries || [])), 0) +
+      weekSessions.reduce((sum, s) => sum + sessionCalories(s, weightKg).kcal, 0) +
       weekRuns.reduce((sum, r) => sum + runCalories(weightKg, r.distance), 0);
     // Punktacja rankingu tygodniowego:
     //   100 pkt za trening (siłowy lub bieg)
@@ -390,7 +390,7 @@ export default function DashboardPage() {
                     );
                   }
                   const session = item.session;
-                  const kcal = strengthCalories(weightKg, countSets(session.entries || []));
+                  const sc = sessionCalories(session, weightKg);
                   return (
                     <Link
                       key={session.id}
@@ -403,7 +403,7 @@ export default function DashboardPage() {
                           <span className="font-medium text-gray-900 text-sm">{formatDate(session.date)}</span>
                         </div>
                         <div className="text-xs text-gray-500 mt-0.5">
-                          🏋️ {session.entries?.length || 0} ćwiczeń{kcal > 0 && ` · ~${kcal} kcal`}
+                          🏋️ {session.entries?.length || 0} ćwiczeń{sc.kcal > 0 && ` · ${sc.estimated ? '~' : ''}${sc.kcal} kcal${sc.estimated ? '' : ' ⌚'}`}
                           {session.notes && <span className="italic"> · {session.notes}</span>}
                         </div>
                       </div>

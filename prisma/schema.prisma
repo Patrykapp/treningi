@@ -38,14 +38,19 @@ model Exercise {
 }
 
 model WorkoutSession {
-  id        String         @id @default(cuid())
-  date      DateTime
-  userId    String
-  user      User           @relation(fields: [userId], references: [id])
-  notes     String?
-  entries   WorkoutEntry[]
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  id          String         @id @default(cuid())
+  date        DateTime
+  userId      String
+  user        User           @relation(fields: [userId], references: [id])
+  notes       String?
+  entries     WorkoutEntry[]
+  // Dane z zegarka (import TCX) — opcjonalne
+  durationSec Int?
+  kcal        Int?
+  avgHr       Int?
+  maxHr       Int?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
   @@index([userId, date])
 }
@@ -111,6 +116,10 @@ model RunSession {
   duration  Int      // seconds
   splits    Json     @default("[]") // array of seconds per km segment
   notes     String?
+  // Dane z zegarka (import TCX) — opcjonalne
+  kcal      Int?
+  avgHr     Int?
+  maxHr     Int?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -10,6 +10,13 @@ import { ExerciseSearch } from '@/components/ui/ExerciseSearch';
 import { RestTimer } from '@/components/ui/RestTimer';
 import { activeSession } from '@/hooks/useActiveSession';
 import { useAuth } from '@/hooks/useAuth';
+import { parseTcx, TcxSummary } from '@/lib/tcx';
+
+function formatDur(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  return h > 0 ? `${h}h ${m}min` : `${m} min`;
+}
 
 interface EntryRow extends NewEntryForm {
   key: string;
@@ -79,6 +86,8 @@ function TreningPage() {
   const [doneSets, setDoneSets] = useState<Record<string, boolean>>({});
   const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
   const [restSecs, setRestSecs] = useState(90);
+  // Dane z zegarka (import TCX)
+  const [watchData, setWatchData] = useState<TcxSummary | null>(null);
 
   const DRAFT_KEY = 'treningFormDraft';
 
@@ -252,6 +261,20 @@ function TreningPage() {
     setSavingTemplate(false);
   };
 
+  const handleTcxFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    const parsed = parseTcx(text);
+    if (parsed) {
+      setWatchData(parsed);
+      setToast({ message: `Zegarek: ${parsed.kcal} kcal, ${formatDur(parsed.durationSec)}`, type: 'success' });
+    } else {
+      setToast({ message: 'Nie udało się odczytać pliku TCX', type: 'error' });
+    }
+    e.target.value = '';
+  };
+
   const deleteTemplate = async (id: string) => {
     const res = await fetch(`/api/templates/${id}`, { method: 'DELETE' });
     if (res.ok) {
@@ -405,6 +428,7 @@ function TreningPage() {
           entries: entries.filter(e => e.exerciseId).map(buildEntryPayload),
           targetUserIds: getTargetUserIds(),
           appendToExisting: true,
+          watch: watchData || undefined,
         }),
       });
       if (res.ok) {
@@ -454,6 +478,7 @@ function TreningPage() {
           date, notes,
           entries: entries.filter(e => e.exerciseId).map(buildEntryPayload),
           targetUserIds: getTargetUserIds(),
+          watch: watchData || undefined,
         }),
       });
 
@@ -677,6 +702,29 @@ function TreningPage() {
             className="w-full text-sm text-gray-500 py-2">
             + Nowe ćwiczenie w bibliotece
           </button>
+        )}
+
+        {!editingSession && (
+          <div className="bg-white rounded-2xl p-4">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-gray-700">⌚ Dane z zegarka <span className="text-gray-400">(opcjonalnie)</span></label>
+              {watchData ? (
+                <button type="button" onClick={() => setWatchData(null)} className="text-xs text-red-400">✕ usuń</button>
+              ) : (
+                <label className="text-sm text-blue-600 font-medium cursor-pointer">
+                  Importuj TCX
+                  <input type="file" accept=".tcx,.xml" onChange={handleTcxFile} className="hidden" />
+                </label>
+              )}
+            </div>
+            {watchData && (
+              <p className="text-sm text-gray-700 mt-2 bg-blue-50 rounded-lg px-3 py-2">
+                🔥 <strong>{watchData.kcal} kcal</strong> · ⏱ {formatDur(watchData.durationSec)}
+                {watchData.avgHr && <> · ❤️ {watchData.avgHr}</>}
+                {watchData.maxHr && <> / {watchData.maxHr} max</>}
+              </p>
+            )}
+          </div>
         )}
 
         {users.length > 1 && !editingSession && (

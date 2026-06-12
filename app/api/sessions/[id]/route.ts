@@ -66,7 +66,23 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const existing = await prisma.workoutSession.findUnique({ where: { id } });
     if (!existing) return NextResponse.json({ error: 'Nie znaleziono' }, { status: 404 });
     if (existing.userId !== userId) return NextResponse.json({ error: 'Brak dostepu' }, { status: 403 });
-    const { entry } = await request.json();
+    const { entry, watch } = await request.json();
+
+    // Aktualizacja danych z zegarka (import TCX w podsumowaniu)
+    if (watch) {
+      const updated = await prisma.workoutSession.update({
+        where: { id },
+        data: {
+          durationSec: watch.durationSec ? Math.round(Number(watch.durationSec)) : null,
+          kcal: watch.kcal ? Math.round(Number(watch.kcal)) : null,
+          avgHr: watch.avgHr ? Math.round(Number(watch.avgHr)) : null,
+          maxHr: watch.maxHr ? Math.round(Number(watch.maxHr)) : null,
+        },
+        include: { user: true, entries: { include: { exercise: true } } },
+      });
+      return NextResponse.json(updated);
+    }
+
     if (!entry) return NextResponse.json({ error: 'Brak cwiczenia' }, { status: 400 });
     const sd = entry.setsData && entry.setsData.length > 0 ? entry.setsData : [];
     const created = await prisma.workoutEntry.create({
