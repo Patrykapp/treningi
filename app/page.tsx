@@ -5,8 +5,20 @@ import Link from 'next/link';
 import { WorkoutSession } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { strengthCalories, countSets, latestWeight } from '@/lib/calories';
 
-function calcStreak(sessions: WorkoutSession[]): number {
+interface Run {
+  id: string;
+  userId: string;
+  date: string;
+  distance: number;
+  duration: number;
+}
+
+// Dowolna aktywność z datą (trening siłowy lub bieg)
+interface Dated { date: string }
+
+function calcStreak(sessions: Dated[]): number {
   if (!sessions.length) return 0;
   const days = new Set(sessions.map(s => {
     const d = new Date(s.date);
@@ -29,9 +41,14 @@ function calcStreak(sessions: WorkoutSession[]): number {
   return streak;
 }
 
-function calcWeeklyCount(sessions: WorkoutSession[]): number {
+function calcWeeklyCount(sessions: Dated[]): number {
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   return sessions.filter(s => new Date(s.date) >= weekAgo).length;
+}
+
+function lastWeek<T extends Dated>(items: T[]): T[] {
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  return items.filter(i => new Date(i.date).getTime() >= weekAgo);
 }
 
 // Początek tygodnia (poniedziałek, 00:00) dla danej daty
@@ -43,7 +60,7 @@ function weekStart(d: Date): number {
 }
 
 // Kolejne tygodnie kalendarzowe z co najmniej jednym treningiem
-function calcWeekStreak(sessions: WorkoutSession[]): number {
+function calcWeekStreak(sessions: Dated[]): number {
   if (!sessions.length) return 0;
   const weeks = new Set(sessions.map(s => weekStart(new Date(s.date))));
   let cursor = weekStart(new Date());
@@ -87,6 +104,8 @@ interface AppUser { id: string; name: string; }
 export default function DashboardPage() {
   const [allSessions, setAllSessions] = useState<WorkoutSession[]>([]);
   const [partnerSessions, setPartnerSessions] = useState<Record<string, WorkoutSession[]>>({});
+  const [runsByUser, setRunsByUser] = useState<Record<string, Run[]>>({});
+  const [weightByUser, setWeightByUser] = useState<Record<string, number>>({});
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
   const { isLoggedIn, name, userId } = useAuth();
@@ -101,17 +120,28 @@ export default function DashboardPage() {
       setAllSessions(Array.isArray(all) ? all : []);
       const userList: AppUser[] = Array.isArray(usersRes) ? usersRes : [];
       setUsers(userList);
-      // Treningi pozostałych użytkowników — do porównania i wspólnego feedu
+      // Treningi siłowe pozostałych + biegi i waga ciała WSZYSTKICH (kcal, statystyki)
       const others = userList.filter(u => u.id !== userId);
-      const results = await Promise.all(
-        others.map(u => fetch(`/api/sessions?userId=${u.id}&limit=200`).then(r => r.json()).catch(() => []))
-      );
+      const [sessionResults, runResults, weightResults] = await Promise.all([
+        Promise.all(others.map(u => fetch(`/api/sessions?userId=${u.id}&limit=200`).then(r => r.json()).catch(() => []))),
+        Promise.all(userList.map(u => fetch(`/api/runs?userId=${u.id}&limit=200`).then(r => r.json()).catch(() => []))),
+        Promise.all(userList.map(u => fetch(`/api/body-weight?userId=${u.id}&limit=1`).then(r => r.json()).catch(() => []))),
+      ]);
       const map: Record<string, WorkoutSession[]> = {};
-      others.forEach((u, i) => { map[u.id] = Array.isArray(results[i]) ? results[i] : []; });
+      others.forEach((u, i) => { map[u.id] = Array.isArray(sessionResults[i]) ? sessionResults[i] : []; });
       setPartnerSessions(map);
+      const rMap: Record<string, Run[]> = {};
+      const wMap: Record<string, number> = {};
+      userList.forEach((u, i) => {
+        rMap[u.id] = Array.isArray(runResults[i]) ? runResults[i] : [];
+        wMap[u.id] = latestWeight(Array.isArray(weightResults[i]) ? weightResults[i] : []);
+      });
+      setRunsByUser(rMap);
+      setWeightByUser(wMap);
     } catch {
       setAllSessions([]);
       setPartnerSessions({});
+      setRunsByUser({});
     } finally {
       setLoading(false);
     }
@@ -122,33 +152,48 @@ export default function DashboardPage() {
     else if (isLoggedIn === false) setLoading(false);
   }, [isLoggedIn, userId, loadSessions]);
 
-  const streak = calcStreak(allSessions);
-  const weeklyCount = calcWeeklyCount(allSessions);
-  const totalCount = allSessions.length;
-  const weekStreak = calcWeekStreak(allSessions);
+  const myRuns = (userId && runsByUser[userId]) || [];
+  const myActivities: Dated[] = [...allSessions, ...myRuns];
+  const streak = calcStreak(myActivities);
+  const weeklyCount = calcWeeklyCount(myActivities);
+  const totalCount = allSessions.length + myRuns.length;
+  const weekStreak = calcWeekStreak(myActivities);
   const weekVol = calcWeeklyVolume(allSessions);
 
   // Porównanie tygodniowe wszystkich użytkowników (motywacja!)
+  // Biegi liczą się jako treningi; kcal = siłownia (z liczby serii) + biegi (z dystansu)
   const comparison = users.map(u => {
     const us = u.id === userId ? allSessions : (partnerSessions[u.id] || []);
+    const runs = runsByUser[u.id] || [];
+    const weightKg = weightByUser[u.id] || 0;
+    const weekSessions = lastWeek(us);
+    const weekRuns = lastWeek(runs);
+    // kcal tylko z treningów siłowych
+    const weekKcal = weekSessions.reduce((sum, s) => sum + strengthCalories(weightKg, countSets(s.entries || [])), 0);
     return {
       id: u.id,
       name: u.id === userId ? 'Ty' : u.name,
       isMe: u.id === userId,
-      weekCount: calcWeeklyCount(us),
+      weekCount: weekSessions.length + weekRuns.length,
       weekVolume: calcWeeklyVolume(us).total,
-      streak: calcStreak(us),
-      lastDate: us[0]?.date || null,
+      weekKcal,
+      streak: calcStreak([...us, ...runs]),
     };
   });
   const maxWeekCount = Math.max(0, ...comparison.map(c => c.weekCount));
   const leader = comparison.filter(c => c.weekCount === maxWeekCount && maxWeekCount > 0);
 
-  // Wspólny feed — treningi wszystkich, posortowane po dacie
-  const feed = [
-    ...allSessions,
-    ...Object.values(partnerSessions).flat(),
-  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 6);
+  // Wspólny feed — treningi siłowe i biegi wszystkich, posortowane po dacie
+  type FeedItem =
+    | { kind: 'workout'; date: string; session: WorkoutSession }
+    | { kind: 'run'; date: string; run: Run };
+  const feed: FeedItem[] = [
+    ...[...allSessions, ...Object.values(partnerSessions).flat()]
+      .map(s => ({ kind: 'workout' as const, date: s.date, session: s })),
+    ...Object.values(runsByUser).flat()
+      .map(r => ({ kind: 'run' as const, date: r.date, run: r })),
+  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 8);
+  const userName = (id: string) => users.find(u => u.id === id)?.name || '?';
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -193,8 +238,13 @@ export default function DashboardPage() {
                         {Math.round(c.weekVolume).toLocaleString('pl-PL')} kg
                       </div>
                     )}
+                    {c.weekKcal > 0 && (
+                      <div className="text-xs text-red-500 font-medium mt-0.5">
+                        🔥 ~{c.weekKcal.toLocaleString('pl-PL')} kcal
+                      </div>
+                    )}
                     {c.streak > 1 && (
-                      <div className="text-xs text-orange-500 font-medium mt-0.5">🔥 {c.streak} dni z rzędu</div>
+                      <div className="text-xs text-orange-500 font-medium mt-0.5">⚡ {c.streak} dni z rzędu</div>
                     )}
                   </div>
                 );
@@ -280,8 +330,38 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                {feed.map((session, i) => {
-                  const mine = session.userId === userId;
+                {feed.map((item, i) => {
+                  const ownerId = item.kind === 'workout' ? item.session.userId : item.run.userId;
+                  const mine = ownerId === userId;
+                  const weightKg = weightByUser[ownerId] || 0;
+                  const badge = (
+                    <span className={`text-xs font-bold rounded-lg px-2 py-0.5 ${
+                      mine ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                    }`}>
+                      {mine ? 'Ty' : (item.kind === 'workout' ? item.session.user?.name : userName(ownerId))}
+                    </span>
+                  );
+                  if (item.kind === 'run') {
+                    const paceSec = item.run.distance > 0 ? item.run.duration / item.run.distance : 0;
+                    const pace = paceSec > 0 ? `${Math.floor(paceSec / 60)}'${String(Math.round(paceSec % 60)).padStart(2, '0')}"/km` : '';
+                    return (
+                      <Link key={`r-${item.run.id}`} href="/bieganie"
+                        className={`flex items-center justify-between gap-2 px-4 py-3 ${i > 0 ? 'border-t border-gray-100' : ''}`}>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            {badge}
+                            <span className="font-medium text-gray-900 text-sm">{formatDate(item.run.date)}</span>
+                          </div>
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            🏃 {item.run.distance} km{pace && ` · ${pace}`}
+                          </div>
+                        </div>
+                        <span className="text-gray-400 shrink-0">›</span>
+                      </Link>
+                    );
+                  }
+                  const session = item.session;
+                  const kcal = strengthCalories(weightKg, countSets(session.entries || []));
                   return (
                     <Link
                       key={session.id}
@@ -290,15 +370,11 @@ export default function DashboardPage() {
                     >
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className={`text-xs font-bold rounded-lg px-2 py-0.5 ${
-                            mine ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
-                          }`}>
-                            {mine ? 'Ty' : session.user?.name}
-                          </span>
+                          {badge}
                           <span className="font-medium text-gray-900 text-sm">{formatDate(session.date)}</span>
                         </div>
                         <div className="text-xs text-gray-500 mt-0.5">
-                          {session.entries?.length || 0} ćwiczeń
+                          🏋️ {session.entries?.length || 0} ćwiczeń{kcal > 0 && ` · ~${kcal} kcal`}
                           {session.notes && <span className="italic"> · {session.notes}</span>}
                         </div>
                       </div>

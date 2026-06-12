@@ -4,6 +4,7 @@ import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { formatDate } from '@/lib/utils';
+import { strengthCalories, latestWeight } from '@/lib/calories';
 
 interface SetData { reps: number; weight: number; }
 interface Exercise { id: string; name: string; muscleGroup?: string | null; }
@@ -21,7 +22,7 @@ interface Session {
   id: string;
   date: string;
   notes?: string | null;
-  user: { name: string };
+  user: { id: string; name: string };
   entries: Entry[];
 }
 interface Rating {
@@ -73,6 +74,7 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
   const [rating, setRating] = useState<Rating | null>(null);
+  const [weightKg, setWeightKg] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -80,7 +82,16 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
       fetch(`/api/sessions/${id}`).then(r => r.json()),
       fetch(`/api/sessions/${id}/rating`).then(r => r.json()),
     ]).then(([sess, rat]) => {
-      if (sess && !sess.error) setSession(sess);
+      if (sess && !sess.error) {
+        setSession(sess);
+        // Waga ciała właściciela treningu — do szacowania kcal
+        if (sess.user?.id) {
+          fetch(`/api/body-weight?userId=${sess.user.id}&limit=1`)
+            .then(r => r.json())
+            .then(d => setWeightKg(latestWeight(Array.isArray(d) ? d : [])))
+            .catch(() => {});
+        }
+      }
       if (rat && !rat.error) setRating(rat);
       setLoading(false);
     }).catch(() => setLoading(false));
@@ -163,19 +174,25 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
         )}
 
         {/* Statystyki ogólne */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className={`grid gap-2 ${weightKg > 0 ? 'grid-cols-4' : 'grid-cols-3'}`}>
           <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
-            <p className="text-2xl font-black text-blue-600">{session.entries.length}</p>
+            <p className="text-xl font-black text-blue-600">{session.entries.length}</p>
             <p className="text-xs text-gray-500 mt-0.5">ćwiczeń</p>
           </div>
           <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
-            <p className="text-2xl font-black text-gray-900">{totalSets}</p>
+            <p className="text-xl font-black text-gray-900">{totalSets}</p>
             <p className="text-xs text-gray-500 mt-0.5">serii</p>
           </div>
           <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
             <p className="text-xl font-black text-gray-900">{Math.round(totalVolume / 1000 * 10) / 10}t</p>
             <p className="text-xs text-gray-500 mt-0.5">wolumen</p>
           </div>
+          {weightKg > 0 && (
+            <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
+              <p className="text-xl font-black text-red-500">~{strengthCalories(weightKg, totalSets)}</p>
+              <p className="text-xs text-gray-500 mt-0.5">kcal 🔥</p>
+            </div>
+          )}
         </div>
 
         {/* Serie per grupa mięśniowa */}
