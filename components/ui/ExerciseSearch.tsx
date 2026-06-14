@@ -12,6 +12,22 @@ interface Props {
   onAddNew?: () => void;
 }
 
+const USAGE_KEY = 'exerciseUsageCount';
+
+function readUsageCounts(): Record<string, number> {
+  if (typeof window === 'undefined') return {};
+  try { return JSON.parse(localStorage.getItem(USAGE_KEY) || '{}'); } catch { return {}; }
+}
+
+function incrementUsage(id: string): Record<string, number> {
+  const counts = readUsageCounts();
+  counts[id] = (counts[id] || 0) + 1;
+  try { localStorage.setItem(USAGE_KEY, JSON.stringify(counts)); } catch {}
+  return counts;
+}
+
+const TOP_N = 8;
+
 function normalizeMuscle(raw: string | null | undefined): string {
   if (!raw) return 'Inne';
   return raw.replace(/\s*\(.*?\)/g, '').trim() || 'Inne';
@@ -30,6 +46,7 @@ export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybi
   const [focusedIdx, setFocusedIdx] = useState(-1);
   // collapsed groups: track which are CLOSED (default: all open)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [usageCounts, setUsageCounts] = useState<Record<string, number>>(() => readUsageCounts());
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -37,7 +54,12 @@ export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybi
   const selected = exercises.find(e => e.id === value);
 
   const filtered = search
-    ? exercises.filter(e => e.name.toLowerCase().includes(search.toLowerCase()))
+    ? exercises
+        .filter(e => e.name.toLowerCase().includes(search.toLowerCase()))
+        .sort((a, b) => {
+          const diff = (usageCounts[b.id] || 0) - (usageCounts[a.id] || 0);
+          return diff !== 0 ? diff : a.name.localeCompare(b.name, 'pl');
+        })
     : [];
 
   const close = useCallback(() => {
@@ -62,6 +84,7 @@ export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybi
 
   const handleSelect = (id: string) => {
     onChange(id);
+    if (id) setUsageCounts(incrementUsage(id));
     close();
   };
 
@@ -125,6 +148,15 @@ export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybi
   }
   const groupKeys = GROUP_ORDER.filter(g => grouped[g])
     .concat(Object.keys(grouped).filter(g => !GROUP_ORDER.includes(g)).sort());
+
+  // Top exercises by usage (only those used at least once)
+  const topExercises = exercises
+    .filter(e => (usageCounts[e.id] || 0) > 0)
+    .sort((a, b) => {
+      const diff = (usageCounts[b.id] || 0) - (usageCounts[a.id] || 0);
+      return diff !== 0 ? diff : a.name.localeCompare(b.name, 'pl');
+    })
+    .slice(0, TOP_N);
 
   return (
     <div ref={containerRef} className="relative">
@@ -221,7 +253,39 @@ export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybi
               )
             ) : (
               // ── Grouped view ─────────────────────────────────
-              groupKeys.map(group => {
+              <>
+              {topExercises.length > 0 && (
+                <div>
+                  <div className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold uppercase tracking-wide border-b border-gray-100 bg-amber-50 text-amber-700 sticky top-0 z-10">
+                    <span>★ Najczęściej <span className="font-normal opacity-60">({topExercises.length})</span></span>
+                  </div>
+                  {topExercises.map(ex => (
+                    <button
+                      key={ex.id}
+                      data-exercise-item
+                      data-selected={ex.id === value}
+                      type="button"
+                      onClick={() => handleSelect(ex.id)}
+                      className={`w-full text-left px-3 py-2 text-sm border-t border-gray-50 transition-colors flex items-center gap-2.5 ${
+                        ex.id === value
+                          ? 'bg-blue-50 text-blue-700 font-semibold'
+                          : 'text-gray-900 hover:bg-gray-50'
+                      }`}
+                    >
+                      <Thumb ex={ex} />
+                      <span className="min-w-0 flex-1 leading-snug">
+                        {ex.id === value && <span className="mr-1.5">✓</span>}
+                        {ex.name}
+                        {ex.muscleGroup && (
+                          <span className="ml-1.5 text-xs text-gray-400">{normalizeMuscle(ex.muscleGroup)}</span>
+                        )}
+                      </span>
+                      <span className="text-xs text-amber-500 shrink-0">{usageCounts[ex.id]}×</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {groupKeys.map(group => {
                 const isCollapsed = collapsedGroups.has(group);
                 const groupExercises = grouped[group];
                 const hasSelected = groupExercises.some(e => e.id === value);
@@ -261,7 +325,8 @@ export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybi
                     ))}
                   </div>
                 );
-              })
+              })}
+              </>
             )}
           </div>
         </div>
