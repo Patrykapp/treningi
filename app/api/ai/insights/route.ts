@@ -20,15 +20,18 @@ export async function POST() {
     if (!user) return NextResponse.json({ error: 'Nieautoryzowany' }, { status: 401 });
 
     const now = new Date();
-    const twoWeeksAgo = new Date(now);
-    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
 
-    const thisWeekStart = new Date(now);
-    thisWeekStart.setHours(0, 0, 0, 0);
-    thisWeekStart.setDate(thisWeekStart.getDate() - ((thisWeekStart.getDay() + 6) % 7));
+    // Używamy kroczących 7 dni zamiast tygodnia kalendarzowego —
+    // unikamy sytuacji gdzie trening z soboty znika w poniedziałek.
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const fourteenDaysAgo = new Date(now);
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
 
-    const prevWeekStart = new Date(thisWeekStart);
-    prevWeekStart.setDate(prevWeekStart.getDate() - 7);
+    // Aliasy dla kompatybilności z kodem poniżej
+    const thisWeekStart = sevenDaysAgo;
+    const prevWeekStart = fourteenDaysAgo;
+    const twoWeeksAgo = fourteenDaysAgo;
 
     // Pobierz dane obu tygodni równolegle
     const [sessions, runs, activities, bodyWeights] = await Promise.all([
