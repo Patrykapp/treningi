@@ -49,6 +49,13 @@ export default function CwiczeniaPage() {
     }
   };
 
+  // Normalizuje grupę mięśniową (usuwa nawiasy) i wykrywa rozciąganie
+  const normalizeMuscle = (raw: string | null | undefined) =>
+    (raw || '').replace(/\s*\(.*?\)/g, '').trim() || 'Inne';
+  const isStretching = (ex: Exercise) =>
+    (ex.muscleGroup || '').toLowerCase().includes('rozciąg') ||
+    ex.name.toLowerCase().includes('rozciąg');
+
   const baseFiltered = exercises.filter(ex => ex.name.toLowerCase().includes(search.toLowerCase()));
   const filtered = showOnlyFavorites ? baseFiltered.filter(ex => favorites.includes(ex.id)) : baseFiltered;
   const sorted = showOnlyFavorites ? filtered : [...filtered].sort((a, b) => {
@@ -59,21 +66,27 @@ export default function CwiczeniaPage() {
   });
 
   const groups = sorted.reduce((acc, ex) => {
-    // Grupa mięśniowa ma pierwszeństwo; prefiks z nazwy ("Grupa - nazwa") to
-    // stara konwencja — używana tylko, gdy grupa nie jest ustawiona
     const namePrefix = ex.name.includes(' - ') ? ex.name.split(' - ')[0] : null;
-    const prefix = showOnlyFavorites || favorites.includes(ex.id)
-      ? 'Ulubione'
-      : (ex.muscleGroup || namePrefix || 'Inne');
+    let prefix: string;
+    if (showOnlyFavorites || favorites.includes(ex.id)) {
+      prefix = 'Ulubione';
+    } else if (isStretching(ex)) {
+      prefix = 'Rozciąganie';
+    } else {
+      prefix = normalizeMuscle(ex.muscleGroup) || namePrefix || 'Inne';
+    }
     if (!acc[prefix]) acc[prefix] = [];
     acc[prefix].push(ex);
     return acc;
   }, {} as Record<string, Exercise[]>);
 
-  const groupOrder = ['Ulubione', 'Barki', 'Biceps', 'Brzuch', 'Extra', 'Kalenistyka', 'Klata', 'Nogi', 'Plecy', 'Przedramie', 'Triceps', 'Inne'];
+  const groupOrder = ['Ulubione', 'Barki', 'Biceps', 'Brzuch', 'Extra', 'Kalenistyka', 'Klatka piersiowa', 'Klata', 'Nogi', 'Plecy', 'Przedramie', 'Triceps', 'Inne', 'Cardio'];
   const sortedGroups = Object.entries(groups).sort(([a], [b]) => {
+    // Rozciąganie zawsze na końcu
+    if (a === 'Rozciąganie') return 1;
+    if (b === 'Rozciąganie') return -1;
     const ai = groupOrder.indexOf(a), bi = groupOrder.indexOf(b);
-    if (ai === -1 && bi === -1) return a.localeCompare(b);
+    if (ai === -1 && bi === -1) return a.localeCompare(b, 'pl');
     if (ai === -1) return 1;
     if (bi === -1) return -1;
     return ai - bi;

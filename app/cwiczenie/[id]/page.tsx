@@ -462,22 +462,48 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
             {!formCustomSets ? (
               <>
                 <div className={`grid gap-2 ${formBodyweight ? 'grid-cols-2' : 'grid-cols-3'}`}>
-                  <div><label className="text-xs text-gray-500 block mb-1">Serie</label>
-                    <input type="number" inputMode="numeric"
-                      value={formSets === 0 ? '' : formSets} placeholder="0"
-                      onChange={e => { setFormPrefilled(false); setFormSets(e.target.value === '' ? 0 : Math.max(1, Number(e.target.value))); }} min={1}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-center" /></div>
-                  <div><label className="text-xs text-gray-500 block mb-1">Powt.</label>
-                    <input type="number" inputMode="numeric"
-                      value={formReps === 0 ? '' : formReps} placeholder="0"
-                      onChange={e => { setFormPrefilled(false); setFormReps(e.target.value === '' ? 0 : Number(e.target.value)); }} min={1}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-center" /></div>
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">Serie</label>
+                    <div className="flex items-center">
+                      <button type="button" onClick={() => { setFormPrefilled(false); setFormSets(s => Math.max(1, s - 1)); }}
+                        className="h-9 w-7 bg-gray-100 rounded-l-xl font-bold text-gray-600 text-base shrink-0 border border-r-0 border-gray-200">−</button>
+                      <input type="number" inputMode="numeric"
+                        value={formSets === 0 ? '' : formSets} placeholder="0"
+                        onChange={e => { setFormPrefilled(false); setFormSets(e.target.value === '' ? 0 : Math.max(1, Number(e.target.value))); }} min={1}
+                        className="flex-1 border border-gray-200 py-2 text-sm text-center min-w-0 h-9" />
+                      <button type="button" onClick={() => { setFormPrefilled(false); setFormSets(s => s + 1); }}
+                        className="h-9 w-7 bg-gray-100 rounded-r-xl font-bold text-gray-600 text-base shrink-0 border border-l-0 border-gray-200">+</button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">Powt.</label>
+                    <div className="flex items-center">
+                      <button type="button" onClick={() => { setFormPrefilled(false); setFormReps(r => Math.max(1, r - 1)); }}
+                        className="h-9 w-7 bg-gray-100 rounded-l-xl font-bold text-gray-600 text-base shrink-0 border border-r-0 border-gray-200">−</button>
+                      <input type="number" inputMode="numeric"
+                        value={formReps === 0 ? '' : formReps} placeholder="0"
+                        onChange={e => { setFormPrefilled(false); setFormReps(e.target.value === '' ? 0 : Number(e.target.value)); }} min={1}
+                        className="flex-1 border border-gray-200 py-2 text-sm text-center min-w-0 h-9" />
+                      <button type="button" onClick={() => { setFormPrefilled(false); setFormReps(r => r + 1); }}
+                        className="h-9 w-7 bg-gray-100 rounded-r-xl font-bold text-gray-600 text-base shrink-0 border border-l-0 border-gray-200">+</button>
+                    </div>
+                  </div>
                   {!formBodyweight && (
-                    <div><label className="text-xs text-gray-500 block mb-1">Ciężar kg</label>
-                      <input type="number" inputMode="decimal" step={0.5}
-                        value={formWeight === 0 ? '' : formWeight} placeholder="0"
-                        onChange={e => { setFormPrefilled(false); setFormWeight(Number(e.target.value) || 0); }} min={0}
-                        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-center" /></div>
+                    <div>
+                      <label className="text-xs text-gray-500 block mb-1">Ciężar kg</label>
+                      <div className="flex items-center">
+                        <button type="button"
+                          onClick={() => { setFormPrefilled(false); setFormWeight(w => Math.max(0, Math.round((w - 2.5) * 10) / 10)); }}
+                          className="h-9 w-8 bg-gray-100 rounded-l-xl font-bold text-gray-600 text-base shrink-0 border border-r-0 border-gray-200">−</button>
+                        <input type="number" inputMode="decimal" step={0.5}
+                          value={formWeight === 0 ? '' : formWeight} placeholder="0"
+                          onChange={e => { setFormPrefilled(false); setFormWeight(Number(e.target.value) || 0); }} min={0}
+                          className="flex-1 border border-gray-200 py-2 text-sm text-center min-w-0 h-9" />
+                        <button type="button"
+                          onClick={() => { setFormPrefilled(false); setFormWeight(w => Math.round((w + 2.5) * 10) / 10); }}
+                          className="h-9 w-8 bg-blue-50 rounded-r-xl font-bold text-blue-600 text-base shrink-0 border border-l-0 border-gray-200">+</button>
+                      </div>
+                    </div>
                   )}
                 </div>
                 <button onClick={initCustomSets} className="text-sm text-blue-600">+ Rozpisz serie osobno</button>
@@ -485,20 +511,29 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
             ) : (
               <div className="space-y-2">
                 {formSetsData.map((s, i) => (
-                  <div key={i} className="flex items-center gap-1.5">
-                    <span className="text-xs text-gray-500 shrink-0 w-9">S{i + 1}</span>
+                  <div key={i} className="flex items-center gap-1">
+                    <span className="text-xs text-gray-500 shrink-0 w-7">S{i + 1}</span>
+                    <button type="button" onClick={() => updateSet(i, 'reps', Math.max(1, (s.reps || 0) - 1))}
+                      className="w-7 h-8 bg-gray-100 rounded-l-lg font-bold text-gray-600 text-sm shrink-0 border border-r-0 border-gray-200">−</button>
                     <input type="number" inputMode="numeric"
                       value={s.reps === 0 ? '' : s.reps} placeholder="powt."
                       onChange={e => updateSet(i, 'reps', e.target.value === '' ? 0 : Number(e.target.value))} min={1}
-                      className="w-16 border border-gray-200 rounded-lg px-1 py-1.5 text-sm text-center" />
+                      className="w-10 border border-gray-200 py-1.5 text-sm text-center h-8" />
+                    <button type="button" onClick={() => updateSet(i, 'reps', (s.reps || 0) + 1)}
+                      className="w-7 h-8 bg-gray-100 rounded-r-lg font-bold text-gray-600 text-sm shrink-0 border border-l-0 border-gray-200">+</button>
                     {!formBodyweight && (
                       <>
                         <span className="text-xs text-gray-400 shrink-0">×</span>
+                        <button type="button"
+                          onClick={() => updateSet(i, 'weight', Math.max(0, Math.round(((s.weight || 0) - 2.5) * 10) / 10))}
+                          className="w-7 h-8 bg-gray-100 rounded-l-lg font-bold text-gray-600 text-sm shrink-0 border border-r-0 border-gray-200">−</button>
                         <input type="number" inputMode="decimal" step={0.5}
                           value={s.weight === 0 ? '' : s.weight} placeholder="kg"
                           onChange={e => updateSet(i, 'weight', e.target.value === '' ? 0 : Number(e.target.value))} min={0}
-                          className="w-16 border border-gray-200 rounded-lg px-1 py-1.5 text-sm text-center" />
-                        <span className="text-xs text-gray-400 shrink-0">kg</span>
+                          className="w-14 border border-gray-200 py-1.5 text-sm text-center h-8" />
+                        <button type="button"
+                          onClick={() => updateSet(i, 'weight', Math.round(((s.weight || 0) + 2.5) * 10) / 10)}
+                          className="w-7 h-8 bg-blue-50 rounded-r-lg font-bold text-blue-600 text-sm shrink-0 border border-l-0 border-gray-200">+</button>
                       </>
                     )}
                     <button onClick={() => removeSet(i)} className="ml-auto text-red-400 p-1 shrink-0">✕</button>
