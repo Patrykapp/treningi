@@ -104,6 +104,9 @@
 .dark .shadow-xl { box-shadow: 0 4px 32px rgba(0,0,0,0.6) !important; }
 .dark .shadow-2xl { box-shadow: 0 8px 48px rgba(0,0,0,0.7) !important; }
 
+/* Fullscreen modal dark mode */
+.dark .fixed.inset-0.bg-white { background-color: #0f172a !important; }
+
 /* Colored backgrounds — dark mode */
 .dark .bg-violet-50  { background-color: #1e1040 !important; }
 .dark .bg-violet-100 { background-color: #2e1065 !important; }
