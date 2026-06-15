@@ -85,6 +85,17 @@ function TreningPage() {
   // null = zalogowany user, 'all' = wszyscy, string = konkretny userId
   const [saveAsUserId, setSaveAsUserId] = useState<string | null>(null);
   const [existingSessionId, setExistingSessionId] = useState<string | null>(null);
+
+  // AI planer
+  const AI_MUSCLE_GROUPS = ['Klatka piersiowa', 'Plecy', 'Barki', 'Biceps', 'Triceps', 'Nogi', 'Brzuch'];
+  const [showAiPlanner, setShowAiPlanner] = useState(false);
+  const [aiMuscles, setAiMuscles] = useState<string[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiPlan, setAiPlan] = useState<{
+    intro: string;
+    exercises: { exerciseId: string; name: string; setsData: { reps: number; weight: number }[]; note: string }[];
+  } | null>(null);
+  const [aiError, setAiError] = useState('');
   // Chroni szkic przed nadpisaniem pustym stanem początkowym przy odświeżeniu strony
   const [draftLoaded, setDraftLoaded] = useState(false);
   // Ostatnie wyniki per ćwiczenie — podpowiedź progresji
@@ -545,6 +556,45 @@ function TreningPage() {
     }
   };
 
+  const generateAiPlan = async () => {
+    if (!aiMuscles.length) return;
+    setAiLoading(true);
+    setAiError('');
+    setAiPlan(null);
+    try {
+      const res = await fetch('/api/ai/suggest-workout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ muscleGroups: aiMuscles }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setAiError(data.error || 'Błąd AI'); return; }
+      setAiPlan(data);
+    } catch {
+      setAiError('Błąd połączenia');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const loadAiPlan = () => {
+    if (!aiPlan) return;
+    const newEntries: EntryRow[] = aiPlan.exercises.map((ex, i) => ({
+      key: String(Date.now() + i),
+      exerciseId: ex.exerciseId,
+      sets: ex.setsData.length,
+      reps: ex.setsData[0]?.reps || 10,
+      weight: ex.setsData[0]?.weight || 0,
+      customSets: true,
+      setsData: ex.setsData,
+      bodyweight: ex.setsData.every(s => s.weight === 0),
+    }));
+    setEntries(newEntries);
+    setShowAiPlanner(false);
+    setAiPlan(null);
+    setAiMuscles([]);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
@@ -586,7 +636,89 @@ function TreningPage() {
             className="flex-1 bg-white border border-gray-200 text-gray-700 py-2.5 rounded-xl text-sm font-medium">
             Szablony ({templates.length})
           </button>
+          <button type="button" onClick={() => { setShowAiPlanner(o => !o); setAiPlan(null); setAiError(''); }}
+            className="flex-1 bg-violet-600 text-white py-2.5 rounded-xl text-sm font-medium">
+            ✨ AI Plan
+          </button>
         </div>
+
+        {showAiPlanner && (
+          <div className="bg-white rounded-2xl p-4 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold text-gray-900">✨ AI dobierze ćwiczenia</h2>
+              <button type="button" onClick={() => setShowAiPlanner(false)} className="text-gray-400 text-lg">✕</button>
+            </div>
+
+            {/* Wybór partii */}
+            <div>
+              <p className="text-xs text-gray-500 mb-2">Które partie chcesz trenować?</p>
+              <div className="flex flex-wrap gap-2">
+                {AI_MUSCLE_GROUPS.map(g => (
+                  <button
+                    key={g} type="button"
+                    onClick={() => setAiMuscles(prev =>
+                      prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]
+                    )}
+                    className={`px-3 py-1.5 rounded-xl text-sm font-medium border transition-colors ${
+                      aiMuscles.includes(g)
+                        ? 'bg-violet-600 text-white border-violet-600'
+                        : 'bg-white text-gray-600 border-gray-200'
+                    }`}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {aiError && (
+              <div className="bg-red-50 text-red-700 text-sm rounded-xl px-3 py-2">{aiError}</div>
+            )}
+
+            {/* Wynik AI */}
+            {aiPlan && (
+              <div className="space-y-3">
+                <p className="text-sm text-gray-700 bg-violet-50 rounded-xl px-3 py-2 italic">{aiPlan.intro}</p>
+                <div className="space-y-2">
+                  {aiPlan.exercises.map(ex => (
+                    <div key={ex.exerciseId} className="bg-gray-50 rounded-xl p-3">
+                      <p className="text-sm font-semibold text-gray-900">{ex.name}</p>
+                      <p className="text-xs text-gray-600 mt-0.5">
+                        {ex.setsData.map((s, i) => `S${i + 1}: ${s.reps}×${s.weight}kg`).join(' · ')}
+                      </p>
+                      {ex.note && <p className="text-xs text-violet-600 mt-1 italic">{ex.note}</p>}
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button" onClick={loadAiPlan}
+                  className="w-full bg-violet-600 text-white py-3 rounded-xl font-bold text-sm"
+                >
+                  Załaduj plan do treningu →
+                </button>
+                <button
+                  type="button" onClick={generateAiPlan} disabled={aiLoading}
+                  className="w-full bg-white border border-violet-200 text-violet-700 py-2 rounded-xl text-sm font-medium"
+                >
+                  ↺ Wygeneruj inny plan
+                </button>
+              </div>
+            )}
+
+            {!aiPlan && (
+              <button
+                type="button" onClick={generateAiPlan}
+                disabled={aiLoading || aiMuscles.length === 0}
+                className="w-full bg-violet-600 text-white py-3 rounded-xl font-bold text-sm disabled:opacity-50"
+              >
+                {aiLoading
+                  ? <span className="flex items-center justify-center gap-2"><span className="animate-spin inline-block">⏳</span> AI planuje...</span>
+                  : aiMuscles.length === 0 ? 'Wybierz partie mięśniowe' : `✨ Generuj plan (${aiMuscles.join(', ')})`
+                }
+              </button>
+            )}
+          </div>
+        )}
 
         {showTemplates && (
           <div className="bg-white rounded-2xl p-4 space-y-2">
