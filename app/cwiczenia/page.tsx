@@ -5,12 +5,19 @@ import { useRouter } from 'next/navigation';
 import { Exercise } from '@/types';
 import { ExerciseThumb } from '@/components/ui/ExerciseThumb';
 
+const USAGE_KEY = 'exerciseUsageCount';
+function readUsageCounts(): Record<string, number> {
+  if (typeof window === 'undefined') return {};
+  try { return JSON.parse(localStorage.getItem(USAGE_KEY) || '{}'); } catch { return {}; }
+}
+
 export default function CwiczeniaPage() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [search, setSearch] = useState('');
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [usageCounts, setUsageCounts] = useState<Record<string, number>>({});
   const router = useRouter();
 
   const toggleGroup = (group: string) => {
@@ -32,6 +39,7 @@ export default function CwiczeniaPage() {
   useEffect(() => {
     fetch('/api/exercises').then(r => r.json()).then(setExercises);
     loadFavorites();
+    setUsageCounts(readUsageCounts());
   }, [loadFavorites]);
 
   const toggleFavorite = async (id: string, e: React.MouseEvent) => {
@@ -62,6 +70,10 @@ export default function CwiczeniaPage() {
     const af = favorites.includes(a.id) ? 0 : 1;
     const bf = favorites.includes(b.id) ? 0 : 1;
     if (af !== bf) return af - bf;
+    // W obrębie tej samej "warstwy" (ulubione/reszta) — najpierw najczęściej używane
+    const ua = usageCounts[a.id] || 0;
+    const ub = usageCounts[b.id] || 0;
+    if (ub !== ua) return ub - ua;
     return a.name.localeCompare(b.name, 'pl');
   });
 
@@ -145,6 +157,9 @@ export default function CwiczeniaPage() {
                     >
                       <ExerciseThumb ex={ex} className="w-11 h-11" />
                       <span className="font-medium text-gray-900 text-sm flex-1 min-w-0 leading-snug">{shortName}</span>
+                      {(usageCounts[ex.id] || 0) > 0 && (
+                        <span className="text-xs text-amber-500 mr-1 shrink-0">{usageCounts[ex.id]}×</span>
+                      )}
                       <button
                         onClick={(e) => toggleFavorite(ex.id, e)}
                         className={`text-xl mr-2 transition-transform active:scale-125 ${isFav ? 'opacity-100' : 'opacity-30'}`}
