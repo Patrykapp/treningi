@@ -273,6 +273,10 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
 
   // Otwiera formularz i opcjonalnie wypełnia ostatnimi wartościami
   const openForm = (prefill = true) => {
+    // Zawsze resetuj datę do dzisiaj i domyślnego użytkownika
+    setFormDate(formatDateInput(new Date()));
+    setSaveAsUserId(authUserId || '');
+
     if (prefill && lastEntry) {
       const lastMax = calcMax(lastEntry);
       const hasSetsData = Array.isArray(lastEntry.setsData) && lastEntry.setsData.length > 0;
@@ -291,6 +295,14 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
       setFormBodyweight(lastMax === 0);
       setFormPrefilled(true);
     } else {
+      setFormSets(3);
+      setFormReps(10);
+      setFormWeight(0);
+      setFormCustomSets(false);
+      setFormSetsData([]);
+      setFormRpe('');
+      setFormComment('');
+      setFormBodyweight(false);
       setFormPrefilled(false);
     }
     setShowForm(true);
@@ -349,10 +361,20 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
         }),
       });
       if (res.ok) {
-        const msg = saveAsUserId === 'all'
-          ? `Zapisano dla ${users.map(u => u.name).join(' i ')}!`
-          : appendToExisting ? 'Dodano do treningu z tego dnia!' : 'Zapisano!';
-        setToast({ message: msg, type: 'success' });
+        // Sprawdź PR
+        const entry = buildEntry();
+        const setsToCheck = entry.setsData && entry.setsData.length > 0
+          ? entry.setsData
+          : Array.from({ length: entry.sets }, () => ({ reps: entry.reps, weight: entry.weight }));
+        const new1RM = Math.max(...setsToCheck.map(s => calc1RM(s.weight, s.reps)));
+        const isPR = new1RM > 0 && new1RM > best1RM;
+
+        const msg = isPR
+          ? `🏆 Nowy rekord 1RM: ${new1RM} kg!`
+          : saveAsUserId === 'all'
+            ? `Zapisano dla ${users.map(u => u.name).join(' i ')}!`
+            : appendToExisting ? 'Dodano do treningu z tego dnia!' : 'Zapisano!';
+        setToast({ message: msg, type: isPR ? 'success' : 'success' });
         setShowForm(false);
         loadData();
       } else {
@@ -830,21 +852,39 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
             <h2 className="px-4 py-3 font-semibold text-gray-900 text-sm border-b border-gray-100">Historia</h2>
             <div className="divide-y divide-gray-100">
-              {entries.map(entry => (
-                <div key={entry.id} className="px-4 py-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium text-gray-900">{formatDate(entry.session.date)}</span>
-                    <span className="text-sm font-bold text-blue-600">{calcMax(entry)} kg</span>
+              {entries.map(entry => {
+                const maxW = calcMax(entry);
+                const isBodyw = maxW === 0;
+                return (
+                  <div key={entry.id} className="px-4 py-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-gray-900">{formatDate(entry.session.date)}</span>
+                      <div className="flex items-center gap-2">
+                        {!isBodyw && <span className="text-sm font-bold text-blue-600">{maxW} kg</span>}
+                        <button
+                          onClick={async () => {
+                            if (!confirm('Usunąć ten wpis?')) return;
+                            const res = await fetch(`/api/entries/${entry.id}`, { method: 'DELETE' });
+                            if (res.ok) { setToast({ message: 'Usunięto', type: 'success' }); loadData(); }
+                            else setToast({ message: 'Błąd usuwania', type: 'error' });
+                          }}
+                          className="text-gray-300 hover:text-red-400 text-lg leading-none transition-colors"
+                          title="Usuń"
+                        >✕</button>
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {Array.isArray(entry.setsData) && entry.setsData.length > 0
+                        ? entry.setsData.map(s => isBodyw ? `${s.reps} powt.` : `${s.reps}×${s.weight}kg`).join(' · ')
+                        : isBodyw
+                          ? `${entry.sets}×${entry.reps} powt.`
+                          : `${entry.sets}×${entry.reps} @ ${entry.weight}kg`}
+                      {entry.rpe && ` · RPE ${entry.rpe}`}
+                    </div>
+                    {entry.comment && <div className="text-xs text-gray-400 italic mt-0.5">{entry.comment}</div>}
                   </div>
-                  <div className="text-xs text-gray-500">
-                    {Array.isArray(entry.setsData) && entry.setsData.length > 0
-                      ? entry.setsData.map(s => `${s.reps}x${s.weight}kg`).join(' · ')
-                      : `${entry.sets}x${entry.reps} @ ${entry.weight}kg`}
-                    {entry.rpe && ` RPE ${entry.rpe}`}
-                  </div>
-                  {entry.comment && <div className="text-xs text-gray-400 italic mt-0.5">{entry.comment}</div>}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
