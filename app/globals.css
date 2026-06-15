@@ -103,3 +103,45 @@
 .dark .shadow-lg { box-shadow: 0 4px 24px rgba(0,0,0,0.5) !important; }
 .dark .shadow-xl { box-shadow: 0 4px 32px rgba(0,0,0,0.6) !important; }
 .dark .shadow-2xl { box-shadow: 0 8px 48px rgba(0,0,0,0.7) !important; }
+
+/* Colored backgrounds — dark mode */
+.dark .bg-violet-50  { background-color: #1e1040 !important; }
+.dark .bg-violet-100 { background-color: #2e1065 !important; }
+.dark .border-violet-200 { border-color: #5b21b6 !important; }
+.dark .text-violet-800 { color: #c4b5fd !important; }
+.dark .text-violet-700 { color: #a78bfa !important; }
+.dark .text-violet-600 { color: #a78bfa !important; }
+.dark .text-violet-500 { color: #8b5cf6 !important; }
+
+.dark .bg-blue-50   { background-color: #0c1a2e !important; }
+.dark .bg-blue-100  { background-color: #172554 !important; }
+.dark .border-blue-200 { border-color: #1d4ed8 !important; }
+.dark .text-blue-700 { color: #93c5fd !important; }
+
+.dark .bg-orange-50  { background-color: #1c0f00 !important; }
+.dark .border-orange-200 { border-color: #c2410c !important; }
+.dark .text-orange-700 { color: #fdba74 !important; }
+.dark .text-orange-500 { color: #fb923c !important; }
+
+.dark .bg-red-50   { background-color: #1c0000 !important; }
+.dark .text-red-700 { color: #fca5a5 !important; }
+.dark .text-red-500 { color: #f87171 !important; }
+
+.dark .bg-green-50  { background-color: #052e16 !important; }
+.dark .text-green-600 { color: #86efac !important; }
+
+.dark .bg-purple-50  { background-color: #1a0938 !important; }
+.dark .bg-purple-100 { background-color: #2e1065 !important; }
+.dark .text-purple-700 { color: #d8b4fe !important; }
+
+.dark .bg-emerald-100 { background-color: #064e3b !important; }
+.dark .text-emerald-700 { color: #6ee7b7 !important; }
+
+.dark .bg-yellow-100 { background-color: #422006 !important; }
+.dark .text-yellow-800 { color: #fde68a !important; }
+
+.dark .bg-teal-100 { background-color: #042f2e !important; }
+.dark .text-teal-700 { color: #5eead4 !important; }
+
+.dark .bg-pink-100 { background-color: #500724 !important; }
+.dark .text-pink-700 { color: #f9a8d4 !important; }
