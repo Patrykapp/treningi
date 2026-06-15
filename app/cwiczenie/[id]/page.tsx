@@ -168,6 +168,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
 
   const [saveAsUserId, setSaveAsUserId] = useState('');
   const [existingSessionId, setExistingSessionId] = useState<string | null>(null);
+  const [formPrefilled, setFormPrefilled] = useState(false);
 
   const [showTechnika, setShowTechnika] = useState(false);
   const [linkedDb, setLinkedDb] = useState<DbExercise | null>(null);
@@ -270,6 +271,34 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
   const compareName = users.find(u => u.id === compareUserId)?.name || 'Porownanie';
   const otherUsers = users.filter(u => u.id !== authUserId);
 
+  // Otwiera formularz i opcjonalnie wypełnia ostatnimi wartościami
+  const openForm = (prefill = true) => {
+    if (prefill && lastEntry) {
+      const lastMax = calcMax(lastEntry);
+      const hasSetsData = Array.isArray(lastEntry.setsData) && lastEntry.setsData.length > 0;
+      setFormSets(lastEntry.sets);
+      setFormReps(lastEntry.reps);
+      setFormWeight(lastMax);
+      if (hasSetsData) {
+        setFormCustomSets(true);
+        setFormSetsData([...lastEntry.setsData!]);
+      } else {
+        setFormCustomSets(false);
+        setFormSetsData([]);
+      }
+      setFormRpe('');
+      setFormComment('');
+      setFormBodyweight(lastMax === 0);
+      setFormPrefilled(true);
+    } else {
+      setFormPrefilled(false);
+    }
+    setShowForm(true);
+    setTimeout(() => {
+      document.getElementById('cwiczenie-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+  };
+
   const initCustomSets = () => {
     setFormSetsData(Array.from({ length: formSets }, () => ({ reps: formReps, weight: formWeight })));
     setFormCustomSets(true);
@@ -357,9 +386,23 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
             {exercise.muscleGroup && <p className="text-sm text-gray-500">{exercise.muscleGroup}</p>}
           </div>
           {isLoggedIn && (
-            <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium">
-              + Dodaj
-            </button>
+            <div className="flex gap-2 items-center">
+              {lastEntry && !showForm && (
+                <button
+                  onClick={() => openForm(true)}
+                  className="bg-gray-100 text-gray-700 px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-1"
+                  title="Otwórz z ostatnimi wartościami"
+                >
+                  ↩ {calcMax(lastEntry) > 0 ? `${calcMax(lastEntry)} kg` : `${lastEntry.reps} powt.`}
+                </button>
+              )}
+              <button
+                onClick={() => showForm ? setShowForm(false) : openForm(!!lastEntry)}
+                className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium"
+              >
+                {showForm ? 'Anuluj' : '+ Dodaj'}
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -390,8 +433,20 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
         )}
 
         {showForm && (
-          <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
-            <h3 className="font-semibold text-gray-900">Nowa sesja</h3>
+          <div id="cwiczenie-form" className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-gray-900">
+                {formPrefilled ? '↩ Powtórz trening' : 'Nowa sesja'}
+              </h3>
+              {lastEntry && (
+                <span className="text-xs text-gray-400">
+                  Poprzednio:{' '}
+                  {Array.isArray(lastEntry.setsData) && lastEntry.setsData.length > 0
+                    ? lastEntry.setsData.slice(0, 3).map(s => `${s.reps}×${s.weight}`).join(' · ')
+                    : `${lastEntry.sets}×${lastEntry.reps} @ ${lastEntry.weight}kg`}
+                </span>
+              )}
+            </div>
             <div>
               <label className="text-xs text-gray-500 block mb-1">Data</label>
               <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)}
@@ -410,18 +465,18 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                   <div><label className="text-xs text-gray-500 block mb-1">Serie</label>
                     <input type="number" inputMode="numeric"
                       value={formSets === 0 ? '' : formSets} placeholder="0"
-                      onChange={e => setFormSets(e.target.value === '' ? 0 : Math.max(1, Number(e.target.value)))} min={1}
+                      onChange={e => { setFormPrefilled(false); setFormSets(e.target.value === '' ? 0 : Math.max(1, Number(e.target.value))); }} min={1}
                       className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-center" /></div>
                   <div><label className="text-xs text-gray-500 block mb-1">Powt.</label>
                     <input type="number" inputMode="numeric"
                       value={formReps === 0 ? '' : formReps} placeholder="0"
-                      onChange={e => setFormReps(e.target.value === '' ? 0 : Number(e.target.value))} min={1}
+                      onChange={e => { setFormPrefilled(false); setFormReps(e.target.value === '' ? 0 : Number(e.target.value)); }} min={1}
                       className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-center" /></div>
                   {!formBodyweight && (
                     <div><label className="text-xs text-gray-500 block mb-1">Ciężar kg</label>
                       <input type="number" inputMode="decimal" step={0.5}
                         value={formWeight === 0 ? '' : formWeight} placeholder="0"
-                        onChange={e => setFormWeight(Number(e.target.value) || 0)} min={0}
+                        onChange={e => { setFormPrefilled(false); setFormWeight(Number(e.target.value) || 0); }} min={0}
                         className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-center" /></div>
                   )}
                 </div>

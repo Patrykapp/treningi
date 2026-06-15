@@ -55,6 +55,9 @@ export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybi
 
   const selected = exercises.find(e => e.id === value);
 
+  // MUSI być przed `filtered` — używane w sortowaniu podczas wyszukiwania
+  const isStretching = (g: string) => g.toLowerCase().includes('rozciąg');
+
   const filtered = search
     ? exercises
         .filter(e => e.name.toLowerCase().includes(search.toLowerCase()))
@@ -144,8 +147,6 @@ export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybi
     }, 50);
     return () => clearTimeout(t);
   }, [open, search, value]);
-
-  const isStretching = (g: string) => g.toLowerCase().includes('rozciąg');
 
   // Build grouped structure
   const grouped: Record<string, Exercise[]> = {};
