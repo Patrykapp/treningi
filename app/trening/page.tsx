@@ -329,6 +329,30 @@ function TreningPage() {
     }));
   };
 
+  const copyLastSet = (entryKey: string) => {
+    setEntries(prev => prev.map(e => {
+      if (e.key !== entryKey || !e.setsData || e.setsData.length === 0) return e;
+      const last = e.setsData[e.setsData.length - 1];
+      return { ...e, setsData: [...e.setsData, { ...last }] };
+    }));
+  };
+
+  const finishAndRedirect = async (sessionId: string, defaultMsg: string) => {
+    try {
+      const rating = await fetch(`/api/sessions/${sessionId}/rating`).then(r => r.json());
+      if (rating?.prCount > 0) {
+        setToast({
+          message: `🏆 ${rating.prCount === 1 ? 'Nowy rekord!' : `${rating.prCount} nowe rekordy!`} Świetna robota! 💪`,
+          type: 'success',
+        });
+        setTimeout(() => router.push('/'), 2500);
+        return;
+      }
+    } catch { /* ignore — PR toast jest opcjonalny */ }
+    setToast({ message: defaultMsg, type: 'success' });
+    setTimeout(() => router.push('/'), 1500);
+  };
+
   // Odhacz serię — zaznaczenie startuje timer przerwy
   const toggleSetDone = (entryKey: string, setIdx: number) => {
     const k = `${entryKey}-${setIdx}`;
@@ -434,8 +458,14 @@ function TreningPage() {
       if (res.ok) {
         activeSession.clear();
         localStorage.removeItem(DRAFT_KEY);
-        setToast({ message: 'Ćwiczenia dodane do treningu z tego dnia!', type: 'success' });
-        setTimeout(() => router.push('/'), 1500);
+        const saved = await res.json().catch(() => null);
+        const mainId = Array.isArray(saved) ? saved[0]?.id : saved?.id;
+        if (mainId) {
+          await finishAndRedirect(mainId, 'Ćwiczenia dodane do treningu z tego dnia!');
+        } else {
+          setToast({ message: 'Ćwiczenia dodane do treningu z tego dnia!', type: 'success' });
+          setTimeout(() => router.push('/'), 1500);
+        }
       } else {
         const err = await res.json().catch(() => ({}));
         setToast({ message: err.error || 'Błąd zapisu — nic nie zostało zapisane', type: 'error' });
@@ -461,8 +491,7 @@ function TreningPage() {
         if (res.ok) {
           activeSession.clear();
           localStorage.removeItem(DRAFT_KEY);
-          setToast({ message: 'Trening zaktualizowany!', type: 'success' });
-          setTimeout(() => router.push('/'), 1500);
+          await finishAndRedirect(editingSession, 'Trening zaktualizowany!');
         } else {
           const err = await res.json();
           setToast({ message: err.error || 'Błąd zapisu', type: 'error' });
@@ -485,11 +514,17 @@ function TreningPage() {
       if (res.ok) {
         activeSession.clear();
         localStorage.removeItem(DRAFT_KEY);
-        const msg = saveAsUserId === 'all'
-          ? `Trening zapisany dla ${users.map(u => u.name).join(' i ')}!`
-          : 'Trening zapisany!';
-        setToast({ message: msg, type: 'success' });
-        setTimeout(() => router.push('/'), 1500);
+        const saved = await res.json().catch(() => null);
+        const mainId = Array.isArray(saved) ? saved[0]?.id : saved?.id;
+        if (mainId && saveAsUserId !== 'all') {
+          await finishAndRedirect(mainId, 'Trening zapisany!');
+        } else {
+          const msg = saveAsUserId === 'all'
+            ? `Trening zapisany dla ${users.map(u => u.name).join(' i ')}!`
+            : 'Trening zapisany!';
+          setToast({ message: msg, type: 'success' });
+          setTimeout(() => router.push('/'), 1500);
+        }
       } else {
         const err = await res.json().catch(() => ({}));
         setToast({ message: err.error || 'Błąd zapisu — nic nie zostało zapisane', type: 'error' });
@@ -638,35 +673,61 @@ function TreningPage() {
             ) : (
               <div className="space-y-2">
                 {(entry.setsData || []).map((s, si) => (
-                  <div key={si} className="flex items-center gap-2">
-                    <button type="button" onClick={() => toggleSetDone(entry.key, si)}
-                      title="Odhacz serię i odpal timer przerwy"
-                      className={`w-7 h-7 rounded-full border text-xs shrink-0 transition-colors ${
-                        doneSets[`${entry.key}-${si}`]
-                          ? 'bg-green-500 border-green-500 text-white'
-                          : 'border-gray-300 text-gray-300'
-                      }`}>✓</button>
-                    <span className="text-xs text-gray-400 w-6">{si + 1}.</span>
-                    <input type="number" min="1" inputMode="numeric"
-                      value={s.reps === 0 ? '' : s.reps} placeholder="0"
-                      onChange={e => updateSet(entry.key, si, 'reps', parseInt(e.target.value) || 1)}
-                      className="w-16 border border-gray-200 rounded-xl px-2 py-2 text-sm text-center" />
+                  <div key={si} className="space-y-1">
+                    {/* Reps row */}
+                    <div className="flex items-center gap-1.5">
+                      <button type="button" onClick={() => toggleSetDone(entry.key, si)}
+                        title="Odhacz serię i odpal timer przerwy"
+                        className={`w-7 h-7 rounded-full border text-xs shrink-0 transition-colors ${
+                          doneSets[`${entry.key}-${si}`]
+                            ? 'bg-green-500 border-green-500 text-white'
+                            : 'border-gray-300 text-gray-300'
+                        }`}>✓</button>
+                      <span className="text-xs text-gray-400 w-4 text-center shrink-0">{si + 1}.</span>
+                      <button type="button"
+                        onClick={() => updateSet(entry.key, si, 'reps', Math.max(1, s.reps - 1))}
+                        className="w-8 h-8 rounded-lg bg-gray-100 font-bold text-gray-600 flex items-center justify-center shrink-0 text-lg active:bg-gray-200">−</button>
+                      <input type="number" min="1" inputMode="numeric"
+                        value={s.reps === 0 ? '' : s.reps} placeholder="0"
+                        onChange={e => updateSet(entry.key, si, 'reps', parseInt(e.target.value) || 1)}
+                        className="w-12 border border-gray-200 rounded-lg px-1 py-1.5 text-sm text-center font-medium" />
+                      <button type="button"
+                        onClick={() => updateSet(entry.key, si, 'reps', s.reps + 1)}
+                        className="w-8 h-8 rounded-lg bg-gray-100 font-bold text-gray-600 flex items-center justify-center shrink-0 text-lg active:bg-gray-200">+</button>
+                      <span className="text-xs text-gray-400 shrink-0">pow.</span>
+                      <button type="button" onClick={() => removeSet(entry.key, si)}
+                        className="ml-auto text-red-400 text-lg w-7 h-7 flex items-center justify-center shrink-0">×</button>
+                    </div>
+                    {/* Weight row */}
                     {!entry.bodyweight && (
-                      <>
-                        <span className="text-xs text-gray-400">x</span>
+                      <div className="flex items-center gap-1.5 pl-11">
+                        <button type="button"
+                          onClick={() => updateSet(entry.key, si, 'weight', Math.max(0, Math.round((s.weight - 2.5) * 10) / 10))}
+                          className="w-10 h-8 rounded-lg bg-gray-100 text-xs font-bold text-gray-600 flex items-center justify-center shrink-0 active:bg-gray-200">−2.5</button>
                         <input type="number" min="0" step="0.5" inputMode="decimal"
                           value={s.weight === 0 ? '' : s.weight} placeholder="0"
                           onChange={e => updateSet(entry.key, si, 'weight', parseFloat(e.target.value) || 0)}
-                          className="w-20 border border-gray-200 rounded-xl px-2 py-2 text-sm text-center" />
-                      </>
+                          className="w-14 border border-gray-200 rounded-lg px-1 py-1.5 text-sm text-center font-medium" />
+                        <button type="button"
+                          onClick={() => updateSet(entry.key, si, 'weight', Math.round((s.weight + 2.5) * 10) / 10)}
+                          className="w-10 h-8 rounded-lg bg-gray-100 text-xs font-bold text-gray-600 flex items-center justify-center shrink-0 active:bg-gray-200">+2.5</button>
+                        <span className="text-xs text-gray-400 shrink-0">kg</span>
+                      </div>
                     )}
-                    <button type="button" onClick={() => removeSet(entry.key, si)} className="text-red-400 text-sm px-1">x</button>
                   </div>
                 ))}
-                <button type="button" onClick={() => addSet(entry.key)}
-                  className="w-full text-sm text-blue-600 border border-dashed border-blue-300 rounded-xl py-2">
-                  + Dodaj serię
-                </button>
+                <div className="flex gap-2 mt-1">
+                  <button type="button" onClick={() => addSet(entry.key)}
+                    className="flex-1 text-sm text-blue-600 border border-dashed border-blue-300 rounded-xl py-2">
+                    + Dodaj serię
+                  </button>
+                  {(entry.setsData || []).length > 0 && (
+                    <button type="button" onClick={() => copyLastSet(entry.key)}
+                      className="text-sm text-gray-500 border border-gray-200 rounded-xl py-2 px-3">
+                      📋 Kopiuj
+                    </button>
+                  )}
+                </div>
               </div>
             )}
             <div className="grid grid-cols-2 gap-2">

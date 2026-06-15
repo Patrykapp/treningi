@@ -6,6 +6,7 @@ import { WorkoutSession } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { runCalories, sessionCalories } from '@/lib/calories';
+import { ActivityHeatmap } from '@/components/ui/ActivityHeatmap';
 
 interface Run {
   id: string;
@@ -303,6 +304,16 @@ export default function DashboardPage() {
               </div>
             </div>
 
+            {weekStreakVal >= 2 && (
+              <div className="bg-orange-50 border border-orange-200 rounded-2xl px-4 py-3 flex items-center gap-3">
+                <span className="text-2xl">🔥</span>
+                <div>
+                  <p className="text-sm font-bold text-orange-700">{weekStreakVal} tygodnie z rzędu!</p>
+                  <p className="text-xs text-orange-500">Nie przerywaj passy — trenuj w tym tygodniu</p>
+                </div>
+              </div>
+            )}
+
             {weekVol.total > 0 && (
               <div className="bg-white rounded-2xl p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-2">
@@ -323,11 +334,10 @@ export default function DashboardPage() {
                     </div>
                   ))}
                 </div>
-                {weekStreakVal > 1 && (
-                  <p className="text-xs text-green-600 font-medium mt-2">🔥 {weekStreakVal} tygodni treningowych z rzędu</p>
-                )}
               </div>
             )}
+
+            <ActivityHeatmap userId={activeId || undefined} />
 
             {/* Trend formy — średnie tętno treningów z zegarka */}
             {(() => {

@@ -44,6 +44,42 @@ function groupByMuscle(entries: WorkoutSession['entries']): Record<string, Worko
   return groups;
 }
 
+// Kolory tagów grup mięśniowych
+const MUSCLE_TAG: Record<string, string> = {
+  'Klatka piersiowa': 'bg-blue-100 text-blue-700',
+  'Plecy':            'bg-emerald-100 text-emerald-700',
+  'Barki':            'bg-purple-100 text-purple-700',
+  'Biceps':           'bg-orange-100 text-orange-700',
+  'Triceps':          'bg-yellow-100 text-yellow-800',
+  'Nogi':             'bg-red-100 text-red-700',
+  'Brzuch':           'bg-teal-100 text-teal-700',
+  'Cardio':           'bg-pink-100 text-pink-700',
+  'Inne':             'bg-gray-100 text-gray-600',
+};
+function muscleTagClass(g: string): string {
+  return MUSCLE_TAG[g] || 'bg-gray-100 text-gray-600';
+}
+
+// Numer tygodnia ISO + etykieta
+function weekLabel(date: string): string {
+  const d = new Date(date);
+  // Poniedziałek bieżącego tygodnia
+  const mon = new Date(d);
+  mon.setHours(0, 0, 0, 0);
+  mon.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  const sun = new Date(mon);
+  sun.setDate(mon.getDate() + 6);
+  const fmt = (dd: Date) => dd.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+  return `${fmt(mon)} – ${fmt(sun)}`;
+}
+function weekKey(date: string): string {
+  const d = new Date(date);
+  const mon = new Date(d);
+  mon.setHours(0, 0, 0, 0);
+  mon.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return mon.toISOString().slice(0, 10);
+}
+
 // Renderuje gwiazdki 1-5
 function Stars({ count, max = 5 }: { count: number; max?: number }) {
   return (
@@ -242,7 +278,8 @@ function HistoriaPage() {
                 if (!byDate[day]) byDate[day] = [];
                 byDate[day].push(s);
               }
-              return sessions.map(session => {
+              let lastWeekKey = '';
+              return sessions.flatMap(session => {
               const rating = ratings[session.id];
               const dayKey = session.date.slice(0, 10);
               const sameDaySessions = byDate[dayKey];
@@ -250,14 +287,40 @@ function HistoriaPage() {
               const mainSession = sameDaySessions.reduce((a, b) => a.entries.length >= b.entries.length ? a : b);
               const muscleGroups = groupByMuscle(session.entries);
               const isExpanded = expandedRating === session.id;
+              // Sticky week header
+              const wk = weekKey(session.date);
+              const weekHeader = wk !== lastWeekKey ? (
+                <div key={`wk-${wk}`} className="sticky top-[120px] z-10 -mx-0 px-0 py-1">
+                  <div className="bg-gray-100 rounded-xl px-3 py-1.5 flex items-center">
+                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                      📅 {weekLabel(session.date)}
+                    </span>
+                  </div>
+                </div>
+              ) : null;
+              lastWeekKey = wk;
+              // Unique muscle groups for this session (ordered)
+              const sessionMuscles = [...new Set(
+                session.entries.map(e => normalizeMuscle(e.exercise?.muscleGroup))
+              )];
 
-              return (
+              return [
+                weekHeader,
                 <div key={session.id} className="bg-white rounded-2xl p-4 shadow-sm">
                   {/* Nagłówek karty */}
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <span className="font-bold text-gray-900">{formatDate(session.date)}</span>
                       <span className="ml-2 text-sm text-blue-600 font-medium">{session.user?.name}</span>
+                      {sessionMuscles.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {sessionMuscles.map(g => (
+                            <span key={g} className={`text-[10px] font-semibold rounded-md px-1.5 py-0.5 ${muscleTagClass(g)}`}>
+                              {g}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       {(() => {
                         const sc = sessionCalories(session, weightKg);
                         if (sc.kcal <= 0) return null;
@@ -420,9 +483,9 @@ function HistoriaPage() {
                       </div>
                     ))}
                   </div>
-                </div>
-              );
-            });
+                </div>,
+              ];
+            }).filter(Boolean);
             })()}
           </div>
         )}
