@@ -88,6 +88,8 @@ function TreningPage() {
   const [restSecs, setRestSecs] = useState(90);
   // Dane z zegarka (import TCX)
   const [watchData, setWatchData] = useState<TcxSummary | null>(null);
+  // Manualny wpis kcal (gdy brak zegarka)
+  const [manualKcal, setManualKcal] = useState<number | ''>('');
 
   const DRAFT_KEY = 'treningFormDraft';
 
@@ -452,7 +454,7 @@ function TreningPage() {
           entries: entries.filter(e => e.exerciseId).map(buildEntryPayload),
           targetUserIds: getTargetUserIds(),
           appendToExisting: true,
-          watch: watchData || undefined,
+          watch: watchData || (manualKcal ? { kcal: Number(manualKcal) } : undefined),
         }),
       });
       if (res.ok) {
@@ -507,7 +509,7 @@ function TreningPage() {
           date, notes,
           entries: entries.filter(e => e.exerciseId).map(buildEntryPayload),
           targetUserIds: getTargetUserIds(),
-          watch: watchData || undefined,
+          watch: watchData || (manualKcal ? { kcal: Number(manualKcal) } : undefined),
         }),
       });
 
@@ -778,12 +780,24 @@ function TreningPage() {
                 </label>
               )}
             </div>
-            {watchData && (
+            {watchData ? (
               <p className="text-sm text-gray-700 mt-2 bg-blue-50 rounded-lg px-3 py-2">
                 🔥 <strong>{watchData.kcal} kcal</strong> · ⏱ {formatDur(watchData.durationSec)}
                 {watchData.avgHr && <> · ❤️ {watchData.avgHr}</>}
                 {watchData.maxHr && <> / {watchData.maxHr} max</>}
               </p>
+            ) : (
+              <div className="flex items-center gap-2 mt-2">
+                <span className="text-sm text-gray-500">🔥 Kcal ręcznie:</span>
+                <input
+                  type="number" min="0" step="10" inputMode="numeric"
+                  value={manualKcal}
+                  onChange={e => setManualKcal(e.target.value === '' ? '' : Number(e.target.value))}
+                  placeholder="np. 350"
+                  className="w-28 border border-gray-200 rounded-xl px-3 py-2 text-sm text-center"
+                />
+                <span className="text-sm text-gray-400">kcal</span>
+              </div>
             )}
           </div>
         )}

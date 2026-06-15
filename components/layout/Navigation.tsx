@@ -40,7 +40,7 @@ export function Navigation() {
     { href: '/', label: 'Start', icon: '🏠' },
     { href: '/cwiczenia', label: 'Ćwicz.', icon: '🏋️' },
     { href: '/trening', label: 'Trening', icon: '💪' },
-    { href: '/challenge', label: 'Challenge', icon: '⚡' },
+    { href: '/aktywnosci', label: 'Aktyw.', icon: '🚴' },
     { href: '/historia', label: 'Historia', icon: '📋' },
     { href: '/ustawienia', label: 'Ustaw.', icon: '⚙️' },
   ];

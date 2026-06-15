@@ -13,17 +13,18 @@ datasource db {
 }
 
 model User {
-  id           String            @id @default(cuid())
-  name         String
-  email        String?           @unique
-  passwordHash String?
-  sessions     WorkoutSession[]
-  bodyWeights  BodyWeight[]
-  favorites    UserFavorite[]
-  templates    WorkoutTemplate[]
-  runs         RunSession[]
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
+  id              String            @id @default(cuid())
+  name            String
+  email           String?           @unique
+  passwordHash    String?
+  sessions        WorkoutSession[]
+  bodyWeights     BodyWeight[]
+  favorites       UserFavorite[]
+  templates       WorkoutTemplate[]
+  runs            RunSession[]
+  otherActivities OtherActivity[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 }
 
 model Exercise {
@@ -123,6 +124,22 @@ model RunSession {
   maxHr     Int?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([userId, date])
+}
+
+model OtherActivity {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date        DateTime
+  type        String   // "Rower", "Pływanie", "Kajak" itp.
+  durationMin Int      // czas w minutach
+  distanceKm  Float?   // opcjonalnie
+  kcal        Int?     // opcjonalnie
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([userId, date])
 }

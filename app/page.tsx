@@ -373,10 +373,11 @@ export default function DashboardPage() {
           </>
         )}
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           {[
             { href: '/historia', icon: '📊', label: 'Historia' },
             { href: '/bieganie', icon: '🏃', label: 'Bieganie' },
+            { href: '/aktywnosci', icon: '🚴', label: 'Aktywności' },
             { href: '/waga', icon: '⚖️', label: 'Waga' },
           ].map(({ href, icon, label }) => (
             <Link key={href} href={href} className="bg-white rounded-2xl p-4 text-center shadow-sm block">
