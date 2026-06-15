@@ -15,7 +15,7 @@ interface InsightRecord {
   };
 }
 
-const CACHE_KEY = 'aiInsightsHistory';
+const CACHE_KEY = 'aiInsightsHistory_v2';
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
 function readHistory(): InsightRecord[] {
