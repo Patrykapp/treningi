@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface Props {
   userId?: string;
@@ -29,6 +29,7 @@ const MONTHS_PL = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz'
 export function ActivityHeatmap({ userId }: Props) {
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [loaded, setLoaded] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const from = new Date();
@@ -78,6 +79,12 @@ export function ActivityHeatmap({ userId }: Props) {
     }
   });
 
+  useEffect(() => {
+    if (loaded && scrollRef.current) {
+      scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
+    }
+  }, [loaded]);
+
   if (!loaded) return null;
 
   const totalSessions = Object.values(counts).reduce((s, v) => s + v, 0);
@@ -96,7 +103,7 @@ export function ActivityHeatmap({ userId }: Props) {
         </span>
       </div>
 
-      <div className="overflow-x-auto -mx-1">
+      <div ref={scrollRef} className="overflow-x-auto -mx-1">
         <div className="inline-flex flex-col px-1" style={{ minWidth: 'max-content' }}>
           {/* Month labels */}
           <div className="flex mb-1" style={{ paddingLeft: '18px' }}>
