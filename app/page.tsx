@@ -379,6 +379,7 @@ export default function DashboardPage() {
             { href: '/bieganie', icon: '🏃', label: 'Bieganie' },
             { href: '/aktywnosci', icon: '🚴', label: 'Aktywności' },
             { href: '/waga', icon: '⚖️', label: 'Waga' },
+            { href: '/insighty', icon: '✨', label: 'AI Insighty' },
           ].map(({ href, icon, label }) => (
             <Link key={href} href={href} className="bg-white rounded-2xl p-4 text-center shadow-sm block">
               <div className="text-2xl mb-1">{icon}</div>
