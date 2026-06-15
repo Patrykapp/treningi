@@ -38,6 +38,8 @@ const GROUP_ORDER = [
   'Nogi', 'Brzuch', 'Cardio', 'Inne',
 ];
 
+const STRETCHING_GROUP = 'Rozciąganie';
+
 const Thumb = ExerciseThumb;
 
 export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybierz ćwiczenie...', onAddNew }: Props) {
@@ -57,6 +59,10 @@ export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybi
     ? exercises
         .filter(e => e.name.toLowerCase().includes(search.toLowerCase()))
         .sort((a, b) => {
+          // Rozciąganie zawsze na końcu wyników wyszukiwania
+          const aStr = isStretching(normalizeMuscle(a.muscleGroup)) ? 1 : 0;
+          const bStr = isStretching(normalizeMuscle(b.muscleGroup)) ? 1 : 0;
+          if (aStr !== bStr) return aStr - bStr;
           const diff = (usageCounts[b.id] || 0) - (usageCounts[a.id] || 0);
           return diff !== 0 ? diff : a.name.localeCompare(b.name, 'pl');
         })
@@ -139,6 +145,8 @@ export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybi
     return () => clearTimeout(t);
   }, [open, search, value]);
 
+  const isStretching = (g: string) => g.toLowerCase().includes('rozciąg');
+
   // Build grouped structure
   const grouped: Record<string, Exercise[]> = {};
   for (const ex of exercises) {
@@ -146,12 +154,28 @@ export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybi
     if (!grouped[g]) grouped[g] = [];
     grouped[g].push(ex);
   }
-  const groupKeys = GROUP_ORDER.filter(g => grouped[g])
-    .concat(Object.keys(grouped).filter(g => !GROUP_ORDER.includes(g)).sort());
+  // Rozciąganie zawsze na końcu listy grup
+  const mainGroups = GROUP_ORDER.filter(g => grouped[g] && !isStretching(g))
+    .concat(Object.keys(grouped).filter(g => !GROUP_ORDER.includes(g) && !isStretching(g)).sort());
+  const stretchingKeys = Object.keys(grouped).filter(isStretching);
+  const groupKeys = [...mainGroups, ...stretchingKeys];
 
-  // Top exercises by usage (only those used at least once)
+  // Domyślnie zwiń grupy Rozciąganie przy pierwszym otwarciu
+  useEffect(() => {
+    if (stretchingKeys.length === 0) return;
+    setCollapsedGroups(prev => {
+      const next = new Set(prev);
+      let changed = false;
+      for (const k of stretchingKeys) { if (!next.has(k)) { next.add(k); changed = true; } }
+      return changed ? next : prev;
+    });
+  // stretchingKeys zmienia się razem z exercises — porównaj po join
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stretchingKeys.join(',')]);
+
+  // Top exercises by usage (only those used at least once, exclude stretching)
   const topExercises = exercises
-    .filter(e => (usageCounts[e.id] || 0) > 0)
+    .filter(e => (usageCounts[e.id] || 0) > 0 && !isStretching(normalizeMuscle(e.muscleGroup)))
     .sort((a, b) => {
       const diff = (usageCounts[b.id] || 0) - (usageCounts[a.id] || 0);
       return diff !== 0 ? diff : a.name.localeCompare(b.name, 'pl');
@@ -296,10 +320,12 @@ export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybi
                       type="button"
                       onClick={() => toggleGroup(group)}
                       className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold uppercase tracking-wide border-b border-gray-100 sticky top-0 z-10 ${
-                        hasSelected ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-500'
+                        hasSelected ? 'bg-blue-50 text-blue-700'
+                        : isStretching(group) ? 'bg-teal-50 text-teal-700'
+                        : 'bg-gray-50 text-gray-500'
                       }`}
                     >
-                      <span>{group} <span className="font-normal opacity-60">({groupExercises.length})</span></span>
+                      <span>{isStretching(group) ? '🧘 ' : ''}{group} <span className="font-normal opacity-60">({groupExercises.length})</span></span>
                       <span className="text-gray-400">{isCollapsed ? '▸' : '▾'}</span>
                     </button>
                     {/* Exercises in group */}

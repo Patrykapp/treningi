@@ -39,6 +39,13 @@ interface LastResult {
   setsData: SetData[];
 }
 
+// Szacowany 1RM (wzór Epley)
+function calc1RM(weight: number, reps: number): number | null {
+  if (weight <= 0 || reps <= 0) return null;
+  if (reps === 1) return weight;
+  return Math.round(weight * (1 + reps / 30) * 10) / 10;
+}
+
 // Sugestia progresji na podstawie ostatniego wyniku
 function progressionHint(last: LastResult): string {
   const maxW = last.setsData.length > 0 ? Math.max(...last.setsData.map(s => s.weight)) : last.weight;
@@ -658,6 +665,7 @@ function TreningPage() {
               </div>
             </div>
             {!entry.customSets ? (
+              <>
               <div className={`grid gap-2 ${entry.bodyweight ? 'grid-cols-2' : 'grid-cols-3'}`}>
                 {[['Serie', 'sets'], ['Powt.', 'reps'], ...(!entry.bodyweight ? [['Ciężar kg', 'weight']] : [])].map(([label, field]) => (
                   <div key={field}>
@@ -672,6 +680,15 @@ function TreningPage() {
                   </div>
                 ))}
               </div>
+              {!entry.bodyweight && (() => {
+                const orm = calc1RM(entry.weight, entry.reps);
+                return orm ? (
+                  <div className="text-xs text-purple-700 bg-purple-50 rounded-lg px-3 py-1.5 text-center">
+                    Szacowany 1RM: <strong>{orm} kg</strong>
+                  </div>
+                ) : null;
+              })()}
+              </>
             ) : (
               <div className="space-y-2">
                 {(entry.setsData || []).map((s, si) => (
@@ -718,6 +735,17 @@ function TreningPage() {
                     )}
                   </div>
                 ))}
+                {!entry.bodyweight && (() => {
+                  const best = (entry.setsData || []).reduce<number | null>((max, s) => {
+                    const v = calc1RM(s.weight, s.reps);
+                    return v && (max === null || v > max) ? v : max;
+                  }, null);
+                  return best ? (
+                    <div className="text-xs text-purple-700 bg-purple-50 rounded-lg px-3 py-1.5 text-center">
+                      Szacowany 1RM: <strong>{best} kg</strong>
+                    </div>
+                  ) : null;
+                })()}
                 <div className="flex gap-2 mt-1">
                   <button type="button" onClick={() => addSet(entry.key)}
                     className="flex-1 text-sm text-blue-600 border border-dashed border-blue-300 rounded-xl py-2">
