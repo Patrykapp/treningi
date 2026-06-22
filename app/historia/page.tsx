@@ -341,7 +341,7 @@ function HistoriaPage() {
               }
               // Wspólna oś czasu: treningi siłowe + inne aktywności, malejąco po dacie
               type TLItem =
-                | { kind: 'workout'; date: string; session: WorkoutSession }
+                | { kind: 'workout'; date: string; session: SessionWithActivities }
                 | { kind: 'activity'; date: string; activity: OtherActivity };
               const timeline: TLItem[] = [
                 ...sessions.map(s => ({ kind: 'workout' as const, date: s.date, session: s })),
