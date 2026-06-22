@@ -18,7 +18,11 @@ export async function GET() {
       const [sessions, runs, activities, weight] = await Promise.all([
         prisma.workoutSession.findMany({
           where: { userId: u.id },
-          include: { user: { select: { id: true, name: true } }, entries: { include: { exercise: true } } },
+          include: {
+            user: { select: { id: true, name: true } },
+            entries: { include: { exercise: true } },
+            activities: { include: { user: { select: { id: true, name: true } } } },
+          },
           orderBy: { date: 'desc' },
           take: 100,
         }),

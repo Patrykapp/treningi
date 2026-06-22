@@ -27,7 +27,11 @@ export async function GET(request: Request) {
         userId: targetUserId || userId,
         ...dateFilter,
       },
-      include: { user: true, entries: { include: { exercise: true } } },
+      include: {
+        user: true,
+        entries: { include: { exercise: true } },
+        activities: { include: { user: { select: { id: true, name: true } } } },
+      },
       orderBy: { date: 'desc' },
       take: limit,
     });

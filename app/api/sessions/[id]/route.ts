@@ -9,7 +9,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const { id } = await params;
     const session = await prisma.workoutSession.findUnique({
       where: { id },
-      include: { user: true, entries: { include: { exercise: true } } },
+      include: {
+        user: true,
+        entries: { include: { exercise: true } },
+        activities: { include: { user: { select: { id: true, name: true } } } },
+      },
     });
     if (!session) return NextResponse.json({ error: 'Nie znaleziono' }, { status: 404 });
     // Odczyt dostępny dla każdego zalogowanego — wspólna aplikacja, podgląd

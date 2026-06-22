@@ -14,7 +14,15 @@ interface OtherActivity {
   distanceKm: number | null;
   kcal: number | null;
   notes: string | null;
+  sessionId: string | null;
   user: { id: string; name: string };
+}
+
+interface DaySession {
+  id: string;
+  date: string;
+  notes: string | null;
+  entries: { exercise?: { muscleGroup?: string | null; name?: string } | null }[];
 }
 
 const PRESET_TYPES = [
@@ -36,6 +44,10 @@ export default function AktywnosPage() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  // Łączenie z treningiem
+  const [linkingId, setLinkingId] = useState<string | null>(null);
+  const [daySessions, setDaySessions] = useState<DaySession[]>([]);
+  const [loadingDay, setLoadingDay] = useState(false);
 
   // Formularz
   const [date, setDate] = useState(formatDateInput(new Date()));
@@ -97,6 +109,34 @@ export default function AktywnosPage() {
       setToast({ message: 'Błąd połączenia', type: 'error' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Otwórz wybór treningu z tego dnia dla danej aktywności
+  const openLink = async (a: OtherActivity) => {
+    if (linkingId === a.id) { setLinkingId(null); return; }
+    setLinkingId(a.id);
+    setDaySessions([]);
+    setLoadingDay(true);
+    const day = a.date.slice(0, 10);
+    const data = await fetch(`/api/sessions?date=${day}`).then(r => r.json()).catch(() => []);
+    setDaySessions(Array.isArray(data) ? data : []);
+    setLoadingDay(false);
+  };
+
+  const linkTo = async (activityId: string, sessionId: string | null) => {
+    const res = await fetch(`/api/activities/${activityId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId }),
+    });
+    if (res.ok) {
+      setActivities(prev => prev.map(a => a.id === activityId ? { ...a, sessionId } : a));
+      setToast({ message: sessionId ? 'Podłączono do treningu' : 'Odpięto od treningu', type: 'success' });
+      setLinkingId(null);
+    } else {
+      const err = await res.json().catch(() => ({}));
+      setToast({ message: err.error || 'Błąd łączenia', type: 'error' });
     }
   };
 
@@ -313,6 +353,44 @@ export default function AktywnosPage() {
                       >🗑️</button>
                     )}
                   </div>
+
+                  {/* Podłączenie do treningu z tego dnia */}
+                  {mine && (
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      {a.sessionId ? (
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-semibold text-blue-700 bg-blue-50 rounded-lg px-2 py-1">🔗 Podłączona do treningu</span>
+                          <button onClick={() => linkTo(a.id, null)} className="text-xs text-gray-500 underline">Odepnij</button>
+                        </div>
+                      ) : (
+                        <>
+                          <button onClick={() => openLink(a)} className="text-xs font-semibold text-blue-600">
+                            🔗 {linkingId === a.id ? 'Anuluj' : 'Podłącz do treningu'}
+                          </button>
+                          {linkingId === a.id && (
+                            <div className="mt-2 space-y-1.5">
+                              {loadingDay ? (
+                                <p className="text-xs text-gray-400">Szukam treningów z tego dnia...</p>
+                              ) : daySessions.length === 0 ? (
+                                <p className="text-xs text-gray-400">Brak treningu w tym dniu — najpierw dodaj trening.</p>
+                              ) : (
+                                daySessions.map(s => {
+                                  const muscles = [...new Set(s.entries.map(e => (e.exercise?.muscleGroup || '').replace(/\s*\(.*?\)/g, '').trim()).filter(Boolean))];
+                                  const label = muscles.length ? muscles.join(', ') : `${s.entries.length} ćwiczeń`;
+                                  return (
+                                    <button key={s.id} onClick={() => linkTo(a.id, s.id)}
+                                      className="w-full text-left text-sm bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-xl px-3 py-2 transition-colors">
+                                      🏋️ Trening · {label}
+                                    </button>
+                                  );
+                                })
+                              )}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}

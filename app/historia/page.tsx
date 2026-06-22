@@ -19,7 +19,18 @@ interface OtherActivity {
   distanceKm: number | null;
   kcal: number | null;
   notes: string | null;
+  sessionId: string | null;
   user?: { id: string; name: string };
+}
+
+type SessionWithActivities = WorkoutSession & { activities?: OtherActivity[] };
+
+// Czas trwania aktywności w formacie "1 h 5 min"
+function formatActDuration(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (h === 0) return `${m} min`;
+  return m === 0 ? `${h} h` : `${h} h ${m} min`;
 }
 
 interface SessionRating {
@@ -106,8 +117,9 @@ function HistoriaPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isLoggedIn, userId: authUserId } = useAuth();
-  const [sessions, setSessions] = useState<WorkoutSession[]>([]);
+  const [sessions, setSessions] = useState<SessionWithActivities[]>([]);
   const [activities, setActivities] = useState<OtherActivity[]>([]);
+  const [linkingId, setLinkingId] = useState<string | null>(null);
   const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
   const [viewUserId, setViewUserId] = useState<string | null>(null); // null = własne
   const [weightKg, setWeightKg] = useState(0); // waga ciała przeglądanej osoby (kcal)
@@ -218,6 +230,23 @@ function HistoriaPage() {
     setMerging(null);
   };
 
+  // Podłącz/odepnij aktywność do treningu (przeładuj, by przeniosła się pod trening)
+  const linkActivity = async (activityId: string, sessionId: string | null) => {
+    const res = await fetch(`/api/activities/${activityId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId }),
+    });
+    if (res.ok) {
+      setToast({ message: sessionId ? 'Podłączono do treningu' : 'Odpięto od treningu', type: 'success' });
+      setLinkingId(null);
+      loadSessions();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      setToast({ message: err.error || 'Błąd łączenia', type: 'error' });
+    }
+  };
+
   const clearFilters = () => {
     setFilterExerciseId('');
     setFilterFrom('');
@@ -316,7 +345,8 @@ function HistoriaPage() {
                 | { kind: 'activity'; date: string; activity: OtherActivity };
               const timeline: TLItem[] = [
                 ...sessions.map(s => ({ kind: 'workout' as const, date: s.date, session: s })),
-                ...activities.map(a => ({ kind: 'activity' as const, date: a.date, activity: a })),
+                // Tylko samodzielne aktywności — przypięte pokazujemy pod treningiem
+                ...activities.filter(a => !a.sessionId).map(a => ({ kind: 'activity' as const, date: a.date, activity: a })),
               ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
               let lastWeekKey = '';
               return timeline.flatMap(item => {
@@ -335,10 +365,12 @@ function HistoriaPage() {
 
               if (item.kind === 'activity') {
                 const a = item.activity;
-                const h = Math.floor(a.durationMin / 60);
-                const m = a.durationMin % 60;
-                const dur = h > 0 ? `${h} h${m > 0 ? ` ${m} min` : ''}` : `${m} min`;
+                const dur = formatActDuration(a.durationMin);
                 const mine = a.userId === authUserId;
+                // Treningi z tego samego dnia (do podpięcia) — już mamy je w pamięci
+                const daySess = mine
+                  ? sessions.filter(s => s.date.slice(0, 10) === a.date.slice(0, 10))
+                  : [];
                 return [
                   itemWeekHeader,
                   <div key={`act-${a.id}`} className="bg-white rounded-2xl p-4 shadow-sm border-l-4 border-cyan-300">
@@ -357,6 +389,27 @@ function HistoriaPage() {
                         {a.kcal && <span className="text-red-500">🔥 {a.kcal} kcal</span>}
                       </div>
                       {a.notes && <p className="text-sm text-gray-500 italic mt-1">{a.notes}</p>}
+                      {mine && daySess.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-gray-100">
+                          <button onClick={() => setLinkingId(linkingId === a.id ? null : a.id)}
+                            className="text-xs font-semibold text-blue-600">
+                            🔗 {linkingId === a.id ? 'Anuluj' : 'Podłącz do treningu'}
+                          </button>
+                          {linkingId === a.id && (
+                            <div className="mt-2 space-y-1.5">
+                              {daySess.map(s => {
+                                const muscles = [...new Set(s.entries.map(e => normalizeMuscle(e.exercise?.muscleGroup)))];
+                                return (
+                                  <button key={s.id} onClick={() => linkActivity(a.id, s.id)}
+                                    className="w-full text-left text-sm bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-xl px-3 py-2 transition-colors">
+                                    🏋️ Trening · {muscles.length ? muscles.join(', ') : `${s.entries.length} ćwiczeń`}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>,
                 ];
@@ -555,6 +608,28 @@ function HistoriaPage() {
                       </div>
                     ))}
                   </div>
+
+                  {/* Przypięte aktywności (worek bokserski itp.) */}
+                  {session.activities && session.activities.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
+                      {session.activities.map(a => (
+                        <div key={`pin-${a.id}`} className="flex items-center justify-between gap-2 bg-cyan-50 rounded-xl px-3 py-2">
+                          <div className="min-w-0">
+                            <span className="text-sm font-semibold text-cyan-800">🔗 {a.type}</span>
+                            <span className="ml-2 text-xs text-gray-600">
+                              ⏱ {formatActDuration(a.durationMin)}
+                              {a.distanceKm ? ` · 📍 ${a.distanceKm} km` : ''}
+                              {a.kcal ? ` · 🔥 ${a.kcal} kcal` : ''}
+                            </span>
+                          </div>
+                          {isLoggedIn && a.userId === authUserId && (
+                            <button onClick={() => linkActivity(a.id, null)}
+                              className="text-xs text-gray-500 underline shrink-0">Odepnij</button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>,
               ];
             }).filter(Boolean);
