@@ -18,10 +18,23 @@ interface Run {
 
 interface AppUser { id: string; name: string; }
 
+interface OtherActivity {
+  id: string;
+  userId: string;
+  date: string;
+  type: string;
+  durationMin: number;
+  distanceKm: number | null;
+  kcal: number | null;
+  notes: string | null;
+  user?: { id: string; name: string };
+}
+
 interface DashboardData {
   users: AppUser[];
   sessionsByUser: Record<string, WorkoutSession[]>;
   runsByUser: Record<string, Run[]>;
+  activitiesByUser: Record<string, OtherActivity[]>;
   weightByUser: Record<string, number>;
 }
 
@@ -150,17 +163,20 @@ export default function DashboardPage() {
   const users = data?.users || [];
   const sessionsByUser = data?.sessionsByUser || {};
   const runsByUser = data?.runsByUser || {};
+  const activitiesByUser = data?.activitiesByUser || {};
   const weightByUser = data?.weightByUser || {};
 
   // Osoba, której pulpit oglądamy (statystyki, objętość)
   const activeId = viewUserId || userId || '';
   const activeSessions = sessionsByUser[activeId] || [];
   const activeRuns = runsByUser[activeId] || [];
-  const activeActivities: Dated[] = [...activeSessions, ...activeRuns];
+  const activeOtherActivities = activitiesByUser[activeId] || [];
+  // Trening siłowy + bieg + inna aktywność — wszystko liczy się do passy/statystyk
+  const activeActivities: Dated[] = [...activeSessions, ...activeRuns, ...activeOtherActivities];
 
   const streak = calcStreak(activeActivities);
   const weeklyCount = calcWeeklyCount(activeActivities);
-  const totalCount = activeSessions.length + activeRuns.length;
+  const totalCount = activeSessions.length + activeRuns.length + activeOtherActivities.length;
   const weekStreakVal = calcWeekStreak(activeActivities);
   const weekVol = calcWeeklyVolume(activeSessions);
 
@@ -168,20 +184,23 @@ export default function DashboardPage() {
   const comparison = users.map(u => {
     const us = sessionsByUser[u.id] || [];
     const runs = runsByUser[u.id] || [];
+    const acts = activitiesByUser[u.id] || [];
     const weightKg = weightByUser[u.id] || 0;
     const weekSessions = lastWeek(us);
     const weekRuns = lastWeek(runs);
+    const weekActs = lastWeek(acts);
     const weekKcal =
       weekSessions.reduce((sum, s) => sum + sessionCalories(s, weightKg).kcal, 0) +
-      weekRuns.reduce((sum, r) => sum + runCalories(weightKg, r.distance), 0);
+      weekRuns.reduce((sum, r) => sum + runCalories(weightKg, r.distance), 0) +
+      weekActs.reduce((sum, a) => sum + (a.kcal || 0), 0);
     // Punktacja rankingu tygodniowego:
-    //   100 pkt za trening (siłowy lub bieg)
+    //   100 pkt za trening (siłowy, bieg lub inna aktywność)
     //   +30 pkt za każdy DZIEŃ z treningiem (premiuje regularność, nie kumulowanie w 1 dzień)
     //   +1 pkt za każde 10 kcal (premiuje cięższe/dłuższe treningi)
-    const weekDays = new Set([...weekSessions, ...weekRuns].map(x => {
+    const weekDays = new Set([...weekSessions, ...weekRuns, ...weekActs].map(x => {
       const d = new Date(x.date); d.setHours(0, 0, 0, 0); return d.getTime();
     })).size;
-    const weekCount = weekSessions.length + weekRuns.length;
+    const weekCount = weekSessions.length + weekRuns.length + weekActs.length;
     const score = weekCount * 100 + weekDays * 30 + Math.round(weekKcal / 10);
     return {
       id: u.id,
@@ -191,7 +210,7 @@ export default function DashboardPage() {
       weekVolume: calcWeeklyVolume(us).total,
       weekKcal,
       score,
-      streak: calcStreak([...us, ...runs]),
+      streak: calcStreak([...us, ...runs, ...acts]),
     };
   });
   const maxScore = Math.max(0, ...comparison.map(c => c.score));
@@ -200,10 +219,12 @@ export default function DashboardPage() {
   // Wspólny feed — treningi siłowe i biegi wszystkich, posortowane po dacie
   type FeedItem =
     | { kind: 'workout'; date: string; session: WorkoutSession }
-    | { kind: 'run'; date: string; run: Run };
+    | { kind: 'run'; date: string; run: Run }
+    | { kind: 'activity'; date: string; activity: OtherActivity };
   const feed: FeedItem[] = [
     ...Object.values(sessionsByUser).flat().map(s => ({ kind: 'workout' as const, date: s.date, session: s })),
     ...Object.values(runsByUser).flat().map(r => ({ kind: 'run' as const, date: r.date, run: r })),
+    ...Object.values(activitiesByUser).flat().map(a => ({ kind: 'activity' as const, date: a.date, activity: a })),
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 8);
   const userName = (id: string) => users.find(u => u.id === id)?.name || '?';
   const activeName = activeId === userId ? 'Ty' : userName(activeId);
@@ -375,6 +396,7 @@ export default function DashboardPage() {
 
         <div className="grid grid-cols-2 gap-3">
           {[
+            { href: '/challenge', icon: '⚡', label: 'Challenge' },
             { href: '/historia', icon: '📊', label: 'Historia' },
             { href: '/bieganie', icon: '🏃', label: 'Bieganie' },
             { href: '/aktywnosci', icon: '🚴', label: 'Aktywności' },
@@ -403,7 +425,9 @@ export default function DashboardPage() {
             ) : (
               <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
                 {feed.map((item, i) => {
-                  const ownerId = item.kind === 'workout' ? item.session.userId : item.run.userId;
+                  const ownerId = item.kind === 'workout' ? item.session.userId
+                    : item.kind === 'run' ? item.run.userId
+                    : item.activity.userId;
                   const mine = ownerId === userId;
                   const weightKg = weightByUser[ownerId] || 0;
                   const badge = (
@@ -413,6 +437,27 @@ export default function DashboardPage() {
                       {mine ? 'Ty' : (item.kind === 'workout' ? item.session.user?.name : userName(ownerId))}
                     </span>
                   );
+                  if (item.kind === 'activity') {
+                    const a = item.activity;
+                    const h = Math.floor(a.durationMin / 60);
+                    const m = a.durationMin % 60;
+                    const dur = h > 0 ? `${h} h${m > 0 ? ` ${m} min` : ''}` : `${m} min`;
+                    return (
+                      <Link key={`a-${a.id}`} href="/aktywnosci"
+                        className={`flex items-center justify-between gap-2 px-4 py-3 ${i > 0 ? 'border-t border-gray-100' : ''}`}>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            {badge}
+                            <span className="font-medium text-gray-900 text-sm">{formatDate(a.date)}</span>
+                          </div>
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            {a.type} · {dur}{a.distanceKm ? ` · ${a.distanceKm} km` : ''}{a.kcal ? ` · ~${a.kcal} kcal` : ''}
+                          </div>
+                        </div>
+                        <span className="text-gray-400 shrink-0">›</span>
+                      </Link>
+                    );
+                  }
                   if (item.kind === 'run') {
                     const kcal = runCalories(weightKg, item.run.distance);
                     const paceSec = item.run.distance > 0 ? item.run.duration / item.run.distance : 0;

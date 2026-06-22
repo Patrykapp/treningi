@@ -361,6 +361,13 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
         }),
       });
       if (res.ok) {
+        // Śledź użycie ćwiczenia w localStorage (ten sam klucz co ExerciseSearch)
+        try {
+          const counts = JSON.parse(localStorage.getItem('exerciseUsageCount') || '{}');
+          counts[id] = (counts[id] || 0) + 1;
+          localStorage.setItem('exerciseUsageCount', JSON.stringify(counts));
+        } catch {}
+
         // Sprawdź PR
         const entry = buildEntry();
         const setsToCheck = entry.setsData && entry.setsData.length > 0
@@ -483,82 +490,103 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
             </div>
             {!formCustomSets ? (
               <>
-                <div className={`grid gap-2 ${formBodyweight ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="text-xs text-gray-500 block mb-1">Serie</label>
                     <div className="flex items-center">
                       <button type="button" onClick={() => { setFormPrefilled(false); setFormSets(s => Math.max(1, s - 1)); }}
-                        className="h-9 w-7 bg-gray-100 rounded-l-xl font-bold text-gray-600 text-base shrink-0 border border-r-0 border-gray-200">−</button>
+                        className="h-10 w-9 bg-gray-100 rounded-l-xl font-bold text-gray-600 text-lg shrink-0 border border-r-0 border-gray-200">−</button>
                       <input type="number" inputMode="numeric"
                         value={formSets === 0 ? '' : formSets} placeholder="0"
                         onChange={e => { setFormPrefilled(false); setFormSets(e.target.value === '' ? 0 : Math.max(1, Number(e.target.value))); }} min={1}
-                        className="flex-1 border border-gray-200 py-2 text-sm text-center min-w-0 h-9" />
+                        className="flex-1 border border-gray-200 py-2 text-base text-center font-semibold min-w-0 h-10" />
                       <button type="button" onClick={() => { setFormPrefilled(false); setFormSets(s => s + 1); }}
-                        className="h-9 w-7 bg-gray-100 rounded-r-xl font-bold text-gray-600 text-base shrink-0 border border-l-0 border-gray-200">+</button>
+                        className="h-10 w-9 bg-gray-100 rounded-r-xl font-bold text-gray-600 text-lg shrink-0 border border-l-0 border-gray-200">+</button>
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500 block mb-1">Powt.</label>
+                    <label className="text-xs text-gray-500 block mb-1">Powtórzenia</label>
                     <div className="flex items-center">
                       <button type="button" onClick={() => { setFormPrefilled(false); setFormReps(r => Math.max(1, r - 1)); }}
-                        className="h-9 w-7 bg-gray-100 rounded-l-xl font-bold text-gray-600 text-base shrink-0 border border-r-0 border-gray-200">−</button>
+                        className="h-10 w-9 bg-gray-100 rounded-l-xl font-bold text-gray-600 text-lg shrink-0 border border-r-0 border-gray-200">−</button>
                       <input type="number" inputMode="numeric"
                         value={formReps === 0 ? '' : formReps} placeholder="0"
                         onChange={e => { setFormPrefilled(false); setFormReps(e.target.value === '' ? 0 : Number(e.target.value)); }} min={1}
-                        className="flex-1 border border-gray-200 py-2 text-sm text-center min-w-0 h-9" />
+                        className="flex-1 border border-gray-200 py-2 text-base text-center font-semibold min-w-0 h-10" />
                       <button type="button" onClick={() => { setFormPrefilled(false); setFormReps(r => r + 1); }}
-                        className="h-9 w-7 bg-gray-100 rounded-r-xl font-bold text-gray-600 text-base shrink-0 border border-l-0 border-gray-200">+</button>
+                        className="h-10 w-9 bg-gray-100 rounded-r-xl font-bold text-gray-600 text-lg shrink-0 border border-l-0 border-gray-200">+</button>
                     </div>
                   </div>
-                  {!formBodyweight && (
-                    <div>
-                      <label className="text-xs text-gray-500 block mb-1">Ciężar kg</label>
-                      <div className="flex items-center">
-                        <button type="button"
-                          onClick={() => { setFormPrefilled(false); setFormWeight(w => Math.max(0, Math.round((w - 2.5) * 10) / 10)); }}
-                          className="h-9 w-8 bg-gray-100 rounded-l-xl font-bold text-gray-600 text-base shrink-0 border border-r-0 border-gray-200">−</button>
-                        <input type="number" inputMode="decimal" step={0.5}
-                          value={formWeight === 0 ? '' : formWeight} placeholder="0"
-                          onChange={e => { setFormPrefilled(false); setFormWeight(Number(e.target.value) || 0); }} min={0}
-                          className="flex-1 border border-gray-200 py-2 text-sm text-center min-w-0 h-9" />
-                        <button type="button"
-                          onClick={() => { setFormPrefilled(false); setFormWeight(w => Math.round((w + 2.5) * 10) / 10); }}
-                          className="h-9 w-8 bg-blue-50 rounded-r-xl font-bold text-blue-600 text-base shrink-0 border border-l-0 border-gray-200">+</button>
-                      </div>
-                    </div>
-                  )}
                 </div>
+                {!formBodyweight && (
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">Ciężar kg</label>
+                    <input type="number" inputMode="decimal" step={0.5}
+                      value={formWeight === 0 ? '' : formWeight} placeholder="0"
+                      onChange={e => { setFormPrefilled(false); setFormWeight(Number(e.target.value) || 0); }} min={0}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-base text-center font-semibold mb-2" />
+                    <div className="grid grid-cols-6 gap-1">
+                      {([-5, -2.5, -1, 1, 2.5, 5] as number[]).map(delta => (
+                        <button key={delta} type="button"
+                          onClick={() => { setFormPrefilled(false); setFormWeight(w => Math.max(0, Math.round((w + delta) * 10) / 10)); }}
+                          className={`py-2 rounded-lg text-xs font-bold border transition-colors ${
+                            delta > 0
+                              ? 'bg-blue-50 text-blue-600 border-blue-100 active:bg-blue-100'
+                              : 'bg-gray-50 text-gray-600 border-gray-200 active:bg-gray-100'
+                          }`}>
+                          {delta > 0 ? `+${delta}` : delta}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <button onClick={initCustomSets} className="text-sm text-blue-600">+ Rozpisz serie osobno</button>
               </>
             ) : (
               <div className="space-y-2">
+                {/* Przesuń wszystkie serie o wybraną wartość */}
+                {!formBodyweight && formSetsData.length > 0 && (
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Przesuń wszystkie serie:</p>
+                    <div className="grid grid-cols-6 gap-1">
+                      {([-5, -2.5, -1, 1, 2.5, 5] as number[]).map(delta => (
+                        <button key={delta} type="button"
+                          onClick={() => setFormSetsData(prev => prev.map(s => ({
+                            ...s, weight: Math.max(0, Math.round(((s.weight || 0) + delta) * 10) / 10)
+                          })))}
+                          className={`py-1.5 rounded-lg text-xs font-bold border ${
+                            delta > 0
+                              ? 'bg-blue-50 text-blue-600 border-blue-100'
+                              : 'bg-gray-50 text-gray-600 border-gray-200'
+                          }`}>
+                          {delta > 0 ? `+${delta}` : delta}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {formSetsData.map((s, i) => (
-                  <div key={i} className="flex items-center gap-1">
-                    <span className="text-xs text-gray-500 shrink-0 w-7">S{i + 1}</span>
+                  <div key={i} className="flex items-center gap-1.5">
+                    <span className="text-xs text-gray-400 shrink-0 w-6">S{i + 1}</span>
                     <button type="button" onClick={() => updateSet(i, 'reps', Math.max(1, (s.reps || 0) - 1))}
-                      className="w-7 h-8 bg-gray-100 rounded-l-lg font-bold text-gray-600 text-sm shrink-0 border border-r-0 border-gray-200">−</button>
+                      className="w-7 h-9 bg-gray-100 rounded-l-lg font-bold text-gray-600 shrink-0 border border-r-0 border-gray-200">−</button>
                     <input type="number" inputMode="numeric"
                       value={s.reps === 0 ? '' : s.reps} placeholder="powt."
                       onChange={e => updateSet(i, 'reps', e.target.value === '' ? 0 : Number(e.target.value))} min={1}
-                      className="w-10 border border-gray-200 py-1.5 text-sm text-center h-8" />
+                      className="w-10 border border-gray-200 py-1.5 text-sm text-center font-semibold h-9" />
                     <button type="button" onClick={() => updateSet(i, 'reps', (s.reps || 0) + 1)}
-                      className="w-7 h-8 bg-gray-100 rounded-r-lg font-bold text-gray-600 text-sm shrink-0 border border-l-0 border-gray-200">+</button>
+                      className="w-7 h-9 bg-gray-100 rounded-r-lg font-bold text-gray-600 shrink-0 border border-l-0 border-gray-200">+</button>
                     {!formBodyweight && (
                       <>
-                        <span className="text-xs text-gray-400 shrink-0">×</span>
-                        <button type="button"
-                          onClick={() => updateSet(i, 'weight', Math.max(0, Math.round(((s.weight || 0) - 2.5) * 10) / 10))}
-                          className="w-7 h-8 bg-gray-100 rounded-l-lg font-bold text-gray-600 text-sm shrink-0 border border-r-0 border-gray-200">−</button>
+                        <span className="text-xs text-gray-300 shrink-0">×</span>
                         <input type="number" inputMode="decimal" step={0.5}
                           value={s.weight === 0 ? '' : s.weight} placeholder="kg"
                           onChange={e => updateSet(i, 'weight', e.target.value === '' ? 0 : Number(e.target.value))} min={0}
-                          className="w-14 border border-gray-200 py-1.5 text-sm text-center h-8" />
-                        <button type="button"
-                          onClick={() => updateSet(i, 'weight', Math.round(((s.weight || 0) + 2.5) * 10) / 10)}
-                          className="w-7 h-8 bg-blue-50 rounded-r-lg font-bold text-blue-600 text-sm shrink-0 border border-l-0 border-gray-200">+</button>
+                          className="flex-1 border border-gray-200 rounded-lg py-1.5 text-sm text-center font-semibold h-9 min-w-0" />
+                        <span className="text-xs text-gray-400 shrink-0">kg</span>
                       </>
                     )}
-                    <button onClick={() => removeSet(i)} className="ml-auto text-red-400 p-1 shrink-0">✕</button>
+                    <button onClick={() => removeSet(i)} className="text-gray-300 hover:text-red-400 px-1 shrink-0 text-lg leading-none">✕</button>
                   </div>
                 ))}
                 <button onClick={addSet} className="text-sm text-blue-600">+ Dodaj serię</button>

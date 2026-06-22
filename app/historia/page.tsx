@@ -10,6 +10,18 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { sessionCalories, latestWeight } from '@/lib/calories';
 
+interface OtherActivity {
+  id: string;
+  userId: string;
+  date: string;
+  type: string;
+  durationMin: number;
+  distanceKm: number | null;
+  kcal: number | null;
+  notes: string | null;
+  user?: { id: string; name: string };
+}
+
 interface SessionRating {
   score: number;
   stars: number;
@@ -95,6 +107,7 @@ function HistoriaPage() {
   const searchParams = useSearchParams();
   const { isLoggedIn, userId: authUserId } = useAuth();
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
+  const [activities, setActivities] = useState<OtherActivity[]>([]);
   const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
   const [viewUserId, setViewUserId] = useState<string | null>(null); // null = własne
   const [weightKg, setWeightKg] = useState(0); // waga ciała przeglądanej osoby (kcal)
@@ -141,6 +154,22 @@ function HistoriaPage() {
       ? (Array.isArray(data) ? data : []).filter((s: WorkoutSession) => s.entries.some(e => e.exerciseId === filterExerciseId))
       : (Array.isArray(data) ? data : []);
     setSessions(filtered);
+
+    // Inne aktywności w tej samej osi czasu (gdy nie filtrujemy po ćwiczeniu — aktywności nie mają ćwiczeń)
+    if (filterExerciseId) {
+      setActivities([]);
+    } else {
+      const aParams = new URLSearchParams({ limit: '100' });
+      if (viewUserId) aParams.set('userId', viewUserId);
+      if (filterFrom) aParams.set('from', filterFrom);
+      const aData = await fetch(`/api/activities?${aParams}`).then(r => r.json()).catch(() => []);
+      let acts: OtherActivity[] = Array.isArray(aData) ? aData : [];
+      if (filterTo) {
+        const to = new Date(filterTo); to.setHours(23, 59, 59, 999);
+        acts = acts.filter(a => new Date(a.date) <= to);
+      }
+      setActivities(acts);
+    }
     setLoading(false);
     // Oceny zbiorczo — jeden request zamiast osobnego na każdą sesję
     const sessionList = Array.isArray(data) ? data : [];
@@ -254,7 +283,7 @@ function HistoriaPage() {
       <div className="px-4 py-4">
         {loading ? (
           <div className="text-center py-8 text-gray-600">Ładowanie...</div>
-        ) : sessions.length === 0 ? (
+        ) : sessions.length === 0 && activities.length === 0 ? (
           <div className="text-center py-8 text-gray-600 bg-white rounded-2xl px-6">
             <p className="text-4xl mb-2">🏋️</p>
             <p className="font-medium mb-1">Brak treningów</p>
@@ -269,7 +298,10 @@ function HistoriaPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-sm text-gray-700 font-medium">{sessions.length} treningów</p>
+            <p className="text-sm text-gray-700 font-medium">
+              {sessions.length} {sessions.length === 1 ? 'trening' : 'treningów'}
+              {activities.length > 0 && ` · ${activities.length} ${activities.length === 1 ? 'aktywność' : 'aktywności'}`}
+            </p>
             {(() => {
               // Group sessions by date (YYYY-MM-DD) to detect same-day duplicates
               const byDate: Record<string, WorkoutSession[]> = {};
@@ -278,8 +310,59 @@ function HistoriaPage() {
                 if (!byDate[day]) byDate[day] = [];
                 byDate[day].push(s);
               }
+              // Wspólna oś czasu: treningi siłowe + inne aktywności, malejąco po dacie
+              type TLItem =
+                | { kind: 'workout'; date: string; session: WorkoutSession }
+                | { kind: 'activity'; date: string; activity: OtherActivity };
+              const timeline: TLItem[] = [
+                ...sessions.map(s => ({ kind: 'workout' as const, date: s.date, session: s })),
+                ...activities.map(a => ({ kind: 'activity' as const, date: a.date, activity: a })),
+              ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
               let lastWeekKey = '';
-              return sessions.flatMap(session => {
+              return timeline.flatMap(item => {
+              // Wspólny sticky nagłówek tygodnia (dla treningów i aktywności)
+              const itemWk = weekKey(item.date);
+              const itemWeekHeader = itemWk !== lastWeekKey ? (
+                <div key={`wk-${itemWk}`} className="sticky top-[120px] z-10 -mx-0 px-0 py-1">
+                  <div className="bg-gray-100 rounded-xl px-3 py-1.5 flex items-center">
+                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                      📅 {weekLabel(item.date)}
+                    </span>
+                  </div>
+                </div>
+              ) : null;
+              lastWeekKey = itemWk;
+
+              if (item.kind === 'activity') {
+                const a = item.activity;
+                const h = Math.floor(a.durationMin / 60);
+                const m = a.durationMin % 60;
+                const dur = h > 0 ? `${h} h${m > 0 ? ` ${m} min` : ''}` : `${m} min`;
+                const mine = a.userId === authUserId;
+                return [
+                  itemWeekHeader,
+                  <div key={`act-${a.id}`} className="bg-white rounded-2xl p-4 shadow-sm border-l-4 border-cyan-300">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-gray-900">{a.type}</span>
+                        <span className="text-sm text-gray-500">{formatDate(a.date)}</span>
+                        <span className="text-[10px] font-semibold rounded-md px-1.5 py-0.5 bg-cyan-100 text-cyan-700">Aktywność</span>
+                        {!mine && a.user && (
+                          <span className="text-xs bg-purple-100 text-purple-700 rounded-lg px-2 py-0.5 font-semibold">{a.user.name}</span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-sm text-gray-600">
+                        <span>⏱ {dur}</span>
+                        {a.distanceKm && <span>📍 {a.distanceKm} km</span>}
+                        {a.kcal && <span className="text-red-500">🔥 {a.kcal} kcal</span>}
+                      </div>
+                      {a.notes && <p className="text-sm text-gray-500 italic mt-1">{a.notes}</p>}
+                    </div>
+                  </div>,
+                ];
+              }
+
+              const session = item.session;
               const rating = ratings[session.id];
               const dayKey = session.date.slice(0, 10);
               const sameDaySessions = byDate[dayKey];
@@ -287,18 +370,7 @@ function HistoriaPage() {
               const mainSession = sameDaySessions.reduce((a, b) => a.entries.length >= b.entries.length ? a : b);
               const muscleGroups = groupByMuscle(session.entries);
               const isExpanded = expandedRating === session.id;
-              // Sticky week header
-              const wk = weekKey(session.date);
-              const weekHeader = wk !== lastWeekKey ? (
-                <div key={`wk-${wk}`} className="sticky top-[120px] z-10 -mx-0 px-0 py-1">
-                  <div className="bg-gray-100 rounded-xl px-3 py-1.5 flex items-center">
-                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">
-                      📅 {weekLabel(session.date)}
-                    </span>
-                  </div>
-                </div>
-              ) : null;
-              lastWeekKey = wk;
+              const weekHeader = itemWeekHeader;
               // Unique muscle groups for this session (ordered)
               const sessionMuscles = [...new Set(
                 session.entries.map(e => normalizeMuscle(e.exercise?.muscleGroup))
