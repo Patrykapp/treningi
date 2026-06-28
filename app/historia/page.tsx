@@ -8,7 +8,16 @@ import { formatDate } from '@/lib/utils';
 import { Toast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useAuth } from '@/hooks/useAuth';
-import { sessionCalories, latestWeight } from '@/lib/calories';
+import { sessionCalories, runCalories, latestWeight } from '@/lib/calories';
+
+interface Run {
+  id: string;
+  userId: string;
+  date: string;
+  distance: number;
+  duration: number;
+  notes?: string | null;
+}
 
 interface OtherActivity {
   id: string;
@@ -119,6 +128,7 @@ function HistoriaPage() {
   const { isLoggedIn, userId: authUserId } = useAuth();
   const [sessions, setSessions] = useState<SessionWithActivities[]>([]);
   const [activities, setActivities] = useState<OtherActivity[]>([]);
+  const [runs, setRuns] = useState<Run[]>([]);
   const [linkingId, setLinkingId] = useState<string | null>(null);
   const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
   const [viewUserId, setViewUserId] = useState<string | null>(null); // null = własne
@@ -167,9 +177,11 @@ function HistoriaPage() {
       : (Array.isArray(data) ? data : []);
     setSessions(filtered);
 
-    // Inne aktywności w tej samej osi czasu (gdy nie filtrujemy po ćwiczeniu — aktywności nie mają ćwiczeń)
+    // Inne aktywności + biegi w tej samej osi czasu
+    // (gdy nie filtrujemy po ćwiczeniu — nie mają one ćwiczeń)
     if (filterExerciseId) {
       setActivities([]);
+      setRuns([]);
     } else {
       const aParams = new URLSearchParams({ limit: '100' });
       if (viewUserId) aParams.set('userId', viewUserId);
@@ -181,6 +193,21 @@ function HistoriaPage() {
         acts = acts.filter(a => new Date(a.date) <= to);
       }
       setActivities(acts);
+
+      // Biegi — /api/runs nie wspiera from/to, więc filtrujemy zakres po stronie klienta
+      const rParams = new URLSearchParams({ limit: '100' });
+      if (viewUserId) rParams.set('userId', viewUserId);
+      const rData = await fetch(`/api/runs?${rParams}`).then(r => r.json()).catch(() => []);
+      let runsList: Run[] = Array.isArray(rData) ? rData : [];
+      if (filterFrom) {
+        const from = new Date(filterFrom); from.setHours(0, 0, 0, 0);
+        runsList = runsList.filter(r => new Date(r.date) >= from);
+      }
+      if (filterTo) {
+        const to = new Date(filterTo); to.setHours(23, 59, 59, 999);
+        runsList = runsList.filter(r => new Date(r.date) <= to);
+      }
+      setRuns(runsList);
     }
     setLoading(false);
     // Oceny zbiorczo — jeden request zamiast osobnego na każdą sesję
@@ -312,7 +339,7 @@ function HistoriaPage() {
       <div className="px-4 py-4">
         {loading ? (
           <div className="text-center py-8 text-gray-600">Ładowanie...</div>
-        ) : sessions.length === 0 && activities.length === 0 ? (
+        ) : sessions.length === 0 && activities.length === 0 && runs.length === 0 ? (
           <div className="text-center py-8 text-gray-600 bg-white rounded-2xl px-6">
             <p className="text-4xl mb-2">🏋️</p>
             <p className="font-medium mb-1">Brak treningów</p>
@@ -329,6 +356,7 @@ function HistoriaPage() {
           <div className="space-y-3">
             <p className="text-sm text-gray-700 font-medium">
               {sessions.length} {sessions.length === 1 ? 'trening' : 'treningów'}
+              {runs.length > 0 && ` · ${runs.length} ${runs.length === 1 ? 'bieg' : 'biegów'}`}
               {activities.length > 0 && ` · ${activities.length} ${activities.length === 1 ? 'aktywność' : 'aktywności'}`}
             </p>
             {(() => {
@@ -342,11 +370,13 @@ function HistoriaPage() {
               // Wspólna oś czasu: treningi siłowe + inne aktywności, malejąco po dacie
               type TLItem =
                 | { kind: 'workout'; date: string; session: SessionWithActivities }
-                | { kind: 'activity'; date: string; activity: OtherActivity };
+                | { kind: 'activity'; date: string; activity: OtherActivity }
+                | { kind: 'run'; date: string; run: Run };
               const timeline: TLItem[] = [
                 ...sessions.map(s => ({ kind: 'workout' as const, date: s.date, session: s })),
                 // Tylko samodzielne aktywności — przypięte pokazujemy pod treningiem
                 ...activities.filter(a => !a.sessionId).map(a => ({ kind: 'activity' as const, date: a.date, activity: a })),
+                ...runs.map(r => ({ kind: 'run' as const, date: r.date, run: r })),
               ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
               let lastWeekKey = '';
               return timeline.flatMap(item => {
@@ -410,6 +440,44 @@ function HistoriaPage() {
                           )}
                         </div>
                       )}
+                    </div>
+                  </div>,
+                ];
+              }
+
+              if (item.kind === 'run') {
+                const r = item.run;
+                const mine = r.userId === authUserId;
+                const owner = users.find(u => u.id === r.userId);
+                const totalSec = r.duration;
+                const hh = Math.floor(totalSec / 3600);
+                const mm = Math.floor((totalSec % 3600) / 60);
+                const ss = totalSec % 60;
+                const durStr = hh > 0 ? `${hh} h ${mm} min` : `${mm}:${String(ss).padStart(2, '0')}`;
+                const paceSec = r.distance > 0 ? r.duration / r.distance : 0;
+                const pace = paceSec > 0
+                  ? `${Math.floor(paceSec / 60)}'${String(Math.round(paceSec % 60)).padStart(2, '0')}"/km`
+                  : '';
+                const kcal = runCalories(weightKg, r.distance);
+                return [
+                  itemWeekHeader,
+                  <div key={`run-${r.id}`} className="bg-white rounded-2xl p-4 shadow-sm border-l-4 border-orange-300">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-gray-900">🏃 Bieg</span>
+                        <span className="text-sm text-gray-500">{formatDate(r.date)}</span>
+                        <span className="text-[10px] font-semibold rounded-md px-1.5 py-0.5 bg-orange-100 text-orange-700">Bieg</span>
+                        {!mine && owner && (
+                          <span className="text-xs bg-purple-100 text-purple-700 rounded-lg px-2 py-0.5 font-semibold">{owner.name}</span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-sm text-gray-600">
+                        <span>📍 {r.distance} km</span>
+                        <span>⏱ {durStr}</span>
+                        {pace && <span>⚡ {pace}</span>}
+                        {kcal > 0 && <span className="text-red-500">🔥 ~{kcal} kcal</span>}
+                      </div>
+                      {r.notes && <p className="text-sm text-gray-500 italic mt-1">{r.notes}</p>}
                     </div>
                   </div>,
                 ];
