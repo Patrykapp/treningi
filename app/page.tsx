@@ -27,6 +27,7 @@ interface OtherActivity {
   distanceKm: number | null;
   kcal: number | null;
   notes: string | null;
+  sessionId?: string | null;
   user?: { id: string; name: string };
 }
 
@@ -171,12 +172,15 @@ export default function DashboardPage() {
   const activeSessions = sessionsByUser[activeId] || [];
   const activeRuns = runsByUser[activeId] || [];
   const activeOtherActivities = activitiesByUser[activeId] || [];
-  // Trening siłowy + bieg + inna aktywność — wszystko liczy się do passy/statystyk
-  const activeActivities: Dated[] = [...activeSessions, ...activeRuns, ...activeOtherActivities];
+  // Aktywność podpięta do treningu jest częścią tego treningu — nie liczymy jej
+  // jako osobnej pozycji (historia też pokazuje ją pod treningiem, nie na osi czasu)
+  const activeSoloActivities = activeOtherActivities.filter(a => !a.sessionId);
+  // Trening siłowy + bieg + samodzielna aktywność — liczy się do passy/statystyk
+  const activeActivities: Dated[] = [...activeSessions, ...activeRuns, ...activeSoloActivities];
 
   const streak = calcStreak(activeActivities);
   const weeklyCount = calcWeeklyCount(activeActivities);
-  const totalCount = activeSessions.length + activeRuns.length + activeOtherActivities.length;
+  const totalCount = activeSessions.length + activeRuns.length + activeSoloActivities.length;
   const weekStreakVal = calcWeekStreak(activeActivities);
   const weekVol = calcWeeklyVolume(activeSessions);
 
@@ -189,6 +193,9 @@ export default function DashboardPage() {
     const weekSessions = lastWeek(us);
     const weekRuns = lastWeek(runs);
     const weekActs = lastWeek(acts);
+    // Aktywności podpięte do treningu nie są osobną pozycją (są częścią treningu),
+    // ale ich kalorie to realny wysiłek: kcal liczymy z wszystkich, licznik tylko z samodzielnych
+    const weekActsSolo = weekActs.filter(a => !a.sessionId);
     const weekKcal =
       weekSessions.reduce((sum, s) => sum + sessionCalories(s, weightKg).kcal, 0) +
       weekRuns.reduce((sum, r) => sum + runCalories(weightKg, r.distance), 0) +
@@ -197,10 +204,10 @@ export default function DashboardPage() {
     //   100 pkt za trening (siłowy, bieg lub inna aktywność)
     //   +30 pkt za każdy DZIEŃ z treningiem (premiuje regularność, nie kumulowanie w 1 dzień)
     //   +1 pkt za każde 10 kcal (premiuje cięższe/dłuższe treningi)
-    const weekDays = new Set([...weekSessions, ...weekRuns, ...weekActs].map(x => {
+    const weekDays = new Set([...weekSessions, ...weekRuns, ...weekActsSolo].map(x => {
       const d = new Date(x.date); d.setHours(0, 0, 0, 0); return d.getTime();
     })).size;
-    const weekCount = weekSessions.length + weekRuns.length + weekActs.length;
+    const weekCount = weekSessions.length + weekRuns.length + weekActsSolo.length;
     const score = weekCount * 100 + weekDays * 30 + Math.round(weekKcal / 10);
     return {
       id: u.id,
@@ -210,7 +217,7 @@ export default function DashboardPage() {
       weekVolume: calcWeeklyVolume(us).total,
       weekKcal,
       score,
-      streak: calcStreak([...us, ...runs, ...acts]),
+      streak: calcStreak([...us, ...runs, ...acts.filter(a => !a.sessionId)]),
     };
   });
   const maxScore = Math.max(0, ...comparison.map(c => c.score));
