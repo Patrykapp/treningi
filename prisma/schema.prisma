@@ -32,6 +32,12 @@ model Exercise {
   name         String         @unique
   muscleGroup  String?
   exerciseDbId String?
+  // Media z ExerciseDB V2 (RapidAPI) — cache w bazie, żeby runtime nie odpytywał
+  // API (limity darmowego planu). Uzupełniane przez prisma/link-v2-media.ts.
+  v2Id         String?        // ID ćwiczenia w V2 (exr_...)
+  v2ImageUrl   String?        // statyczny obraz (miniatura / poster)
+  v2VideoUrl   String?        // animowane wideo (MP4) — odtwarzane jak GIF
+  v2Checked    Boolean        @default(false) // już próbowano dopasować (także gdy brak trafienia)
   entries      WorkoutEntry[]
   favorites    UserFavorite[]
   createdAt    DateTime       @default(now())

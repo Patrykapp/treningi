@@ -116,7 +116,11 @@ async function fetchCatalog(): Promise<Map<string, string>> {
   const map = new Map<string, string>();
   let cursor: string | null = null;
   try {
-    for (let page = 0; page < 25; page++) {
+    // API twardo ogranicza stronę do 25 rekordów (parametr `limit` jest ścinany),
+    // więc pełny katalog ~1500 ćwiczeń to ok. 60 stron. Wcześniejszy limit 25 stron
+    // katalogował tylko ~625 ćwiczeń → reszta nie rozwiązywała obrazka. Pętla i tak
+    // kończy się wcześniej, gdy `hasNextPage` = false; 120 to bezpieczny zawór.
+    for (let page = 0; page < 120; page++) {
       const url: string = cursor
         ? `${EDB_BASE}/api/v1/exercises?limit=100&after=${encodeURIComponent(cursor)}`
         : `${EDB_BASE}/api/v1/exercises?limit=100`;

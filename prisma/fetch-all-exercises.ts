@@ -33,8 +33,10 @@ async function fetchAll(): Promise<ExerciseDBItem[]> {
   console.log('Pobieram wszystkie ćwiczenia z ExerciseDB...');
 
   do {
+    // Parametr paginacji to `after` (nie `cursor`). Z `cursor=` API ignorowało go
+    // i w kółko zwracało pierwszą stronę → skrypt nigdy nie pobierał całej listy.
     const url = cursor
-      ? `${BASE}/api/v1/exercises?limit=100&cursor=${encodeURIComponent(cursor)}`
+      ? `${BASE}/api/v1/exercises?limit=100&after=${encodeURIComponent(cursor)}`
       : `${BASE}/api/v1/exercises?limit=100`;
 
     const res = await fetch(url);

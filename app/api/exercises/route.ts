@@ -6,11 +6,21 @@ import { framesForDbId } from '@/lib/exerciseImages';
 export async function GET() {
   try {
     const exercises = await prisma.exercise.findMany({ orderBy: { name: 'asc' } });
-    // Dokleja miniaturę (klatka 0) z free-exercise-db — stary host gifów padł.
-    // Rozwiązywanie jest cache'owane; błędy sieci degradują się do braku obrazka.
+    // Priorytet: animowane media z ExerciseDB V2 zapisane w bazie (videoUrl/obraz)
+    // — uzupełniane przez prisma/link-v2-media.ts, więc runtime nie woła API.
+    // Fallback (gdy brak danych V2): klatki-zdjęcia z free-exercise-db (jsDelivr),
+    // bo stary host GIF-ów padł. Błędy sieci degradują się do braku obrazka.
     const withImgs = await Promise.all(exercises.map(async ex => {
+      if (ex.v2VideoUrl || ex.v2ImageUrl) {
+        return {
+          ...ex,
+          videoUrl: ex.v2VideoUrl ?? null,
+          gifUrl: ex.v2ImageUrl ?? ex.v2VideoUrl ?? null,
+          images: ex.v2ImageUrl ? [ex.v2ImageUrl] : [],
+        };
+      }
       const frames = await framesForDbId(ex.exerciseDbId);
-      return { ...ex, gifUrl: frames?.[0] ?? null, images: frames ?? [] };
+      return { ...ex, videoUrl: null, gifUrl: frames?.[0] ?? null, images: frames ?? [] };
     }));
     return NextResponse.json(withImgs, {
       // no-store: nowe ćwiczenia muszą być widoczne natychmiast.
