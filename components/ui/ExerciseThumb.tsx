@@ -2,10 +2,12 @@
 
 import { Exercise } from '@/types';
 
-// Miniatura ćwiczenia z ExerciseDB — URL deterministyczny względem exerciseDbId.
-// Dla niepowiązanych ćwiczeń pokazuje ikonę zastępczą.
+// Miniatura ćwiczenia — obrazek (klatka 0) z free-exercise-db doklejany przez
+// /api/exercises jako `gifUrl`. Stary host static.exercisedb.dev został wyłączony.
+// Dla ćwiczeń bez dopasowanego obrazka pokazuje ikonę zastępczą.
 export function ExerciseThumb({ ex, className = 'w-10 h-10' }: { ex: Exercise; className?: string }) {
-  if (!ex.exerciseDbId) {
+  const src = ex.gifUrl || ex.images?.[0];
+  if (!src) {
     return (
       <span className={`${className} rounded-lg bg-gray-100 flex items-center justify-center text-gray-300 text-base shrink-0`}>
         🏋️
@@ -15,7 +17,7 @@ export function ExerciseThumb({ ex, className = 'w-10 h-10' }: { ex: Exercise; c
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={`https://static.exercisedb.dev/media/${ex.exerciseDbId}.gif`}
+      src={src}
       alt=""
       loading="lazy"
       className={`${className} rounded-lg object-cover bg-gray-100 shrink-0`}

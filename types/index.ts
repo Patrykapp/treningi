@@ -10,6 +10,10 @@ export interface Exercise {
   name: string;
   muscleGroup?: string | null;
   exerciseDbId?: string | null;
+  // Klatki animacji z free-exercise-db (doklejane przez /api/exercises).
+  // gifUrl = pierwsza klatka (miniatura), images = wszystkie klatki.
+  gifUrl?: string | null;
+  images?: string[];
   createdAt: string;
   updatedAt: string;
 }

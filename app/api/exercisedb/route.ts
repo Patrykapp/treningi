@@ -1,6 +1,18 @@
 import { NextResponse } from 'next/server';
+import { framesForName } from '@/lib/exerciseImages';
 
 const BASE = 'https://oss.exercisedb.dev';
+
+// Dokleja klatki animacji z free-exercise-db (host static.exercisedb.dev
+// został wyłączony — patrz lib/exerciseImages.ts). Nadpisuje martwe gifUrl.
+async function withImages<T extends { name?: string; gifUrl?: string }>(ex: T): Promise<T & { images: string[]; gifUrl: string }> {
+  const frames = ex?.name ? await framesForName(ex.name) : null;
+  return {
+    ...ex,
+    images: frames ?? [],
+    gifUrl: frames?.[0] ?? '', // stare static.exercisedb.dev już nie żyje
+  };
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -27,12 +39,14 @@ export async function GET(request: Request) {
     if (exId) {
       // { success: true, data: { exerciseId, name, ... } }
       const ex = json?.data ?? json;
-      return NextResponse.json(ex && ex.exerciseId ? ex : null);
+      if (!ex || !ex.exerciseId) return NextResponse.json(null);
+      return NextResponse.json(await withImages(ex));
     }
 
     // { success: true, data: [...] }
-    const list: unknown[] = Array.isArray(json) ? json : (json?.data ?? []);
-    return NextResponse.json(list);
+    const list: { name?: string; gifUrl?: string }[] = Array.isArray(json) ? json : (json?.data ?? []);
+    const withImgs = await Promise.all(list.map(withImages));
+    return NextResponse.json(withImgs);
   } catch {
     return NextResponse.json([], { status: 200 });
   }

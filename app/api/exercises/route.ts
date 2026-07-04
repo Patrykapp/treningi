@@ -1,11 +1,18 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuthUserId } from '@/lib/auth';
+import { framesForDbId } from '@/lib/exerciseImages';
 
 export async function GET() {
   try {
     const exercises = await prisma.exercise.findMany({ orderBy: { name: 'asc' } });
-    return NextResponse.json(exercises, {
+    // Dokleja miniaturę (klatka 0) z free-exercise-db — stary host gifów padł.
+    // Rozwiązywanie jest cache'owane; błędy sieci degradują się do braku obrazka.
+    const withImgs = await Promise.all(exercises.map(async ex => {
+      const frames = await framesForDbId(ex.exerciseDbId);
+      return { ...ex, gifUrl: frames?.[0] ?? null, images: frames ?? [] };
+    }));
+    return NextResponse.json(withImgs, {
       // no-store: nowe ćwiczenia muszą być widoczne natychmiast.
       // Wcześniejsze s-maxage=300 + stale-while-revalidate=600 powodowało
       // do ~10 minut opóźnienia na CDN zanim lista się odświeżyła.

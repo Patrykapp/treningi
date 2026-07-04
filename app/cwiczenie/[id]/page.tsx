@@ -6,6 +6,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Exercise, SetData } from '@/types';
 import { formatDate, formatDateInput } from '@/lib/utils';
 import { Toast } from '@/components/ui/Toast';
+import { ExerciseAnimation } from '@/components/ui/ExerciseAnimation';
 import { useAuth } from '@/hooks/useAuth';
 import { activeSession } from '@/hooks/useActiveSession';
 
@@ -31,6 +32,7 @@ interface DbExercise {
   secondaryMuscles: string[];
   instructions?: string[];
   gifUrl: string;
+  images?: string[];
 }
 
 interface AppUser { id: string; name: string; }
@@ -798,8 +800,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
               {linkedDb ? (
                 <div className="p-4 space-y-4">
                   <div className="flex gap-3">
-                    <img src={linkedDb.gifUrl} alt={linkedDb.name}
-                      className="w-28 h-28 object-cover rounded-xl border border-gray-200 flex-shrink-0" />
+                    <ExerciseAnimation images={linkedDb.images?.length ? linkedDb.images : (linkedDb.gifUrl ? [linkedDb.gifUrl] : [])} alt={linkedDb.name} className="w-28 h-28" />
                     <div className="min-w-0">
                       <h3 className="font-semibold text-gray-900 text-sm">{linkedDb.name}</h3>
                       <div className="text-xs text-gray-500 mt-1 space-y-1">
@@ -851,7 +852,14 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                           {suggestions.map(ex => (
                             <button key={ex.exerciseId} onClick={() => linkExercise(ex)} disabled={linking}
                               className="w-full flex items-center gap-3 p-2 rounded-xl border border-gray-100 active:bg-blue-50 text-left disabled:opacity-50">
-                              <img src={ex.gifUrl} alt={ex.name} className="w-14 h-14 object-cover rounded-lg flex-shrink-0" />
+                              {ex.gifUrl ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={ex.gifUrl} alt={ex.name} loading="lazy"
+                                  className="w-14 h-14 object-cover rounded-lg flex-shrink-0 bg-gray-100"
+                                  onError={e => { e.currentTarget.style.visibility = 'hidden'; }} />
+                              ) : (
+                                <span className="w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center text-gray-300 text-xl flex-shrink-0">🏋️</span>
+                              )}
                               <div className="min-w-0 flex-1">
                                 <div className="text-sm font-medium text-gray-900">{ex.name}</div>
                                 <div className="text-xs text-gray-500">
