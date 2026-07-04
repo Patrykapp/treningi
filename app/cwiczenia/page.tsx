@@ -17,10 +17,14 @@ export default function CwiczeniaPage() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  // Grupy rozwinięte choć raz — dopiero wtedy montujemy miniatury (GIF-y),
+  // inaczej przeglądarka ładuje setki animowanych GIF-ów naraz i zabija płynność.
+  const [everExpanded, setEverExpanded] = useState<Set<string>>(new Set());
   const [usageCounts, setUsageCounts] = useState<Record<string, number>>({});
   const router = useRouter();
 
   const toggleGroup = (group: string) => {
+    setEverExpanded(prev => prev.has(group) ? prev : new Set(prev).add(group));
     setExpandedGroups(prev => {
       const next = new Set(prev);
       if (next.has(group)) next.delete(group);
@@ -156,7 +160,9 @@ export default function CwiczeniaPage() {
                       onClick={() => router.push(`/cwiczenie/${ex.id}`)}
                       className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 text-left active:bg-gray-50 ${i > 0 ? 'border-t border-gray-100' : ''}`}
                     >
-                      <ExerciseThumb ex={ex} className="w-11 h-11" />
+                      {everExpanded.has(group)
+                        ? <ExerciseThumb ex={ex} className="w-11 h-11" />
+                        : <span className="w-11 h-11 rounded-lg bg-gray-100 shrink-0" />}
                       <span className="font-medium text-gray-900 text-sm flex-1 min-w-0 leading-snug">{shortName}</span>
                       {(usageCounts[ex.id] || 0) > 0 && (
                         <span className="text-xs text-amber-500 mr-1 shrink-0">{usageCounts[ex.id]}×</span>
