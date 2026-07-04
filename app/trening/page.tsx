@@ -108,6 +108,10 @@ function TreningPage() {
   const [watchData, setWatchData] = useState<TcxSummary | null>(null);
   // Manualny wpis kcal (gdy brak zegarka)
   const [manualKcal, setManualKcal] = useState<number | ''>('');
+  // Sekcje pickera ćwiczeń: ulubione + ostatnio używane + liczniki z historii (baza, nie localStorage)
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  const [recentIds, setRecentIds] = useState<string[]>([]);
+  const [dbUsageCounts, setDbUsageCounts] = useState<Record<string, number>>({});
 
   const DRAFT_KEY = 'treningFormDraft';
 
@@ -180,6 +184,34 @@ function TreningPage() {
 
   // Użytkownik, dla którego pokazujemy podpowiedzi progresji
   const hintUserId = saveAsUserId && saveAsUserId !== 'all' ? saveAsUserId : authUserId;
+
+  // Ulubione zalogowanego użytkownika (sekcja ★ w pickerze ćwiczeń)
+  useEffect(() => {
+    fetch('/api/favorites')
+      .then(r => (r.ok ? r.json() : []))
+      .then(d => setFavoriteIds(Array.isArray(d) ? d : []))
+      .catch(() => {});
+  }, []);
+
+  // Historia wpisów → sekcja "Ostatnio" i realne liczniki "Najczęściej" w pickerze
+  useEffect(() => {
+    if (!hintUserId) return;
+    fetch(`/api/entries?userId=${hintUserId}&limit=300`)
+      .then(r => (r.ok ? r.json() : []))
+      .then((data: { exerciseId?: string }[]) => {
+        if (!Array.isArray(data)) return;
+        const counts: Record<string, number> = {};
+        const recent: string[] = [];
+        for (const e of data) {
+          if (!e.exerciseId) continue;
+          counts[e.exerciseId] = (counts[e.exerciseId] || 0) + 1;
+          if (!recent.includes(e.exerciseId)) recent.push(e.exerciseId);
+        }
+        setDbUsageCounts(counts);
+        setRecentIds(recent.slice(0, 15));
+      })
+      .catch(() => {});
+  }, [hintUserId]);
 
   // Pobierz ostatni wynik dla każdego wybranego ćwiczenia.
   // Cache kluczowany "userId:exerciseId" (zmiana użytkownika nie wymaga resetu),
@@ -764,6 +796,9 @@ function TreningPage() {
               value={entry.exerciseId}
               onChange={val => updateEntry(entry.key, 'exerciseId', val)}
               onAddNew={() => setShowNewEx(true)}
+              favoriteIds={favoriteIds}
+              recentIds={recentIds}
+              usageCounts={dbUsageCounts}
             />
             {(() => {
               const hint = entry.exerciseId && hintUserId ? lastResults[`${hintUserId}:${entry.exerciseId}`] : null;

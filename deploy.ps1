@@ -1,6 +1,13 @@
 # deploy.ps1 - commit i push zmian
-# Uruchom:  .\deploy.ps1
+# Uruchom:        .\deploy.ps1
+#   wszystkie:    .\deploy.ps1 -All
+#   bez buildu:   .\deploy.ps1 -SkipBuild
 # Vercel zdeployuje automatycznie po push na branch main.
+
+param(
+    [switch]$All,        # dodaj wszystkie zmiany (git add -A) zamiast listy ponizej
+    [switch]$SkipBuild   # pomin lokalny 'npm run build' przed commitem
+)
 
 $ErrorActionPreference = 'Stop'
 
@@ -19,14 +26,15 @@ git status --short
 
 # Pliki tej poprawki
 $files = @(
-    "app/api/dashboard/route.ts",
-    "app/page.tsx",
-    "app/historia/page.tsx"
+    "app/historia/page.tsx",
+    "app/page.tsx"
 )
-git add -- $files
 
-# Aby wrzucic WSZYSTKIE zmiany, zamiast powyzszego uzyj:
-# git add -A
+if ($All) {
+    git add -A
+} else {
+    git add -- $files
+}
 
 $staged = git diff --cached --name-only
 if (-not $staged) {
@@ -39,7 +47,20 @@ Write-Host ""
 Write-Host "Do commitu:" -ForegroundColor Cyan
 $staged
 
-$msg = "feat: inne aktywnosci licza sie do wyniku tygodnia i historii; przywrocony kafelek Challenge"
+# Bramka jakosci: lokalny build musi przejsc, zanim cokolwiek wypchniemy
+if (-not $SkipBuild) {
+    Write-Host ""
+    Write-Host "Lokalny build (npm run build)..." -ForegroundColor Cyan
+    npm run build
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host ""
+        Write-Host "BLAD: build sie nie powiodl. Nic nie zostalo wypchniete." -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "Build OK." -ForegroundColor Green
+}
+
+$msg = "fix: biegi w historii + aktywnosc podpieta do treningu nie liczy sie jako osobny trening (spojnosc dashboardu z historia)"
 git commit -m $msg
 
 $branch = git rev-parse --abbrev-ref HEAD

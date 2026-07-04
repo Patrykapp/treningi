@@ -10,6 +10,12 @@ interface Props {
   onChange: (id: string) => void;
   placeholder?: string;
   onAddNew?: () => void;
+  /** ID ulubionych ćwiczeń (sekcja ★ Ulubione + priorytet w wyszukiwaniu) */
+  favoriteIds?: string[];
+  /** ID ostatnio używanych ćwiczeń, od najnowszego (sekcja 🕐 Ostatnio) */
+  recentIds?: string[];
+  /** Liczba użyć per ćwiczenie z bazy (historia treningów) — nadpisuje localStorage */
+  usageCounts?: Record<string, number>;
 }
 
 const USAGE_KEY = 'exerciseUsageCount';
@@ -26,11 +32,22 @@ function incrementUsage(id: string): Record<string, number> {
   return counts;
 }
 
-const TOP_N = 8;
+const TOP_N = 5;
+const RECENT_N = 5;
 
 function normalizeMuscle(raw: string | null | undefined): string {
   if (!raw) return 'Inne';
   return raw.replace(/\s*\(.*?\)/g, '').trim() || 'Inne';
+}
+
+// Normalizacja do wyszukiwania: małe litery + usunięcie polskich znaków.
+// Uwaga: ł/Ł nie rozkłada się przez NFD, stąd osobne zamiany.
+function normalizeText(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/ł/g, 'l')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '');
 }
 
 const GROUP_ORDER = [
@@ -42,7 +59,10 @@ const STRETCHING_GROUP = 'Rozciąganie';
 
 const Thumb = ExerciseThumb;
 
-export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybierz ćwiczenie...', onAddNew }: Props) {
+export function ExerciseSearch({
+  exercises, value, onChange, placeholder = 'Wybierz ćwiczenie...', onAddNew,
+  favoriteIds, recentIds, usageCounts: usageCountsProp,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [focusedIdx, setFocusedIdx] = useState(-1);
@@ -55,18 +75,34 @@ export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybi
 
   const selected = exercises.find(e => e.id === value);
 
+  // Liczniki użyć: z bazy (props) jeśli dostępne, inaczej localStorage
+  const effCounts = usageCountsProp && Object.keys(usageCountsProp).length > 0
+    ? usageCountsProp
+    : usageCounts;
+  const favSet = new Set(favoriteIds ?? []);
+
   // MUSI być przed `filtered` — używane w sortowaniu podczas wyszukiwania
   const isStretching = (g: string) => g.toLowerCase().includes('rozciąg');
 
-  const filtered = search
+  // Wyszukiwanie odporne na polskie znaki i kolejność słów:
+  // "lawce skosnej" znajdzie "ławce skośnej", "hantli wyciskanie" → "Wyciskanie hantli..."
+  const tokens = normalizeText(search).split(/\s+/).filter(Boolean);
+  const filtered = tokens.length > 0
     ? exercises
-        .filter(e => e.name.toLowerCase().includes(search.toLowerCase()))
+        .filter(e => {
+          const name = normalizeText(e.name);
+          return tokens.every(t => name.includes(t));
+        })
         .sort((a, b) => {
           // Rozciąganie zawsze na końcu wyników wyszukiwania
           const aStr = isStretching(normalizeMuscle(a.muscleGroup)) ? 1 : 0;
           const bStr = isStretching(normalizeMuscle(b.muscleGroup)) ? 1 : 0;
           if (aStr !== bStr) return aStr - bStr;
-          const diff = (usageCounts[b.id] || 0) - (usageCounts[a.id] || 0);
+          // Ulubione na górze wyników
+          const aFav = favSet.has(a.id) ? 1 : 0;
+          const bFav = favSet.has(b.id) ? 1 : 0;
+          if (aFav !== bFav) return bFav - aFav;
+          const diff = (effCounts[b.id] || 0) - (effCounts[a.id] || 0);
           return diff !== 0 ? diff : a.name.localeCompare(b.name, 'pl');
         })
     : [];
@@ -174,14 +210,56 @@ export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybi
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stretchingKeys.join(',')]);
 
+  // Sekcje szybkiego wyboru: Ulubione → Ostatnio → Najczęściej (bez powtórzeń)
+  const byId = new Map(exercises.map(e => [e.id, e]));
+  const shownIds = new Set<string>();
+
+  const favoriteExercises = (favoriteIds ?? [])
+    .map(id => byId.get(id))
+    .filter((e): e is Exercise => !!e)
+    .sort((a, b) => a.name.localeCompare(b.name, 'pl'));
+  favoriteExercises.forEach(e => shownIds.add(e.id));
+
+  const recentExercises = (recentIds ?? [])
+    .filter(id => !shownIds.has(id))
+    .map(id => byId.get(id))
+    .filter((e): e is Exercise => !!e)
+    .slice(0, RECENT_N);
+  recentExercises.forEach(e => shownIds.add(e.id));
+
   // Top exercises by usage (only those used at least once, exclude stretching)
   const topExercises = exercises
-    .filter(e => (usageCounts[e.id] || 0) > 0 && !isStretching(normalizeMuscle(e.muscleGroup)))
+    .filter(e => (effCounts[e.id] || 0) > 0 && !shownIds.has(e.id) && !isStretching(normalizeMuscle(e.muscleGroup)))
     .sort((a, b) => {
-      const diff = (usageCounts[b.id] || 0) - (usageCounts[a.id] || 0);
+      const diff = (effCounts[b.id] || 0) - (effCounts[a.id] || 0);
       return diff !== 0 ? diff : a.name.localeCompare(b.name, 'pl');
     })
     .slice(0, TOP_N);
+
+  const renderRow = (ex: Exercise, right?: React.ReactNode) => (
+    <button
+      key={ex.id}
+      data-exercise-item
+      data-selected={ex.id === value}
+      type="button"
+      onClick={() => handleSelect(ex.id)}
+      className={`w-full text-left px-3 py-2 text-sm border-t border-gray-50 transition-colors flex items-center gap-2.5 ${
+        ex.id === value
+          ? 'bg-blue-50 text-blue-700 font-semibold'
+          : 'text-gray-900 hover:bg-gray-50'
+      }`}
+    >
+      <Thumb ex={ex} />
+      <span className="min-w-0 flex-1 leading-snug">
+        {ex.id === value && <span className="mr-1.5">✓</span>}
+        {ex.name}
+        {ex.muscleGroup && (
+          <span className="ml-1.5 text-xs text-gray-400">{normalizeMuscle(ex.muscleGroup)}</span>
+        )}
+      </span>
+      {right}
+    </button>
+  );
 
   return (
     <div ref={containerRef} className="relative">
@@ -279,34 +357,30 @@ export function ExerciseSearch({ exercises, value, onChange, placeholder = 'Wybi
             ) : (
               // ── Grouped view ─────────────────────────────────
               <>
+              {favoriteExercises.length > 0 && (
+                <div>
+                  <div className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold uppercase tracking-wide border-b border-gray-100 bg-yellow-50 text-yellow-700 sticky top-0 z-10">
+                    <span>★ Ulubione <span className="font-normal opacity-60">({favoriteExercises.length})</span></span>
+                  </div>
+                  {favoriteExercises.map(ex => renderRow(ex))}
+                </div>
+              )}
+              {recentExercises.length > 0 && (
+                <div>
+                  <div className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold uppercase tracking-wide border-b border-gray-100 bg-sky-50 text-sky-700 sticky top-0 z-10">
+                    <span>🕐 Ostatnio <span className="font-normal opacity-60">({recentExercises.length})</span></span>
+                  </div>
+                  {recentExercises.map(ex => renderRow(ex))}
+                </div>
+              )}
               {topExercises.length > 0 && (
                 <div>
                   <div className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold uppercase tracking-wide border-b border-gray-100 bg-amber-50 text-amber-700 sticky top-0 z-10">
-                    <span>★ Najczęściej <span className="font-normal opacity-60">({topExercises.length})</span></span>
+                    <span>🔥 Najczęściej <span className="font-normal opacity-60">({topExercises.length})</span></span>
                   </div>
-                  {topExercises.map(ex => (
-                    <button
-                      key={ex.id}
-                      data-exercise-item
-                      data-selected={ex.id === value}
-                      type="button"
-                      onClick={() => handleSelect(ex.id)}
-                      className={`w-full text-left px-3 py-2 text-sm border-t border-gray-50 transition-colors flex items-center gap-2.5 ${
-                        ex.id === value
-                          ? 'bg-blue-50 text-blue-700 font-semibold'
-                          : 'text-gray-900 hover:bg-gray-50'
-                      }`}
-                    >
-                      <Thumb ex={ex} />
-                      <span className="min-w-0 flex-1 leading-snug">
-                        {ex.id === value && <span className="mr-1.5">✓</span>}
-                        {ex.name}
-                        {ex.muscleGroup && (
-                          <span className="ml-1.5 text-xs text-gray-400">{normalizeMuscle(ex.muscleGroup)}</span>
-                        )}
-                      </span>
-                      <span className="text-xs text-amber-500 shrink-0">{usageCounts[ex.id]}×</span>
-                    </button>
+                  {topExercises.map(ex => renderRow(
+                    ex,
+                    <span className="text-xs text-amber-500 shrink-0">{effCounts[ex.id]}×</span>
                   ))}
                 </div>
               )}
