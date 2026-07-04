@@ -137,9 +137,10 @@ export default function CwiczeniaPage() {
                 {group === 'Ulubione' ? '⭐ Ulubione' : group}
                 <span className="ml-1.5 font-normal normal-case opacity-60">({exs.length})</span>
               </h2>
-              <span className="text-gray-400 text-sm">{isCollapsed ? '▸' : '▾'}</span>
+              <span className={`text-gray-400 text-sm inline-block transition-transform duration-300 ${isCollapsed ? '' : 'rotate-90'}`}>▸</span>
             </button>
-            {!isCollapsed && (
+            <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isCollapsed ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]'}`}>
+              <div className="overflow-hidden">
               <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
                 {exs.map((ex, i) => {
                   // Skracaj nazwę tylko przy starej konwencji "Grupa - nazwa"
@@ -171,7 +172,8 @@ export default function CwiczeniaPage() {
                   );
                 })}
               </div>
-            )}
+              </div>
+            </div>
           </div>
           );
         })}
