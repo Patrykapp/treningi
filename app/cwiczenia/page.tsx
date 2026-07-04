@@ -161,8 +161,8 @@ export default function CwiczeniaPage() {
                       className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 text-left active:bg-gray-50 ${i > 0 ? 'border-t border-gray-100' : ''}`}
                     >
                       {everExpanded.has(group)
-                        ? <ExerciseThumb ex={ex} className="w-11 h-11" />
-                        : <span className="w-11 h-11 rounded-lg bg-gray-100 shrink-0" />}
+                        ? <ExerciseThumb ex={ex} className="w-14 h-14" />
+                        : <span className="w-14 h-14 rounded-lg bg-gray-100 shrink-0" />}
                       <span className="font-medium text-gray-900 text-sm flex-1 min-w-0 leading-snug">{shortName}</span>
                       {(usageCounts[ex.id] || 0) > 0 && (
                         <span className="text-xs text-amber-500 mr-1 shrink-0">{usageCounts[ex.id]}×</span>
