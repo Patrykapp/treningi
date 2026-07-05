@@ -19,6 +19,12 @@ const FREE_DB_URL = 'https://cdn.jsdelivr.net/gh/yuhonas/free-exercise-db@main/d
 const IMG_BASE = 'https://cdn.jsdelivr.net/gh/yuhonas/free-exercise-db@main/exercises';
 const EDB_BASE = 'https://oss.exercisedb.dev';
 
+// ─── Tymczasowy wyłącznik mediów ─────────────────────────────────────────────
+// Gify/zdjęcia ćwiczeń są chwilowo zdjęte z aplikacji. Przy ćwiczeniach zostaje
+// tylko kolorowy kafelek-placeholder (bez pobierania obrazków z sieci).
+// Aby PRZYWRÓCIĆ obrazki: zmień na true.
+const MEDIA_ENABLED = false;
+
 interface FreeExercise {
   id: string;
   name: string;
@@ -91,6 +97,7 @@ const nameFramesCache = new Map<string, string[] | null>();
 
 /** Zwraca pełne URL-e klatek animacji dla angielskiej nazwy ćwiczenia (lub null). */
 export async function framesForName(name: string): Promise<string[] | null> {
+  if (!MEDIA_ENABLED) return null; // media tymczasowo wyłączone
   const key = normalize(name);
   if (!key) return null;
   if (nameFramesCache.has(key)) return nameFramesCache.get(key) ?? null;
@@ -156,6 +163,7 @@ async function getCatalog(): Promise<Map<string, string>> {
 
 /** Zwraca klatki animacji dla ExerciseDB id (przez angielską nazwę z katalogu). */
 export async function framesForDbId(dbId: string | null | undefined): Promise<string[] | null> {
+  if (!MEDIA_ENABLED) return null; // media tymczasowo wyłączone
   if (!dbId) return null;
   const catalog = await getCatalog();
   const english = catalog.get(dbId);

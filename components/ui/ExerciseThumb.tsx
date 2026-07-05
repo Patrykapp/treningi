@@ -58,25 +58,7 @@ export function ExerciseThumb({ ex, className = 'w-14 h-14' }: { ex: Exercise; c
     ? ex.images
     : (ex.gifUrl ? [ex.gifUrl] : []);
   const animate = frames.length >= 2;
-  const frame = useFrameTick(animate); // hook zawsze wywoływany (Rules of Hooks)
-
-  // Priorytet: animowane wideo z ExerciseDB V2 (pętla, wyciszone — wygląda jak GIF).
-  // Obraz (gifUrl) służy jako poster/fallback.
-  if (ex.videoUrl) {
-    return (
-      <video
-        src={ex.videoUrl}
-        poster={ex.gifUrl ?? undefined}
-        autoPlay
-        loop
-        muted
-        playsInline
-        preload="metadata"
-        className={`${className} rounded-lg object-cover bg-gray-100 shrink-0`}
-        onError={e => { e.currentTarget.style.visibility = 'hidden'; }}
-      />
-    );
-  }
+  const frame = useFrameTick(animate);
 
   if (frames.length === 0) {
     const { cls, label } = groupBadge(ex.muscleGroup);
