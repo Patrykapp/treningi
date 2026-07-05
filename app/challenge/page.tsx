@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { Toast } from '@/components/ui/Toast';
+import { ExercisePicker } from '@/components/ui/ExercisePicker';
 import { Exercise } from '@/types';
 
 type Phase = 'setup' | 'prep' | 'active' | 'rest' | 'summary';
@@ -56,10 +57,9 @@ export default function ChallengePage() {
   const [hydrated, setHydrated] = useState(false);
 
   const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [favorites, setFavorites] = useState<string[]>([]);
   const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
   const [saveAsUserId, setSaveAsUserId] = useState('');
-  const [search, setSearch] = useState('');
-  const [showDropdown, setShowDropdown] = useState(false);
 
   const [phase, setPhase] = useState<Phase>('setup');
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
@@ -88,6 +88,7 @@ export default function ChallengePage() {
   useEffect(() => {
     fetch('/api/exercises').then(r => r.json()).then(d => setExercises(Array.isArray(d) ? d : []));
     fetch('/api/users').then(r => r.json()).then(d => setUsers(Array.isArray(d) ? d : []));
+    fetch('/api/favorites').then(r => (r.ok ? r.json() : [])).then(d => setFavorites(Array.isArray(d) ? d : [])).catch(() => {});
 
     const saved = loadState();
     if (saved && saved.phase !== 'setup') {
@@ -195,10 +196,6 @@ export default function ChallengePage() {
     }, 1000);
     return clearTimer;
   }, [phase]);
-
-  const filtered = exercises.filter(e =>
-    e.name.toLowerCase().includes(search.toLowerCase())
-  ).slice(0, 8);
 
   const startChallenge = () => {
     if (!selectedExercise) return;
@@ -313,32 +310,13 @@ export default function ChallengePage() {
         <div className="px-4 py-4 space-y-4">
           <div className="bg-white rounded-2xl shadow-sm p-4 space-y-2">
             <label className="text-sm font-medium text-gray-700 block">Ćwiczenie</label>
-            <div className="relative">
-              <input
-                type="text"
-                value={selectedExercise ? selectedExercise.name : search}
-                placeholder="Szukaj ćwiczenia..."
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm"
-                onFocus={() => { setShowDropdown(true); if (selectedExercise) { setSearch(''); setSelectedExercise(null); } }}
-                onChange={e => { setSearch(e.target.value); setShowDropdown(true); setSelectedExercise(null); }}
-              />
-              {showDropdown && filtered.length > 0 && !selectedExercise && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-lg border border-gray-100 z-20 max-h-56 overflow-y-auto">
-                  {filtered.map(ex => (
-                    <button key={ex.id} className="w-full text-left px-4 py-2.5 text-sm hover:bg-blue-50 border-b border-gray-50 last:border-0"
-                      onMouseDown={() => { setSelectedExercise(ex); setSearch(''); setShowDropdown(false); }}>
-                      <div className="font-medium text-gray-900">{ex.name}</div>
-                      {ex.muscleGroup && <div className="text-xs text-gray-400">{ex.muscleGroup}</div>}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            {selectedExercise && (
+            {selectedExercise ? (
               <div className="flex items-center gap-2 bg-blue-50 rounded-xl px-3 py-2">
-                <span className="text-blue-600 text-sm font-medium flex-1">{selectedExercise.name}</span>
-                <button onClick={() => { setSelectedExercise(null); setSearch(''); }} className="text-gray-400 text-xs">✕</button>
+                <span className="text-blue-600 text-sm font-medium flex-1 min-w-0 truncate">{selectedExercise.name}</span>
+                <button onClick={() => setSelectedExercise(null)} className="text-gray-500 text-xs font-medium shrink-0">zmień ✕</button>
               </div>
+            ) : (
+              <ExercisePicker exercises={exercises} favorites={favorites} onSelect={setSelectedExercise} />
             )}
           </div>
 
