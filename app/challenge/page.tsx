@@ -1,11 +1,14 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { Toast } from '@/components/ui/Toast';
 import { Exercise } from '@/types';
 
-type Phase = 'setup' | 'active' | 'rest' | 'summary';
+type Phase = 'setup' | 'prep' | 'active' | 'rest' | 'summary';
+
+const PREP_SECONDS = 20; // czas na przygotowanie przed pierwszą serią
 
 interface SetResult {
   reps: number;
@@ -23,6 +26,7 @@ interface SavedState {
   // Timestamps for timer reconstruction
   setStartedAt: number | null;   // Date.now() when active set began
   restStartedAt: number | null;  // Date.now() when rest began
+  prepStartedAt: number | null;  // Date.now() when prep countdown began
 }
 
 const STORAGE_KEY = 'challenge_state';
@@ -69,10 +73,12 @@ export default function ChallengePage() {
 
   const [elapsed, setElapsed] = useState(0);
   const [restRemaining, setRestRemaining] = useState(0);
+  const [prepRemaining, setPrepRemaining] = useState(0);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const setStartedAtRef = useRef<number | null>(null);
   const restStartedAtRef = useRef<number | null>(null);
+  const prepStartedAtRef = useRef<number | null>(null);
 
   const clearTimer = () => {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
@@ -107,6 +113,17 @@ export default function ChallengePage() {
           setStartedAtRef.current = Date.now();
         }
       }
+      if (saved.phase === 'prep' && saved.prepStartedAt) {
+        prepStartedAtRef.current = saved.prepStartedAt;
+        const gone = Math.floor((Date.now() - saved.prepStartedAt) / 1000);
+        const remaining = Math.max(0, PREP_SECONDS - gone);
+        setPrepRemaining(remaining);
+        if (remaining === 0) {
+          setPhase('active');
+          prepStartedAtRef.current = null;
+          setStartedAtRef.current = Date.now();
+        }
+      }
     }
     setHydrated(true);
   }, []);
@@ -119,6 +136,7 @@ export default function ChallengePage() {
       phase, selectedExercise, numSets, restSeconds, currentSet, results, pendingReps,
       setStartedAt: setStartedAtRef.current,
       restStartedAt: restStartedAtRef.current,
+      prepStartedAt: prepStartedAtRef.current,
     });
   }, [phase, selectedExercise, numSets, restSeconds, currentSet, results, pendingReps, hydrated]);
 
@@ -158,6 +176,26 @@ export default function ChallengePage() {
     return clearTimer;
   }, [phase, restSeconds]);
 
+  // ── Prep countdown (20 s na przygotowanie przed pierwszą serią) ─────────────
+  useEffect(() => {
+    if (phase !== 'prep') return;
+    if (!prepStartedAtRef.current) { prepStartedAtRef.current = Date.now(); setPrepRemaining(PREP_SECONDS); }
+    clearTimer();
+    timerRef.current = setInterval(() => {
+      const gone = Math.floor((Date.now() - prepStartedAtRef.current!) / 1000);
+      const remaining = Math.max(0, PREP_SECONDS - gone);
+      setPrepRemaining(remaining);
+      if (remaining === 0) {
+        clearTimer();
+        prepStartedAtRef.current = null;
+        setStartedAtRef.current = Date.now();
+        setElapsed(0);
+        setPhase('active');
+      }
+    }, 1000);
+    return clearTimer;
+  }, [phase]);
+
   const filtered = exercises.filter(e =>
     e.name.toLowerCase().includes(search.toLowerCase())
   ).slice(0, 8);
@@ -167,8 +205,19 @@ export default function ChallengePage() {
     setResults([]);
     setCurrentSet(1);
     setPendingReps('');
-    setStartedAtRef.current = Date.now();
+    setStartedAtRef.current = null;
     restStartedAtRef.current = null;
+    prepStartedAtRef.current = Date.now();
+    setPrepRemaining(PREP_SECONDS);
+    setPhase('prep');
+  };
+
+  // Pomiń przygotowanie i zacznij od razu
+  const startNow = () => {
+    clearTimer();
+    prepStartedAtRef.current = null;
+    setStartedAtRef.current = Date.now();
+    setElapsed(0);
     setPhase('active');
   };
 
@@ -218,7 +267,7 @@ export default function ChallengePage() {
           reps: Math.round(totalReps / results.length),
           weight: 0,
           setsData,
-          comment: JSON.stringify({ challenge: true, totalReps, durations: results.map(r => r.duration) }),
+          comment: JSON.stringify({ challenge: true, totalReps, restSeconds, durations: results.map(r => r.duration) }),
         }],
       }),
     });
@@ -253,8 +302,13 @@ export default function ChallengePage() {
       <div className="min-h-screen bg-gray-50 pb-24">
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
         <div className="bg-white border-b px-4 pt-4 pb-3 sticky top-0 z-10">
-          <h1 className="text-xl font-bold text-gray-900">⚡ Challenge</h1>
-          <p className="text-sm text-gray-500">Serie do upadku mięśniowego</p>
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">⚡ Challenge</h1>
+              <p className="text-sm text-gray-500">Serie do upadku mięśniowego</p>
+            </div>
+            <Link href="/challenge/historia" className="text-sm font-medium bg-gray-100 text-gray-700 rounded-xl px-3 py-2 shrink-0">📊 Postępy</Link>
+          </div>
         </div>
         <div className="px-4 py-4 space-y-4">
           <div className="bg-white rounded-2xl shadow-sm p-4 space-y-2">
@@ -319,6 +373,36 @@ export default function ChallengePage() {
             className="w-full bg-blue-600 text-white py-4 rounded-2xl text-lg font-bold disabled:opacity-40 shadow-sm active:scale-95 transition-transform">
             {!isLoggedIn ? 'Zaloguj się aby kontynuować' : !selectedExercise ? 'Wybierz ćwiczenie' : `🔥 Start — ${numSets} serie`}
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── PREP (20 s na przygotowanie) ────────────────────────────────────────────
+  if (phase === 'prep') {
+    const pct = ((PREP_SECONDS - prepRemaining) / PREP_SECONDS) * 100;
+    return (
+      <div className="min-h-screen bg-gray-50 pb-24 flex flex-col">
+        {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+        <div className="bg-white border-b px-4 pt-4 pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Przygotuj się</p>
+              <h1 className="text-3xl font-black text-gray-900">Za chwilę start</h1>
+            </div>
+            <button onClick={restartChallenge} className="text-sm text-gray-400 underline">Anuluj</button>
+          </div>
+          <p className="text-sm text-blue-600 font-medium mt-1 truncate">{selectedExercise?.name}</p>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center gap-8 px-4 py-8">
+          <div className="text-center">
+            <div className="text-8xl font-black text-blue-600 tabular-nums">{prepRemaining}</div>
+            <p className="text-sm text-gray-400 mt-1">sekund do startu</p>
+          </div>
+          <div className="w-full max-w-xs bg-gray-200 rounded-full h-2">
+            <div className="bg-blue-500 h-2 rounded-full transition-all duration-1000" style={{ width: `${pct}%` }} />
+          </div>
+          <button onClick={startNow} className="text-sm text-blue-600 underline">Start teraz →</button>
         </div>
       </div>
     );
