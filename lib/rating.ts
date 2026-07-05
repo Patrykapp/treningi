@@ -137,10 +137,11 @@ export function computeRating(session: RatingSession, history: RatingHistorySess
   }
 
   // ---- Wynik końcowy ----
-  const weights = { volume: 0.3, progress: 0.4, rpe: avgRpe !== null ? 0.3 : 0 };
-  const totalWeight = weights.volume + weights.progress + weights.rpe;
+  // RPE świadomie NIE wpływa na ocenę (gwiazdki) — trening jest blisko/do upadku,
+  // a RPE nie jest wpisywane. Liczą się tylko wolumen i progres.
+  const weights = { volume: 0.4, progress: 0.6 };
   const score = Math.round(
-    ((volumeScore * weights.volume + progressPts * weights.progress + rpeScore * weights.rpe) / totalWeight) * 10
+    (volumeScore * weights.volume + progressPts * weights.progress) * 10
   ) / 10;
 
   const clampedScore = Math.min(10, Math.max(1, score));
@@ -171,11 +172,11 @@ export function computeRating(session: RatingSession, history: RatingHistorySess
     tips.push('🏆 Brak nowych rekordów — wybierz jedno ćwiczenie i pobij PR nawet o 1kg');
   }
 
-  if (avgRpe === null) {
-    tips.push('⚡ Wpisuj RPE po każdym ćwiczeniu — pomoże to lepiej oceniać intensywność treningu');
-  } else if (avgRpe < 6) {
+  // RPE nie jest już wymagane — brak namolnej podpowiedzi o wpisywaniu RPE.
+  // Wskazówki o RPE pokazujemy tylko, gdy RPE faktycznie zostało wpisane.
+  if (avgRpe !== null && avgRpe < 6) {
     tips.push(`⚡ Średnie RPE wyniosło tylko ${avgRpe.toFixed(1)} — trening był za łatwy, zwiększ ciężar lub skróć przerwy`);
-  } else if (avgRpe > 9) {
+  } else if (avgRpe !== null && avgRpe > 9) {
     tips.push(`⚡ Średnie RPE ${avgRpe.toFixed(1)} — bardzo wysokie, upewnij się że dobrze regenerujesz`);
   }
 
