@@ -14,6 +14,8 @@ export interface Exercise {
   // gifUrl = pierwsza klatka (miniatura), images = wszystkie klatki.
   gifUrl?: string | null;
   images?: string[];
+  // Liczba wpisów treningowych (popularność) — z bazy, przez /api/exercises.
+  usageCount?: number;
   createdAt: string;
   updatedAt: string;
 }

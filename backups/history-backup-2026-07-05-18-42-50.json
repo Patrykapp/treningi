@@ -1,0 +1,2474 @@
+{
+  "exportedAt": "2026-07-05T18:42:50.290Z",
+  "count": 111,
+  "entries": [
+    {
+      "date": "2026-04-15",
+      "dateISO": "2026-04-15T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Podciąganie nachwytem",
+      "muscleGroup": "Plecy",
+      "sets": 3,
+      "reps": 6,
+      "weight": 0,
+      "rpe": null,
+      "setsDetail": "6×0kg; 5×0kg; 3×0kg",
+      "comment": "Challenge – łącznie 14 powt.",
+      "setsData": [
+        {
+          "reps": 6,
+          "weight": 0
+        },
+        {
+          "reps": 5,
+          "weight": 0
+        },
+        {
+          "reps": 3,
+          "weight": 0
+        }
+      ]
+    },
+    {
+      "date": "2026-04-19",
+      "dateISO": "2026-04-19T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Wyciskanie sztangi na ławce poziomej",
+      "muscleGroup": "Klatka piersiowa",
+      "sets": 3,
+      "reps": 6,
+      "weight": 60,
+      "rpe": null,
+      "setsDetail": "6×60kg; 5×60kg; 4×60kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 6,
+          "weight": 60
+        },
+        {
+          "reps": 5,
+          "weight": 60
+        },
+        {
+          "reps": 4,
+          "weight": 60
+        }
+      ]
+    },
+    {
+      "date": "2026-04-19",
+      "dateISO": "2026-04-19T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Wyciskanie sztangi na ławce poziomej",
+      "muscleGroup": "Klatka piersiowa",
+      "sets": 3,
+      "reps": 10,
+      "weight": 80,
+      "rpe": null,
+      "setsDetail": "10×60kg; 8×80kg; 8×80kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 60
+        },
+        {
+          "reps": 8,
+          "weight": 80
+        },
+        {
+          "reps": 8,
+          "weight": 80
+        }
+      ]
+    },
+    {
+      "date": "2026-05-01",
+      "dateISO": "2026-05-01T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Podciąganie nachwytem",
+      "muscleGroup": "Plecy",
+      "sets": 3,
+      "reps": 7,
+      "weight": 0,
+      "rpe": null,
+      "setsDetail": "7×0kg; 5×0kg; 6×0kg",
+      "comment": "Challenge – łącznie 18 powt.",
+      "setsData": [
+        {
+          "reps": 7,
+          "weight": 0
+        },
+        {
+          "reps": 5,
+          "weight": 0
+        },
+        {
+          "reps": 6,
+          "weight": 0
+        }
+      ]
+    },
+    {
+      "date": "2026-05-16",
+      "dateISO": "2026-05-16T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Podciąganie nachwytem",
+      "muscleGroup": "Plecy",
+      "sets": 3,
+      "reps": 8,
+      "weight": 0,
+      "rpe": null,
+      "setsDetail": "8×0kg; 7×0kg; 5×0kg",
+      "comment": "Challenge – łącznie 20 powt.",
+      "setsData": [
+        {
+          "reps": 8,
+          "weight": 0
+        },
+        {
+          "reps": 7,
+          "weight": 0
+        },
+        {
+          "reps": 5,
+          "weight": 0
+        }
+      ]
+    },
+    {
+      "date": "2026-05-24",
+      "dateISO": "2026-05-24T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Wyciskanie sztangi na ławce poziomej",
+      "muscleGroup": "Klatka piersiowa",
+      "sets": 3,
+      "reps": 8,
+      "weight": 60,
+      "rpe": null,
+      "setsDetail": "8×60kg; 7×60kg; 8×60kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 8,
+          "weight": 60
+        },
+        {
+          "reps": 7,
+          "weight": 60
+        },
+        {
+          "reps": 8,
+          "weight": 60
+        }
+      ]
+    },
+    {
+      "date": "2026-05-24",
+      "dateISO": "2026-05-24T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Wyciskanie sztangi na ławce poziomej",
+      "muscleGroup": "Klatka piersiowa",
+      "sets": 3,
+      "reps": 10,
+      "weight": 100,
+      "rpe": null,
+      "setsDetail": "10×60kg; 5×80kg; 1×100kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 60
+        },
+        {
+          "reps": 5,
+          "weight": 80
+        },
+        {
+          "reps": 1,
+          "weight": 100
+        }
+      ]
+    },
+    {
+      "date": "2026-05-30",
+      "dateISO": "2026-05-30T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Hip extension przywodziciele",
+      "muscleGroup": "Nogi",
+      "sets": 3,
+      "reps": 10,
+      "weight": 45,
+      "rpe": null,
+      "setsDetail": "3×10×45kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-05-30",
+      "dateISO": "2026-05-30T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Prostowanie przedramion na wyciągu górnym (Triceps Pushdown)",
+      "muscleGroup": "Triceps",
+      "sets": 3,
+      "reps": 10,
+      "weight": 23,
+      "rpe": null,
+      "setsDetail": "10×18kg; 10×23kg; 10×23kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 18
+        },
+        {
+          "reps": 10,
+          "weight": 23
+        },
+        {
+          "reps": 10,
+          "weight": 23
+        }
+      ]
+    },
+    {
+      "date": "2026-05-30",
+      "dateISO": "2026-05-30T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Leg press wypychanie na maszynie",
+      "muscleGroup": "Nogi",
+      "sets": 3,
+      "reps": 10,
+      "weight": 120,
+      "rpe": null,
+      "setsDetail": "10×80kg; 10×100kg; 10×120kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 80
+        },
+        {
+          "reps": 10,
+          "weight": 100
+        },
+        {
+          "reps": 10,
+          "weight": 120
+        }
+      ]
+    },
+    {
+      "date": "2026-05-30",
+      "dateISO": "2026-05-30T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Rozciągający wykrok z obciążeniem",
+      "muscleGroup": "Nogi (uda)",
+      "sets": 3,
+      "reps": 10,
+      "weight": 20,
+      "rpe": null,
+      "setsDetail": "3×10×20kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-05-30",
+      "dateISO": "2026-05-30T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Prostowanie ramion hantlami leżąc (triceps)",
+      "muscleGroup": "Triceps",
+      "sets": 3,
+      "reps": 10,
+      "weight": 8,
+      "rpe": null,
+      "setsDetail": "3×10×8kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-05-30",
+      "dateISO": "2026-05-30T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Unoszenie prostych nóg w zwisie na podwyższeniu",
+      "muscleGroup": "Brzuch",
+      "sets": 3,
+      "reps": 10,
+      "weight": 0,
+      "rpe": null,
+      "setsDetail": "3×10×0kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-05-30",
+      "dateISO": "2026-05-30T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Wspięcia na palce stojąc na Maszynie Smitha",
+      "muscleGroup": "Nogi (łydki)",
+      "sets": 3,
+      "reps": 10,
+      "weight": 40,
+      "rpe": null,
+      "setsDetail": "3×10×40kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-05-30",
+      "dateISO": "2026-05-30T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Leg press wypychanie na maszynie",
+      "muscleGroup": "Nogi",
+      "sets": 3,
+      "reps": 10,
+      "weight": 120,
+      "rpe": null,
+      "setsDetail": "10×80kg; 10×100kg; 10×120kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 80
+        },
+        {
+          "reps": 10,
+          "weight": 100
+        },
+        {
+          "reps": 10,
+          "weight": 120
+        }
+      ]
+    },
+    {
+      "date": "2026-05-30",
+      "dateISO": "2026-05-30T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Prostowanie ramion hantlami leżąc (triceps)",
+      "muscleGroup": "Triceps",
+      "sets": 3,
+      "reps": 10,
+      "weight": 8,
+      "rpe": null,
+      "setsDetail": "3×10×8kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-05-30",
+      "dateISO": "2026-05-30T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Unoszenie prostych nóg w zwisie na podwyższeniu",
+      "muscleGroup": "Brzuch",
+      "sets": 3,
+      "reps": 10,
+      "weight": 0,
+      "rpe": null,
+      "setsDetail": "3×10×0kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-05-30",
+      "dateISO": "2026-05-30T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Wspięcia na palce stojąc na Maszynie Smitha",
+      "muscleGroup": "Nogi (łydki)",
+      "sets": 3,
+      "reps": 10,
+      "weight": 40,
+      "rpe": null,
+      "setsDetail": "3×10×40kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-05-30",
+      "dateISO": "2026-05-30T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Szrugsy",
+      "muscleGroup": "Szyja",
+      "sets": 3,
+      "reps": 10,
+      "weight": 20,
+      "rpe": null,
+      "setsDetail": "3×10×20kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-05-30",
+      "dateISO": "2026-05-30T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Leg extension",
+      "muscleGroup": "Nogi",
+      "sets": 3,
+      "reps": 10,
+      "weight": 66,
+      "rpe": null,
+      "setsDetail": "3×10×66kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-05-30",
+      "dateISO": "2026-05-30T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Seated dip",
+      "muscleGroup": "Triceps",
+      "sets": 3,
+      "reps": 10,
+      "weight": 59,
+      "rpe": null,
+      "setsDetail": "10×44kg; 10×50kg; 10×59kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 44
+        },
+        {
+          "reps": 10,
+          "weight": 50
+        },
+        {
+          "reps": 10,
+          "weight": 59
+        }
+      ]
+    },
+    {
+      "date": "2026-05-30",
+      "dateISO": "2026-05-30T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Szrugsy",
+      "muscleGroup": "Szyja",
+      "sets": 3,
+      "reps": 10,
+      "weight": 20,
+      "rpe": null,
+      "setsDetail": "3×10×20kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-05-30",
+      "dateISO": "2026-05-30T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Leg extension",
+      "muscleGroup": "Nogi",
+      "sets": 3,
+      "reps": 10,
+      "weight": 66,
+      "rpe": null,
+      "setsDetail": "3×10×66kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-05-30",
+      "dateISO": "2026-05-30T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Seated dip",
+      "muscleGroup": "Triceps",
+      "sets": 3,
+      "reps": 10,
+      "weight": 59,
+      "rpe": null,
+      "setsDetail": "10×44kg; 10×50kg; 10×59kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 44
+        },
+        {
+          "reps": 10,
+          "weight": 50
+        },
+        {
+          "reps": 10,
+          "weight": 59
+        }
+      ]
+    },
+    {
+      "date": "2026-05-30",
+      "dateISO": "2026-05-30T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Hip extension przywodziciele",
+      "muscleGroup": "Nogi",
+      "sets": 3,
+      "reps": 10,
+      "weight": 45,
+      "rpe": null,
+      "setsDetail": "3×10×45kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-05-30",
+      "dateISO": "2026-05-30T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Prostowanie przedramion na wyciągu górnym (Triceps Pushdown)",
+      "muscleGroup": "Triceps",
+      "sets": 3,
+      "reps": 10,
+      "weight": 23,
+      "rpe": null,
+      "setsDetail": "10×18kg; 10×23kg; 10×23kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 18
+        },
+        {
+          "reps": 10,
+          "weight": 23
+        },
+        {
+          "reps": 10,
+          "weight": 23
+        }
+      ]
+    },
+    {
+      "date": "2026-05-30",
+      "dateISO": "2026-05-30T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Rozciągający wykrok z obciążeniem",
+      "muscleGroup": "Nogi (uda)",
+      "sets": 3,
+      "reps": 10,
+      "weight": 20,
+      "rpe": null,
+      "setsDetail": "3×10×20kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-01",
+      "dateISO": "2026-06-01T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Podciąganie na drążku (nachwytem)",
+      "muscleGroup": "Plecy",
+      "sets": 3,
+      "reps": 8,
+      "weight": 0,
+      "rpe": null,
+      "setsDetail": "8×0kg; 5×0kg; 4×0kg",
+      "comment": "{\"challenge\":true,\"totalReps\":17,\"durations\":[46,37,39]}",
+      "setsData": [
+        {
+          "reps": 8,
+          "weight": 0
+        },
+        {
+          "reps": 5,
+          "weight": 0
+        },
+        {
+          "reps": 4,
+          "weight": 0
+        }
+      ]
+    },
+    {
+      "date": "2026-06-03",
+      "dateISO": "2026-06-03T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Podciąganie na drążku (nachwytem)",
+      "muscleGroup": "Plecy",
+      "sets": 5,
+      "reps": 5,
+      "weight": 0,
+      "rpe": null,
+      "setsDetail": "5×0kg; 5×0kg; 5×0kg; 5×0kg; 4×0kg",
+      "comment": "{\"challenge\":true,\"totalReps\":24,\"durations\":[25,24,26,27,27]}",
+      "setsData": [
+        {
+          "reps": 5,
+          "weight": 0
+        },
+        {
+          "reps": 5,
+          "weight": 0
+        },
+        {
+          "reps": 5,
+          "weight": 0
+        },
+        {
+          "reps": 5,
+          "weight": 0
+        },
+        {
+          "reps": 4,
+          "weight": 0
+        }
+      ]
+    },
+    {
+      "date": "2026-06-07",
+      "dateISO": "2026-06-07T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Uginanie ramion z hantlami (jednocześnie)",
+      "muscleGroup": "Biceps",
+      "sets": 3,
+      "reps": 8,
+      "weight": 14,
+      "rpe": null,
+      "setsDetail": "8×14kg; 8×14kg; 8×14kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 8,
+          "weight": 14
+        },
+        {
+          "reps": 8,
+          "weight": 14
+        },
+        {
+          "reps": 8,
+          "weight": 14
+        }
+      ]
+    },
+    {
+      "date": "2026-06-07",
+      "dateISO": "2026-06-07T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Uginanie ramion na modlitewniku (Scott curl)",
+      "muscleGroup": "Biceps",
+      "sets": 3,
+      "reps": 10,
+      "weight": 41,
+      "rpe": null,
+      "setsDetail": "10×36kg; 10×41kg; 10×41kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 36
+        },
+        {
+          "reps": 10,
+          "weight": 41
+        },
+        {
+          "reps": 10,
+          "weight": 41
+        }
+      ]
+    },
+    {
+      "date": "2026-06-07",
+      "dateISO": "2026-06-07T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Ściąganie drążka wyciągu do klatki (szerokim nachwytem)",
+      "muscleGroup": "Plecy",
+      "sets": 3,
+      "reps": 8,
+      "weight": 66,
+      "rpe": null,
+      "setsDetail": "8×66kg; 8×59kg; 8×59kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 8,
+          "weight": 66
+        },
+        {
+          "reps": 8,
+          "weight": 59
+        },
+        {
+          "reps": 8,
+          "weight": 59
+        }
+      ]
+    },
+    {
+      "date": "2026-06-07",
+      "dateISO": "2026-06-07T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Wiosłowanie siedząc na maszynie",
+      "muscleGroup": "Plecy",
+      "sets": 3,
+      "reps": 10,
+      "weight": 73,
+      "rpe": null,
+      "setsDetail": "10×66kg; 8×73kg; 6×73kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 66
+        },
+        {
+          "reps": 8,
+          "weight": 73
+        },
+        {
+          "reps": 6,
+          "weight": 73
+        }
+      ]
+    },
+    {
+      "date": "2026-06-07",
+      "dateISO": "2026-06-07T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Unoszenie prostych nóg w zwisie na podwyższeniu",
+      "muscleGroup": "Brzuch",
+      "sets": 3,
+      "reps": 10,
+      "weight": 0,
+      "rpe": null,
+      "setsDetail": "3×10×0kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-09",
+      "dateISO": "2026-06-09T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Abdukcja na maszynie",
+      "muscleGroup": "Nogi",
+      "sets": 3,
+      "reps": 10,
+      "weight": 47.5,
+      "rpe": null,
+      "setsDetail": "10×47.5kg; 10×47.5kg; 10×47.5kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 47.5
+        },
+        {
+          "reps": 10,
+          "weight": 47.5
+        },
+        {
+          "reps": 10,
+          "weight": 47.5
+        }
+      ]
+    },
+    {
+      "date": "2026-06-09",
+      "dateISO": "2026-06-09T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Wyciskanie hantli na barki jednorącz",
+      "muscleGroup": "Barki",
+      "sets": 3,
+      "reps": 10,
+      "weight": 10,
+      "rpe": null,
+      "setsDetail": "3×10×10kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-09",
+      "dateISO": "2026-06-09T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Przyciąganie hantli wzdłuż tułowia oburącz",
+      "muscleGroup": "Barki",
+      "sets": 3,
+      "reps": 10,
+      "weight": 28,
+      "rpe": null,
+      "setsDetail": "3×10×28kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-09",
+      "dateISO": "2026-06-09T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Uginanie nóg na maszynie (Leg curl)",
+      "muscleGroup": "Nogi",
+      "sets": 3,
+      "reps": 10,
+      "weight": 50,
+      "rpe": null,
+      "setsDetail": "10×36kg; 10×50kg; 10×50kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 36
+        },
+        {
+          "reps": 10,
+          "weight": 50
+        },
+        {
+          "reps": 10,
+          "weight": 50
+        }
+      ]
+    },
+    {
+      "date": "2026-06-09",
+      "dateISO": "2026-06-09T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Hip extension przywodziciele",
+      "muscleGroup": "Nogi",
+      "sets": 3,
+      "reps": 10,
+      "weight": 50,
+      "rpe": null,
+      "setsDetail": "10×45kg; 10×50kg; 10×50kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 45
+        },
+        {
+          "reps": 10,
+          "weight": 50
+        },
+        {
+          "reps": 10,
+          "weight": 50
+        }
+      ]
+    },
+    {
+      "date": "2026-06-11",
+      "dateISO": "2026-06-11T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Uginanie ramion na modlitewniku ze sztangą - chwyt szeroki",
+      "muscleGroup": "Biceps",
+      "sets": 2,
+      "reps": 10,
+      "weight": 18,
+      "rpe": null,
+      "setsDetail": "2×10×18kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-11",
+      "dateISO": "2026-06-11T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Wyciskanie sztangi na ławce poziomej",
+      "muscleGroup": "Klatka piersiowa",
+      "sets": 3,
+      "reps": 8,
+      "weight": 60,
+      "rpe": null,
+      "setsDetail": "8×60kg; 7×60kg; 6×60kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 8,
+          "weight": 60
+        },
+        {
+          "reps": 7,
+          "weight": 60
+        },
+        {
+          "reps": 6,
+          "weight": 60
+        }
+      ]
+    },
+    {
+      "date": "2026-06-11",
+      "dateISO": "2026-06-11T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Uginanie ramion ze sztangą (biceps)",
+      "muscleGroup": "Biceps",
+      "sets": 3,
+      "reps": 8,
+      "weight": 30,
+      "rpe": null,
+      "setsDetail": "3×8×30kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-11",
+      "dateISO": "2026-06-11T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Rozpiętki z hantlami na ławce poziomej",
+      "muscleGroup": "Klatka piersiowa",
+      "sets": 3,
+      "reps": 8,
+      "weight": 14,
+      "rpe": null,
+      "setsDetail": "3×8×14kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-11",
+      "dateISO": "2026-06-11T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Chwyt młotkowy ławka skos",
+      "muscleGroup": "Biceps",
+      "sets": 3,
+      "reps": 10,
+      "weight": 12,
+      "rpe": null,
+      "setsDetail": "10×12kg; 10×12kg; 8×12kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 12
+        },
+        {
+          "reps": 10,
+          "weight": 12
+        },
+        {
+          "reps": 8,
+          "weight": 12
+        }
+      ]
+    },
+    {
+      "date": "2026-06-11",
+      "dateISO": "2026-06-11T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Unoszenie kolan do klatki w zwisie",
+      "muscleGroup": "Brzuch",
+      "sets": 3,
+      "reps": 10,
+      "weight": 0,
+      "rpe": null,
+      "setsDetail": "3×10×0kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-11",
+      "dateISO": "2026-06-11T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Skłony boczne tułowia z obciążeniem",
+      "muscleGroup": "Brzuch",
+      "sets": 3,
+      "reps": 10,
+      "weight": 20,
+      "rpe": null,
+      "setsDetail": "3×10×20kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-11",
+      "dateISO": "2026-06-11T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Wyciskanie hantli na ławce skośnej (górnej)",
+      "muscleGroup": "Klatka piersiowa",
+      "sets": 3,
+      "reps": 10,
+      "weight": 14,
+      "rpe": null,
+      "setsDetail": "3×10×14kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-11",
+      "dateISO": "2026-06-11T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Uginanie ramion na modlitewniku ze sztangą - chwyt wąski",
+      "muscleGroup": "Biceps",
+      "sets": 2,
+      "reps": 10,
+      "weight": 18,
+      "rpe": null,
+      "setsDetail": "2×10×18kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-11",
+      "dateISO": "2026-06-11T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Uginanie ramion na modlitewniku ze sztangą - chwyt szeroki",
+      "muscleGroup": "Biceps",
+      "sets": 2,
+      "reps": 10,
+      "weight": 18,
+      "rpe": null,
+      "setsDetail": "2×10×18kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-11",
+      "dateISO": "2026-06-11T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Wyciskanie sztangi na ławce poziomej",
+      "muscleGroup": "Klatka piersiowa",
+      "sets": 4,
+      "reps": 10,
+      "weight": 100,
+      "rpe": null,
+      "setsDetail": "8×60kg; 1×100kg; 1×100kg; 10×60kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 8,
+          "weight": 60
+        },
+        {
+          "reps": 1,
+          "weight": 100
+        },
+        {
+          "reps": 1,
+          "weight": 100
+        },
+        {
+          "reps": 10,
+          "weight": 60
+        }
+      ]
+    },
+    {
+      "date": "2026-06-11",
+      "dateISO": "2026-06-11T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Uginanie ramion ze sztangą (biceps)",
+      "muscleGroup": "Biceps",
+      "sets": 2,
+      "reps": 8,
+      "weight": 30,
+      "rpe": null,
+      "setsDetail": "2×8×30kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-11",
+      "dateISO": "2026-06-11T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Rozpiętki z hantlami na ławce poziomej",
+      "muscleGroup": "Klatka piersiowa",
+      "sets": 3,
+      "reps": 8,
+      "weight": 14,
+      "rpe": null,
+      "setsDetail": "3×8×14kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-11",
+      "dateISO": "2026-06-11T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Chwyt młotkowy ławka skos",
+      "muscleGroup": "Biceps",
+      "sets": 3,
+      "reps": 10,
+      "weight": 12,
+      "rpe": null,
+      "setsDetail": "3×10×12kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-11",
+      "dateISO": "2026-06-11T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Unoszenie kolan do klatki w zwisie",
+      "muscleGroup": "Brzuch",
+      "sets": 3,
+      "reps": 10,
+      "weight": 0,
+      "rpe": null,
+      "setsDetail": "3×10×0kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-11",
+      "dateISO": "2026-06-11T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Skłony boczne tułowia z obciążeniem",
+      "muscleGroup": "Brzuch",
+      "sets": 3,
+      "reps": 10,
+      "weight": 20,
+      "rpe": null,
+      "setsDetail": "3×10×20kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-11",
+      "dateISO": "2026-06-11T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Wyciskanie hantli na ławce skośnej (górnej)",
+      "muscleGroup": "Klatka piersiowa",
+      "sets": 3,
+      "reps": 10,
+      "weight": 14,
+      "rpe": null,
+      "setsDetail": "3×10×14kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-11",
+      "dateISO": "2026-06-11T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Uginanie ramion na modlitewniku ze sztangą - chwyt wąski",
+      "muscleGroup": "Biceps",
+      "sets": 2,
+      "reps": 10,
+      "weight": 18,
+      "rpe": null,
+      "setsDetail": "2×10×18kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-14",
+      "dateISO": "2026-06-14T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Uginanie nadgarstków nachwytem ze sztangą trzymaną z tyłu.",
+      "muscleGroup": "Przedramiona",
+      "sets": 3,
+      "reps": 10,
+      "weight": 15,
+      "rpe": null,
+      "setsDetail": "3×10×15kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-14",
+      "dateISO": "2026-06-14T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Uginanie nadgarstków nachwytem ze sztangą trzymaną z tyłu.",
+      "muscleGroup": "Przedramiona",
+      "sets": 3,
+      "reps": 10,
+      "weight": 15,
+      "rpe": null,
+      "setsDetail": "3×10×15kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-14",
+      "dateISO": "2026-06-14T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Wypychanie ciężaru palcami na maszynie",
+      "muscleGroup": "Nogi (łydki)",
+      "sets": 3,
+      "reps": 10,
+      "weight": 50,
+      "rpe": null,
+      "setsDetail": "3×10×50kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-14",
+      "dateISO": "2026-06-14T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Wypychanie ciężaru palcami na maszynie",
+      "muscleGroup": "Nogi (łydki)",
+      "sets": 3,
+      "reps": 10,
+      "weight": 50,
+      "rpe": null,
+      "setsDetail": "3×10×50kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-14",
+      "dateISO": "2026-06-14T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Kickback z hantlem",
+      "muscleGroup": "Triceps",
+      "sets": 3,
+      "reps": 10,
+      "weight": 6,
+      "rpe": null,
+      "setsDetail": "3×10×6kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-14",
+      "dateISO": "2026-06-14T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Prostowanie przedramion na wyciągu górnym (Triceps Pushdown)",
+      "muscleGroup": "Triceps",
+      "sets": 3,
+      "reps": 10,
+      "weight": 27,
+      "rpe": null,
+      "setsDetail": "10×23kg; 10×27kg; 10×27kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 23
+        },
+        {
+          "reps": 10,
+          "weight": 27
+        },
+        {
+          "reps": 10,
+          "weight": 27
+        }
+      ]
+    },
+    {
+      "date": "2026-06-14",
+      "dateISO": "2026-06-14T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Uginanie nóg na maszynie (Leg curl)",
+      "muscleGroup": "Nogi",
+      "sets": 3,
+      "reps": 10,
+      "weight": 50,
+      "rpe": null,
+      "setsDetail": "10×41kg; 10×45kg; 10×50kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 41
+        },
+        {
+          "reps": 10,
+          "weight": 45
+        },
+        {
+          "reps": 10,
+          "weight": 50
+        }
+      ]
+    },
+    {
+      "date": "2026-06-14",
+      "dateISO": "2026-06-14T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Leg press wypychanie na maszynie",
+      "muscleGroup": "Nogi",
+      "sets": 3,
+      "reps": 10,
+      "weight": 140,
+      "rpe": null,
+      "setsDetail": "10×100kg; 10×140kg; 10×140kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 100
+        },
+        {
+          "reps": 10,
+          "weight": 140
+        },
+        {
+          "reps": 10,
+          "weight": 140
+        }
+      ]
+    },
+    {
+      "date": "2026-06-14",
+      "dateISO": "2026-06-14T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Uginanie nóg na maszynie (Leg curl)",
+      "muscleGroup": "Nogi",
+      "sets": 3,
+      "reps": 10,
+      "weight": 50,
+      "rpe": null,
+      "setsDetail": "3×10×50kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-14",
+      "dateISO": "2026-06-14T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Kickback z hantlem",
+      "muscleGroup": "Triceps",
+      "sets": 3,
+      "reps": 10,
+      "weight": 6,
+      "rpe": null,
+      "setsDetail": "3×10×6kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-14",
+      "dateISO": "2026-06-14T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Prostowanie przedramion na wyciągu górnym (Triceps Pushdown)",
+      "muscleGroup": "Triceps",
+      "sets": 3,
+      "reps": 10,
+      "weight": 27,
+      "rpe": null,
+      "setsDetail": "10×23kg; 10×27kg; 10×27kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 23
+        },
+        {
+          "reps": 10,
+          "weight": 27
+        },
+        {
+          "reps": 10,
+          "weight": 27
+        }
+      ]
+    },
+    {
+      "date": "2026-06-14",
+      "dateISO": "2026-06-14T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Leg press wypychanie na maszynie",
+      "muscleGroup": "Nogi",
+      "sets": 3,
+      "reps": 10,
+      "weight": 140,
+      "rpe": null,
+      "setsDetail": "10×100kg; 10×140kg; 10×140kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 100
+        },
+        {
+          "reps": 10,
+          "weight": 140
+        },
+        {
+          "reps": 10,
+          "weight": 140
+        }
+      ]
+    },
+    {
+      "date": "2026-06-14",
+      "dateISO": "2026-06-14T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Seated dip",
+      "muscleGroup": "Triceps",
+      "sets": 3,
+      "reps": 10,
+      "weight": 64,
+      "rpe": null,
+      "setsDetail": "10×45kg; 10×50kg; 10×64kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 45
+        },
+        {
+          "reps": 10,
+          "weight": 50
+        },
+        {
+          "reps": 10,
+          "weight": 64
+        }
+      ]
+    },
+    {
+      "date": "2026-06-14",
+      "dateISO": "2026-06-14T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Seated dip",
+      "muscleGroup": "Triceps",
+      "sets": 3,
+      "reps": 10,
+      "weight": 64,
+      "rpe": null,
+      "setsDetail": "10×45kg; 10×50kg; 10×64kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 45
+        },
+        {
+          "reps": 10,
+          "weight": 50
+        },
+        {
+          "reps": 10,
+          "weight": 64
+        }
+      ]
+    },
+    {
+      "date": "2026-06-14",
+      "dateISO": "2026-06-14T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Jednorącz odwrotne uginanie nadgarstka oparte o ławkę",
+      "muscleGroup": "Przedramiona",
+      "sets": 3,
+      "reps": 10,
+      "weight": 6,
+      "rpe": null,
+      "setsDetail": "3×10×6kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-14",
+      "dateISO": "2026-06-14T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Jednorącz odwrotne uginanie nadgarstka oparte o ławkę",
+      "muscleGroup": "Przedramiona",
+      "sets": 3,
+      "reps": 10,
+      "weight": 6,
+      "rpe": null,
+      "setsDetail": "3×10×6kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-17",
+      "dateISO": "2026-06-17T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Martwy ciąg",
+      "muscleGroup": "Plecy",
+      "sets": 3,
+      "reps": 10,
+      "weight": 80,
+      "rpe": null,
+      "setsDetail": "9×60kg; 10×60kg; 10×80kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 9,
+          "weight": 60
+        },
+        {
+          "reps": 10,
+          "weight": 60
+        },
+        {
+          "reps": 10,
+          "weight": 80
+        }
+      ]
+    },
+    {
+      "date": "2026-06-17",
+      "dateISO": "2026-06-17T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Podciąganie nachwytem",
+      "muscleGroup": "Plecy",
+      "sets": 3,
+      "reps": 5,
+      "weight": 0,
+      "rpe": null,
+      "setsDetail": "5×0kg; 5×0kg; 5×0kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 5,
+          "weight": 0
+        },
+        {
+          "reps": 5,
+          "weight": 0
+        },
+        {
+          "reps": 5,
+          "weight": 0
+        }
+      ]
+    },
+    {
+      "date": "2026-06-17",
+      "dateISO": "2026-06-17T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Podciąganie nachwytem",
+      "muscleGroup": "Plecy",
+      "sets": 3,
+      "reps": 5,
+      "weight": 0,
+      "rpe": null,
+      "setsDetail": "5×0kg; 5×0kg; 5×0kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 5,
+          "weight": 0
+        },
+        {
+          "reps": 5,
+          "weight": 0
+        },
+        {
+          "reps": 5,
+          "weight": 0
+        }
+      ]
+    },
+    {
+      "date": "2026-06-17",
+      "dateISO": "2026-06-17T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Uginanie ramion na modlitewniku ze sztangą - chwyt szeroki",
+      "muscleGroup": "Biceps",
+      "sets": 3,
+      "reps": 10,
+      "weight": 23,
+      "rpe": null,
+      "setsDetail": "10×18kg; 10×20.5kg; 10×23kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 18
+        },
+        {
+          "reps": 10,
+          "weight": 20.5
+        },
+        {
+          "reps": 10,
+          "weight": 23
+        }
+      ]
+    },
+    {
+      "date": "2026-06-17",
+      "dateISO": "2026-06-17T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Uginanie ramion na modlitewniku ze sztangą - chwyt szeroki",
+      "muscleGroup": "Biceps",
+      "sets": 3,
+      "reps": 10,
+      "weight": 23,
+      "rpe": null,
+      "setsDetail": "10×18kg; 10×20.5kg; 10×23kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 18
+        },
+        {
+          "reps": 10,
+          "weight": 20.5
+        },
+        {
+          "reps": 10,
+          "weight": 23
+        }
+      ]
+    },
+    {
+      "date": "2026-06-17",
+      "dateISO": "2026-06-17T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Martwy ciąg",
+      "muscleGroup": "Plecy",
+      "sets": 3,
+      "reps": 10,
+      "weight": 80,
+      "rpe": null,
+      "setsDetail": "6×60kg; 10×60kg; 8×80kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 6,
+          "weight": 60
+        },
+        {
+          "reps": 10,
+          "weight": 60
+        },
+        {
+          "reps": 8,
+          "weight": 80
+        }
+      ]
+    },
+    {
+      "date": "2026-06-17",
+      "dateISO": "2026-06-17T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Chwyt młotkowy ławka skos",
+      "muscleGroup": "Biceps",
+      "sets": 3,
+      "reps": 10,
+      "weight": 16,
+      "rpe": null,
+      "setsDetail": "10×12kg; 6×16kg; 6×16kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 12
+        },
+        {
+          "reps": 6,
+          "weight": 16
+        },
+        {
+          "reps": 6,
+          "weight": 16
+        }
+      ]
+    },
+    {
+      "date": "2026-06-17",
+      "dateISO": "2026-06-17T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Chwyt młotkowy ławka skos",
+      "muscleGroup": "Biceps",
+      "sets": 3,
+      "reps": 9,
+      "weight": 14,
+      "rpe": null,
+      "setsDetail": "9×12kg; 6×14kg; 8×14kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 9,
+          "weight": 12
+        },
+        {
+          "reps": 6,
+          "weight": 14
+        },
+        {
+          "reps": 8,
+          "weight": 14
+        }
+      ]
+    },
+    {
+      "date": "2026-06-17",
+      "dateISO": "2026-06-17T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Wiosłowanie siedząc na maszynie",
+      "muscleGroup": "Plecy",
+      "sets": 3,
+      "reps": 10,
+      "weight": 73,
+      "rpe": null,
+      "setsDetail": "10×66kg; 8×73kg; 8×73kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 66
+        },
+        {
+          "reps": 8,
+          "weight": 73
+        },
+        {
+          "reps": 8,
+          "weight": 73
+        }
+      ]
+    },
+    {
+      "date": "2026-06-17",
+      "dateISO": "2026-06-17T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Wiosłowanie siedząc na maszynie",
+      "muscleGroup": "Plecy",
+      "sets": 3,
+      "reps": 10,
+      "weight": 73,
+      "rpe": null,
+      "setsDetail": "10×66kg; 8×73kg; 8×73kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 66
+        },
+        {
+          "reps": 8,
+          "weight": 73
+        },
+        {
+          "reps": 8,
+          "weight": 73
+        }
+      ]
+    },
+    {
+      "date": "2026-06-17",
+      "dateISO": "2026-06-17T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Odwrotne rozpiętki z hantlami (tył barku)",
+      "muscleGroup": "Barki",
+      "sets": 3,
+      "reps": 10,
+      "weight": 8,
+      "rpe": null,
+      "setsDetail": "10×6kg; 10×8kg; 10×8kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 6
+        },
+        {
+          "reps": 10,
+          "weight": 8
+        },
+        {
+          "reps": 10,
+          "weight": 8
+        }
+      ]
+    },
+    {
+      "date": "2026-06-17",
+      "dateISO": "2026-06-17T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Odwrotne rozpiętki z hantlami (tył barku)",
+      "muscleGroup": "Barki",
+      "sets": 3,
+      "reps": 10,
+      "weight": 8,
+      "rpe": null,
+      "setsDetail": "10×6kg; 10×8kg; 10×8kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 6
+        },
+        {
+          "reps": 10,
+          "weight": 8
+        },
+        {
+          "reps": 10,
+          "weight": 8
+        }
+      ]
+    },
+    {
+      "date": "2026-06-22",
+      "dateISO": "2026-06-22T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Podciąganie na drążku (nachwytem)",
+      "muscleGroup": "Plecy",
+      "sets": 5,
+      "reps": 5,
+      "weight": 0,
+      "rpe": null,
+      "setsDetail": "5×5×0kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-22",
+      "dateISO": "2026-06-22T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Podciąganie na drążku (nachwytem)",
+      "muscleGroup": "Plecy",
+      "sets": 5,
+      "reps": 5,
+      "weight": 0,
+      "rpe": null,
+      "setsDetail": "5×0kg; 5×0kg; 5×0kg; 5×0kg; 5×0kg",
+      "comment": "{\"challenge\":true,\"totalReps\":25,\"durations\":[31,22,29,20,27]}",
+      "setsData": [
+        {
+          "reps": 5,
+          "weight": 0
+        },
+        {
+          "reps": 5,
+          "weight": 0
+        },
+        {
+          "reps": 5,
+          "weight": 0
+        },
+        {
+          "reps": 5,
+          "weight": 0
+        },
+        {
+          "reps": 5,
+          "weight": 0
+        }
+      ]
+    },
+    {
+      "date": "2026-06-25",
+      "dateISO": "2026-06-25T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Leg press",
+      "muscleGroup": "Nogi",
+      "sets": 3,
+      "reps": 10,
+      "weight": 93,
+      "rpe": null,
+      "setsDetail": "10×59kg; 10×79kg; 10×93kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 59
+        },
+        {
+          "reps": 10,
+          "weight": 79
+        },
+        {
+          "reps": 10,
+          "weight": 93
+        }
+      ]
+    },
+    {
+      "date": "2026-06-25",
+      "dateISO": "2026-06-25T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Hip extension przywodziciele",
+      "muscleGroup": "Nogi",
+      "sets": 3,
+      "reps": 10,
+      "weight": 59,
+      "rpe": null,
+      "setsDetail": "10×52kg; 10×59kg; 10×59kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 52
+        },
+        {
+          "reps": 10,
+          "weight": 59
+        },
+        {
+          "reps": 10,
+          "weight": 59
+        }
+      ]
+    },
+    {
+      "date": "2026-06-25",
+      "dateISO": "2026-06-25T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Abdukcja na maszynie",
+      "muscleGroup": "Nogi",
+      "sets": 3,
+      "reps": 10,
+      "weight": 59,
+      "rpe": null,
+      "setsDetail": "10×52kg; 10×59kg; 10×52kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 52
+        },
+        {
+          "reps": 10,
+          "weight": 59
+        },
+        {
+          "reps": 10,
+          "weight": 52
+        }
+      ]
+    },
+    {
+      "date": "2026-06-25",
+      "dateISO": "2026-06-25T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Hip trust na maszynie",
+      "muscleGroup": "Nogi",
+      "sets": 3,
+      "reps": 10,
+      "weight": 40,
+      "rpe": null,
+      "setsDetail": "10×40kg; 10×40kg; 10×40kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 40
+        },
+        {
+          "reps": 10,
+          "weight": 40
+        },
+        {
+          "reps": 10,
+          "weight": 40
+        }
+      ]
+    },
+    {
+      "date": "2026-06-28",
+      "dateISO": "2026-06-28T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Pompki",
+      "muscleGroup": "Klatka piersiowa",
+      "sets": 3,
+      "reps": 20,
+      "weight": 0,
+      "rpe": null,
+      "setsDetail": "3×20×0kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-28",
+      "dateISO": "2026-06-28T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Uginanie ramion sztangielkami z supinacją nadgarstka",
+      "muscleGroup": "Biceps",
+      "sets": 3,
+      "reps": 10,
+      "weight": 11,
+      "rpe": null,
+      "setsDetail": "10×6kg; 10×11kg; 10×11kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 6
+        },
+        {
+          "reps": 10,
+          "weight": 11
+        },
+        {
+          "reps": 10,
+          "weight": 11
+        }
+      ]
+    },
+    {
+      "date": "2026-06-28",
+      "dateISO": "2026-06-28T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Wyciskanie sztangi na ławce poziomej",
+      "muscleGroup": "Klatka piersiowa",
+      "sets": 3,
+      "reps": 10,
+      "weight": 90,
+      "rpe": null,
+      "setsDetail": "10×70kg; 4×90kg; 4×90kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 70
+        },
+        {
+          "reps": 4,
+          "weight": 90
+        },
+        {
+          "reps": 4,
+          "weight": 90
+        }
+      ]
+    },
+    {
+      "date": "2026-06-28",
+      "dateISO": "2026-06-28T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Rozpiętki z hantlami na ławce poziomej",
+      "muscleGroup": "Klatka piersiowa",
+      "sets": 3,
+      "reps": 10,
+      "weight": 14,
+      "rpe": null,
+      "setsDetail": "3×10×14kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-28",
+      "dateISO": "2026-06-28T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Uginanie ramion na drążku",
+      "muscleGroup": "Biceps",
+      "sets": 3,
+      "reps": 10,
+      "weight": 0,
+      "rpe": null,
+      "setsDetail": "3×10×0kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-30",
+      "dateISO": "2026-06-30T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Skłony boczne tułowia z obciążeniem",
+      "muscleGroup": "Brzuch",
+      "sets": 3,
+      "reps": 10,
+      "weight": 20,
+      "rpe": null,
+      "setsDetail": "3×10×20kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-30",
+      "dateISO": "2026-06-30T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "French press (hantle)",
+      "muscleGroup": "Triceps",
+      "sets": 3,
+      "reps": 10,
+      "weight": 9,
+      "rpe": null,
+      "setsDetail": "3×10×9kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-30",
+      "dateISO": "2026-06-30T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Seated dip",
+      "muscleGroup": "Triceps",
+      "sets": 3,
+      "reps": 10,
+      "weight": 68,
+      "rpe": null,
+      "setsDetail": "10×64kg; 10×64kg; 10×68kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 64
+        },
+        {
+          "reps": 10,
+          "weight": 64
+        },
+        {
+          "reps": 10,
+          "weight": 68
+        }
+      ]
+    },
+    {
+      "date": "2026-06-30",
+      "dateISO": "2026-06-30T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Ściąganie drążka na maszynie z przodu",
+      "muscleGroup": "Plecy",
+      "sets": 3,
+      "reps": 10,
+      "weight": 59,
+      "rpe": null,
+      "setsDetail": "3×10×59kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-06-30",
+      "dateISO": "2026-06-30T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Wiosłowanie na maszynie (siedząc)",
+      "muscleGroup": "Plecy",
+      "sets": 3,
+      "reps": 10,
+      "weight": 45,
+      "rpe": null,
+      "setsDetail": "3×10×45kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-07-03",
+      "dateISO": "2026-07-03T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Uginanie ramion na modlitewniku ze sztangą - chwyt szeroki",
+      "muscleGroup": "Biceps",
+      "sets": 3,
+      "reps": 8,
+      "weight": 23,
+      "rpe": null,
+      "setsDetail": "8×23kg; 8×23kg; 8×23kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 8,
+          "weight": 23
+        },
+        {
+          "reps": 8,
+          "weight": 23
+        },
+        {
+          "reps": 8,
+          "weight": 23
+        }
+      ]
+    },
+    {
+      "date": "2026-07-03",
+      "dateISO": "2026-07-03T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Rozpiętki z hantlami na ławce poziomej",
+      "muscleGroup": "Klatka piersiowa",
+      "sets": 3,
+      "reps": 8,
+      "weight": 14,
+      "rpe": null,
+      "setsDetail": "8×14kg; 7×14kg; 6×14kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 8,
+          "weight": 14
+        },
+        {
+          "reps": 7,
+          "weight": 14
+        },
+        {
+          "reps": 6,
+          "weight": 14
+        }
+      ]
+    },
+    {
+      "date": "2026-07-03",
+      "dateISO": "2026-07-03T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Chwyt młotkowy ławka skos",
+      "muscleGroup": "Biceps",
+      "sets": 3,
+      "reps": 8,
+      "weight": 14,
+      "rpe": null,
+      "setsDetail": "8×14kg; 8×14kg; 8×14kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 8,
+          "weight": 14
+        },
+        {
+          "reps": 8,
+          "weight": 14
+        },
+        {
+          "reps": 8,
+          "weight": 14
+        }
+      ]
+    },
+    {
+      "date": "2026-07-03",
+      "dateISO": "2026-07-03T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Wyciskanie sztangi na ławce poziomej",
+      "muscleGroup": "Klatka piersiowa",
+      "sets": 6,
+      "reps": 8,
+      "weight": 65,
+      "rpe": null,
+      "setsDetail": "8×40kg; 5×65kg; 5×65kg; 5×65kg; 5×65kg; 5×65kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 8,
+          "weight": 40
+        },
+        {
+          "reps": 5,
+          "weight": 65
+        },
+        {
+          "reps": 5,
+          "weight": 65
+        },
+        {
+          "reps": 5,
+          "weight": 65
+        },
+        {
+          "reps": 5,
+          "weight": 65
+        },
+        {
+          "reps": 5,
+          "weight": 65
+        }
+      ]
+    },
+    {
+      "date": "2026-07-03",
+      "dateISO": "2026-07-03T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Wyciskanie na maszynie siedząc",
+      "muscleGroup": "Klatka piersiowa",
+      "sets": 3,
+      "reps": 8,
+      "weight": 50,
+      "rpe": null,
+      "setsDetail": "3×8×50kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-07-03",
+      "dateISO": "2026-07-03T00:00:00.000Z",
+      "user": "Patryk",
+      "userId": "cmpl7c3ni0000l704zy673amo",
+      "exercise": "Szrugsy",
+      "muscleGroup": "Szyja",
+      "sets": 4,
+      "reps": 12,
+      "weight": 40,
+      "rpe": null,
+      "setsDetail": "12×28kg; 12×28kg; 12×28kg; 12×40kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 12,
+          "weight": 28
+        },
+        {
+          "reps": 12,
+          "weight": 28
+        },
+        {
+          "reps": 12,
+          "weight": 28
+        },
+        {
+          "reps": 12,
+          "weight": 40
+        }
+      ]
+    },
+    {
+      "date": "2026-07-05",
+      "dateISO": "2026-07-05T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Martwy ciąg",
+      "muscleGroup": "Plecy",
+      "sets": 3,
+      "reps": 10,
+      "weight": 90,
+      "rpe": null,
+      "setsDetail": "10×70kg; 10×90kg; 10×90kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 10,
+          "weight": 70
+        },
+        {
+          "reps": 10,
+          "weight": 90
+        },
+        {
+          "reps": 10,
+          "weight": 90
+        }
+      ]
+    },
+    {
+      "date": "2026-07-05",
+      "dateISO": "2026-07-05T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Unoszenie barków w zwisie na drążku",
+      "muscleGroup": "BARKI",
+      "sets": 3,
+      "reps": 10,
+      "weight": 0,
+      "rpe": null,
+      "setsDetail": "3×10×0kg",
+      "comment": "",
+      "setsData": []
+    },
+    {
+      "date": "2026-07-05",
+      "dateISO": "2026-07-05T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Podciąganie nachwytem",
+      "muscleGroup": "Plecy",
+      "sets": 3,
+      "reps": 5,
+      "weight": 0,
+      "rpe": null,
+      "setsDetail": "5×0kg; 5×0kg; 5×0kg",
+      "comment": "",
+      "setsData": [
+        {
+          "reps": 5,
+          "weight": 0
+        },
+        {
+          "reps": 5,
+          "weight": 0
+        },
+        {
+          "reps": 5,
+          "weight": 0
+        }
+      ]
+    },
+    {
+      "date": "2026-07-05",
+      "dateISO": "2026-07-05T00:00:00.000Z",
+      "user": "Adrian",
+      "userId": "cmpl7c7el0001l704389xya6p",
+      "exercise": "Wiosłowanie sztangą",
+      "muscleGroup": "Plecy",
+      "sets": 3,
+      "reps": 10,
+      "weight": 50,
+      "rpe": null,
+      "setsDetail": "3×10×50kg",
+      "comment": "",
+      "setsData": []
+    }
+  ]
+}

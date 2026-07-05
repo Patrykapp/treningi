@@ -5,12 +5,15 @@ import { framesForDbId } from '@/lib/exerciseImages';
 
 export async function GET() {
   try {
-    const exercises = await prisma.exercise.findMany({ orderBy: { name: 'asc' } });
-    // Dokleja miniaturę (klatka 0) z free-exercise-db — stary host gifów padł.
-    // Rozwiązywanie jest cache'owane; błędy sieci degradują się do braku obrazka.
-    const withImgs = await Promise.all(exercises.map(async ex => {
+    const exercises = await prisma.exercise.findMany({
+      orderBy: { name: 'asc' },
+      include: { _count: { select: { entries: true } } },
+    });
+    // usageCount = liczba wpisów treningowych (realna „popularność" z historii,
+    // wspólna dla wszystkich urządzeń). gifUrl/images: media (obecnie wyłączone).
+    const withImgs = await Promise.all(exercises.map(async ({ _count, ...ex }) => {
       const frames = await framesForDbId(ex.exerciseDbId);
-      return { ...ex, gifUrl: frames?.[0] ?? null, images: frames ?? [] };
+      return { ...ex, usageCount: _count.entries, gifUrl: frames?.[0] ?? null, images: frames ?? [] };
     }));
     return NextResponse.json(withImgs, {
       // no-store: nowe ćwiczenia muszą być widoczne natychmiast.
