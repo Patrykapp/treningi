@@ -25,13 +25,8 @@ export function ExerciseAnimation({
     return () => clearInterval(t);
   }, [frames.length]);
 
-  if (frames.length === 0) {
-    return (
-      <span className={`${className} rounded-xl bg-gray-100 flex items-center justify-center text-gray-300 text-3xl border border-gray-200 flex-shrink-0`}>
-        🏋️
-      </span>
-    );
-  }
+  // Media tymczasowo wyłączone — bez klatek nie pokazujemy placeholdera.
+  if (frames.length === 0) return null;
 
   return (
     <div className={`${className} relative rounded-xl border border-gray-200 bg-white overflow-hidden flex-shrink-0`}>

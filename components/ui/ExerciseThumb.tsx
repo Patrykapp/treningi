@@ -32,23 +32,7 @@ function useFrameTick(active: boolean): number {
   return sharedFrame;
 }
 
-// ─── Kolor + skrót grupy mięśniowej (fallback, gdy brak obrazka) ──────────────
-function groupBadge(muscleGroup: string | null | undefined): { cls: string; label: string } {
-  const g = (muscleGroup || '').toLowerCase();
-  const pick = (cls: string, label: string) => ({ cls, label });
-  if (g.includes('klat') || g.includes('chest')) return pick('bg-blue-500', 'Kl');
-  if (g.includes('plec') || g.includes('back'))  return pick('bg-emerald-500', 'Pl');
-  if (g.includes('bark') || g.includes('ramion') || g.includes('shoulder')) return pick('bg-orange-500', 'Ba');
-  if (g.includes('biceps')) return pick('bg-violet-500', 'Bi');
-  if (g.includes('triceps')) return pick('bg-fuchsia-500', 'Tr');
-  if (g.includes('nog') || g.includes('uda') || g.includes('leg')) return pick('bg-red-500', 'No');
-  if (g.includes('brzuch') || g.includes('abs') || g.includes('core')) return pick('bg-amber-500', 'Br');
-  if (g.includes('cardio')) return pick('bg-teal-500', 'Ca');
-  if (g.includes('rozciąg') || g.includes('stretch')) return pick('bg-cyan-500', '🧘');
-  if (g.includes('przedrami') || g.includes('forearm')) return pick('bg-lime-600', 'Pr');
-  if (g.includes('kark') || g.includes('neck')) return pick('bg-slate-500', 'Ka');
-  return pick('bg-gray-400', '🏋️');
-}
+// (Kafelek-placeholder z grupą mięśniową usunięty — media i placeholdery wyłączone.)
 
 // Miniatura ćwiczenia. Gdy są 2 klatki (start/koniec z free-exercise-db) —
 // animuje je, co ułatwia rozpoznanie ruchu ćwiczenia bez czytania nazwy.
@@ -60,14 +44,8 @@ export function ExerciseThumb({ ex, className = 'w-14 h-14' }: { ex: Exercise; c
   const animate = frames.length >= 2;
   const frame = useFrameTick(animate);
 
-  if (frames.length === 0) {
-    const { cls, label } = groupBadge(ex.muscleGroup);
-    return (
-      <span className={`${className} rounded-lg ${cls} flex items-center justify-center text-white text-sm font-bold shrink-0`}>
-        {label}
-      </span>
-    );
-  }
+  // Media tymczasowo wyłączone — bez obrazka nie pokazujemy nic (żadnego placeholdera).
+  if (frames.length === 0) return null;
 
   if (!animate) {
     return (

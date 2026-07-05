@@ -857,9 +857,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                                 <img src={ex.gifUrl} alt={ex.name} loading="lazy"
                                   className="w-14 h-14 object-cover rounded-lg flex-shrink-0 bg-gray-100"
                                   onError={e => { e.currentTarget.style.visibility = 'hidden'; }} />
-                              ) : (
-                                <span className="w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center text-gray-300 text-xl flex-shrink-0">🏋️</span>
-                              )}
+                              ) : null}
                               <div className="min-w-0 flex-1">
                                 <div className="text-sm font-medium text-gray-900">{ex.name}</div>
                                 <div className="text-xs text-gray-500">
