@@ -1,29 +1,21 @@
 /**
- * Rozwiązywanie animacji ćwiczeń z free-exercise-db (yuhonas, licencja MIT).
+ * Animacje ćwiczeń.
  *
- * Kontekst: oryginalny host gifów `static.exercisedb.dev` został wyłączony
- * (DNS NXDOMAIN) przy rebrandingu ExerciseDB → AscendAPI, więc wszystkie
- * gify przestały się ładować. Dane (nazwy, instrukcje) z `oss.exercisedb.dev`
- * dalej działają — tutaj dokładamy tylko obrazki z darmowego, stabilnego
- * źródła hostowanego na jsDelivr.
+ * Ćwiczenia z `exerciseDbId` używają GIF-ów ExerciseDB pobranych LOKALNIE do
+ * public/exercise-gifs/<exerciseDbId>.gif (patrz prisma/download-gifs.ts).
+ * Dzięki temu apka NIE zależy w runtime od zewnętrznego hosta — jeśli danego
+ * pliku brak, <img onError> po prostu go ukryje (bez psucia układu).
  *
- * free-exercise-db daje 2 klatki na ćwiczenie (pozycja startowa i końcowa) w JPG.
- * Przełączanie ich w UI daje efekt animacji (patrz components/ui/ExerciseAnimation).
+ * framesForName (używane przez przeglądarkę techniki w /api/exercisedb) korzysta
+ * ze zdjęć free-exercise-db (yuhonas, jsDelivr) dopasowanych po nazwie.
  *
- * Uwaga: wszystkie pobrania są cache'owane w scope modułu (jedna instancja
- * serwera pobiera dane raz) + revalidate 24h. Błędy sieci degradują się cicho
- * do braku obrazka — nic się nie wywala.
+ * Media © AscendAPI / ExerciseDB — użytek niekomercyjny + atrybucja.
  */
+
+const MEDIA_ENABLED = true;
 
 const FREE_DB_URL = 'https://cdn.jsdelivr.net/gh/yuhonas/free-exercise-db@main/dist/exercises.json';
 const IMG_BASE = 'https://cdn.jsdelivr.net/gh/yuhonas/free-exercise-db@main/exercises';
-const EDB_BASE = 'https://oss.exercisedb.dev';
-
-// ─── Tymczasowy wyłącznik mediów ─────────────────────────────────────────────
-// Gify/zdjęcia ćwiczeń są chwilowo zdjęte z aplikacji. Przy ćwiczeniach zostaje
-// tylko kolorowy kafelek-placeholder (bez pobierania obrazków z sieci).
-// Aby PRZYWRÓCIĆ obrazki: zmień na true.
-const MEDIA_ENABLED = false;
 
 interface FreeExercise {
   id: string;
@@ -87,7 +79,6 @@ function scoreCandidate(qNorm: string, qTokens: string[], cand: IndexedFree): nu
   if (qTokens.length === 0) return 0;
   const matched = qTokens.filter(t => cand.tokens.includes(t)).length;
   if (matched === 0) return 0;
-  // proporcja trafionych tokenów zapytania (0-70) z lekką premią za pokrycie kandydata
   const coverage = matched / qTokens.length;
   const candCoverage = matched / Math.max(cand.tokens.length, 1);
   return Math.round(coverage * 60 + candCoverage * 15);
@@ -95,9 +86,9 @@ function scoreCandidate(qNorm: string, qTokens: string[], cand: IndexedFree): nu
 
 const nameFramesCache = new Map<string, string[] | null>();
 
-/** Zwraca pełne URL-e klatek animacji dla angielskiej nazwy ćwiczenia (lub null). */
+/** Klatki animacji dla angielskiej nazwy ćwiczenia (zdjęcia free-exercise-db). */
 export async function framesForName(name: string): Promise<string[] | null> {
-  if (!MEDIA_ENABLED) return null; // media tymczasowo wyłączone
+  if (!MEDIA_ENABLED) return null;
   const key = normalize(name);
   if (!key) return null;
   if (nameFramesCache.has(key)) return nameFramesCache.get(key) ?? null;
@@ -116,57 +107,11 @@ export async function framesForName(name: string): Promise<string[] | null> {
   return result;
 }
 
-// ─── katalog ExerciseDB: exerciseDbId → angielska nazwa (cache) ───────────────
-let catalogPromise: Promise<Map<string, string>> | null = null;
-
-async function fetchCatalog(): Promise<Map<string, string>> {
-  const map = new Map<string, string>();
-  let cursor: string | null = null;
-  try {
-    // API twardo ogranicza stronę do 25 rekordów (parametr `limit` jest ścinany),
-    // więc pełny katalog ~1500 ćwiczeń to ok. 60 stron. Wcześniejszy limit 25 stron
-    // katalogował tylko ~625 ćwiczeń → reszta nie rozwiązywała obrazka. Pętla i tak
-    // kończy się wcześniej, gdy `hasNextPage` = false; 120 to bezpieczny zawór.
-    for (let page = 0; page < 120; page++) {
-      const url: string = cursor
-        ? `${EDB_BASE}/api/v1/exercises?limit=100&after=${encodeURIComponent(cursor)}`
-        : `${EDB_BASE}/api/v1/exercises?limit=100`;
-      const res = await fetch(url, { next: { revalidate: 86400 }, headers: { Accept: 'application/json' } });
-      if (!res.ok) break;
-      const json = await res.json() as {
-        meta?: { hasNextPage?: boolean; nextCursor?: string };
-        data?: { exerciseId?: string; name?: string }[];
-      };
-      const data = json?.data ?? [];
-      if (data.length === 0) break;
-      for (const e of data) if (e?.exerciseId && e?.name) map.set(e.exerciseId, e.name);
-      if (json?.meta?.hasNextPage && json?.meta?.nextCursor) cursor = json.meta.nextCursor;
-      else break;
-    }
-  } catch {
-    /* sieć/limit — zwróć to, co udało się pobrać */
-  }
-  return map;
-}
-
-async function getCatalog(): Promise<Map<string, string>> {
-  if (!catalogPromise) {
-    catalogPromise = fetchCatalog().then(map => {
-      // Jeśli nic nie pobrano (np. rate limit), nie utrwalaj pustej mapy —
-      // pozwól spróbować ponownie przy następnym żądaniu.
-      if (map.size === 0) catalogPromise = null;
-      return map;
-    });
-  }
-  return catalogPromise;
-}
-
-/** Zwraca klatki animacji dla ExerciseDB id (przez angielską nazwę z katalogu). */
+/**
+ * Lokalny GIF ExerciseDB po ID (samodzielnie hostowany w public/exercise-gifs/).
+ * Zwraca ścieżkę względną — Next serwuje ją z public/. Zero zależności od hosta.
+ */
 export async function framesForDbId(dbId: string | null | undefined): Promise<string[] | null> {
-  if (!MEDIA_ENABLED) return null; // media tymczasowo wyłączone
-  if (!dbId) return null;
-  const catalog = await getCatalog();
-  const english = catalog.get(dbId);
-  if (!english) return null;
-  return framesForName(english);
+  if (!MEDIA_ENABLED || !dbId) return null;
+  return [`/exercise-gifs/${dbId}.gif`];
 }

@@ -1,0 +1,203 @@
+Mapowanie GIF-ów (polska nazwa → angielskie ćwiczenie ExerciseDB)
+Wszystkich: 200 | z plikiem GIF: 0 | bez ID: 10 | ID bez pliku: 190 | ID spoza katalogu: 58
+
+✗  Abdukcja na maszynie (historia)  → „resistance band seated hip abduction"  [0xDpB4L]  ✗ brak pliku
+✗  Addukcja na maszynie  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [c8f5cSY]  ✗ brak pliku
+✗  Bieżnia  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [oLrKqDH]  ✗ brak pliku
+✗  Brzuszki (Crunch)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [TFqbd8t]  ✗ brak pliku
+✗  Brzuszki Jandy (bez angażowania zginaczy bioder)  → „janda sit-up"  [1GPHRyK]  ✗ brak pliku
+✗  Brzuszki na ławce skośnej w dół  → „decline crunch"  [9Ap7miY]  ✗ brak pliku
+✗  Brzuszki z rękoma skrzyżowanymi na klatce  → „sit-up with arms on chest"  [6ZCiYWQ]  ✗ brak pliku
+✗  Chód na maszynie schodowej (stepmill)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [j9Q5crt]  ✗ brak pliku
+✗  Deska boczna w oparciu o podwyższenie  → „bodyweight incline side plank"  [5VXmnV5]  ✗ brak pliku
+✗  Dipy na maszynie siedząc (historia)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [X6C6i5Y]  ✗ brak pliku
+✗  Dynamiczne wyrzuty piłki lekarskiej sprzed klatki  → „medicine ball chest push multiple response"  [7aolH9D]  ✗ brak pliku
+✗  Dzień dobry (Good Morning) ze zgiętymi kolanami na Maszynie Smitha  → „smith bent knee good morning"  [1bQkKZK]  ✗ brak pliku
+✗  Francuskie wyciskanie stojąc sztangą łamaną (EZ)  → „ez bar standing french press"  [1cTf2Ux]  ✗ brak pliku
+✗  Francuskie wyciskanie sztangi za głowę w wąskim chwycie siedząc  → „barbell seated close grip behind neck triceps extension"  [4CBIBOM]  ✗ brak pliku
+✗  French press (hantle) (historia)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [mpKZGWz]  ✗ brak pliku
+✗  French press (sztanga)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [iZop9xO]  ✗ brak pliku
+✗  Hip extension przywodziciele (historia)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [Kpajagk]  ✗ brak pliku
+—  Hip thrust na maszynie (historia)  →  BRAK exerciseDbId (nie pokaże GIF-a)
+✗  Hip thrust ze sztangą  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [qKBpF7I]  ✗ brak pliku
+✗  Hyperextension  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [zhMwOwE]  ✗ brak pliku
+✗  Jednorącz martwy ciąg boczny ze sztangą (walizkowy)  → „barbell one arm side deadlift"  [2DxtqHL]  ✗ brak pliku
+✗  Jednorącz odwrotne uginanie nadgarstka oparte o ławkę (historia)  → „dumbbell over bench one arm reverse wrist curl"  [4Jc36XM]  ✗ brak pliku
+✗  Jednorącz uginanie młotkowe na modlitewniku  → „dumbbell one arm hammer preacher curl"  [4dF3maG]  ✗ brak pliku
+✗  Jednorącz uginanie młotkowe stojąc  → „dumbbell one arm standing hammer curl"  [2sQGZ5b]  ✗ brak pliku
+✗  Kickback z hantlem (historia)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [W6PxUkg]  ✗ brak pliku
+✗  Krążenia nadgarstków  → „wrist circles"  [2zNKRUB]  ✗ brak pliku
+✗  Krótkie spięcia brzucha (brzuszki 3/4)  → „3/4 sit-up"  [2gPfomN]  ✗ brak pliku
+✗  Krzyżowanie linek wyciągu w bramie (wariacja)  → „cable cross-over variation"  [0CXGHya]  ✗ brak pliku
+✗  Martwy ciąg (historia)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [ila4NZS]  ✗ brak pliku
+✗  Martwy ciąg na prostych nogach z hantlami  → „dumbbell stiff leg deadlift"  [5eLRITT]  ✗ brak pliku
+✗  Martwy ciąg rumuński  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [wQ2c4XD]  ✗ brak pliku
+✗  Martwy ciąg sumo z podciąganiem kettlebella do brody (high pull)  → „kettlebell sumo high pull"  [8ARQ9Hw]  ✗ brak pliku
+✗  Mobilizacja barków i łopatek z wałkiem siedząc  → „roller seated shoulder flexor depresor retractor"  [8coXSYU]  ✗ brak pliku
+✗  Naprzemienne ściąganie drążka wyciągu górnego  → „alternate lateral pulldown"  [4IKbhHV]  ✗ brak pliku
+✗  Naprzemienne scyzoryki (V-up) z gumą oporową  → „band alternating v-up with simple"  [3pqGMQj]  ✗ brak pliku
+✗  Naprzemienne wyciskanie kettlebelli leżąc na podłodze (floor press)  → „kettlebell alternating press on floor"  [7w6i0vE]  ✗ brak pliku
+✗  Naprzemienne wyciskanie kettlebelli nad głowę  → „kettlebell alternating press"  [5KLbZWx]  ✗ brak pliku
+✗  Naprzemienny zarzut ze zwisu z kettlebellem  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [I4tibZG]  ✗ brak pliku
+✗  Narciarz ze sztangą (skier)  → „barbell skier"  [4Leypho]  ✗ brak pliku
+✗  Nawijanie ciężaru na drążek (Wrist Roller)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [bd5b860]  ✗ brak pliku
+✗  Odwodzenie ramion z hantlami leżąc przodem (tył barku)  → „dumbbell lying rear lateral raise"  [53Ttlck]  ✗ brak pliku
+✗  Odwrotne rozpiętki na maszynie  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [myfUsKf]  ✗ brak pliku
+✗  Odwrotne rozpiętki z hantlami (tył barku) (historia)  → „dumbbell rear fly"  [8DiFDVA]  ✗ brak pliku
+✗  Odwrotne uginanie nadgarstków ze sztangą nachwytem  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [LsZkfU6]  ✗ brak pliku
+✗  Odwrotne uginanie nóg (na maszynie wyciągowej)  → „inverse leg curl (on pull-up cable machine)"  [0rHfvy9]  ✗ brak pliku
+✗  Odwrotne wiosłowanie (szeroki wariant)  → „extended style inverted row"  [1YUWDNZ]  ✗ brak pliku
+✗  Orbitrek (Elliptical)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [PCUYOMs]  ✗ brak pliku
+✗  Plank (deska)  → „bodyweight incline side plank"  [5VXmnV5]  ✗ brak pliku
+✗  Plank boczny  → „bodyweight incline side plank"  [5VXmnV5]  ✗ brak pliku
+✗  Podciąganie (chwyt neutralny)  → „pull up (neutral grip)"  [0V2YQjW]  ✗ brak pliku
+✗  Podciąganie na drążku (nachwytem) (historia)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [lBDjFxJ]  ✗ brak pliku
+✗  Podciąganie na drążku (podchwytem)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [T2mxWqc]  ✗ brak pliku
+✗  Podciąganie podchwytem ze wsparciem stojąc  → „assisted standing chin-up"  [7OeHptV]  ✗ brak pliku
+✗  Podciąganie typu archer (łucznika)  → „archer pull up"  [72BC5Za]  ✗ brak pliku
+✗  Podciąganie w opadzie ze wsparciem  → „assisted pull-up inclined"  [5ipN0iE]  ✗ brak pliku
+✗  Pompki (historia)  → „raise single arm push-up"  [13TpY4H]  ✗ brak pliku
+✗  Pompki jednorącz na podwyższeniu  → „raise single arm push-up"  [13TpY4H]  ✗ brak pliku
+✗  Pompki łopatkowe na poręczach  → „scapula dips"  [7xeukSt]  ✗ brak pliku
+✗  Pompki na poręczach (Dips)  → „raise single arm push-up"  [13TpY4H]  ✗ brak pliku
+✗  Pompki na poręczach (wąski chwyt)  → „push-up inside leg kick"  [0br45wL]  ✗ brak pliku
+✗  Pompki w wąskim chwycie w oparciu o podwyższenie  → „incline close-grip push-up"  [1YB40kg]  ✗ brak pliku
+✗  Pompki z dotknięciem klatki piersiowej  → „chest tap push-up (male)"  [7E06s6d]  ✗ brak pliku
+✗  Pronacja nadgarstka z hantlą leżąc na podłodze  → „dumbbell lying pronation on floor"  [7RWNjiB]  ✗ brak pliku
+✗  Prostowanie nóg na maszynie (Leg extension) (historia)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [my33uHU]  ✗ brak pliku
+✗  Prostowanie przedramion na wyciągu górnym zza głowy  → „cable high pulley overhead tricep extension"  [1xHyxys]  ✗ brak pliku
+✗  Prostowanie przedramion zza głowy na wyciągu z użyciem sznura  → „cable overhead triceps extension (rope attachment)"  [2IxROQ1]  ✗ brak pliku
+✗  Prostowanie ramion hantlami leżąc (triceps) (historia)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [mpKZGWz]  ✗ brak pliku
+✗  Prostowanie ramion na wyciągu (triceps pushdown) (historia)  → „cable pushdown"  [3ZflifB]  ✗ brak pliku
+✗  Prostowanie ramion na wyciągu w oparciu o ławkę skośną  → „cable incline pushdown"  [1PK5Uo3]  ✗ brak pliku
+✗  Prostowanie ramion nad głową na wyciągu  → „cable overhead triceps extension (rope attachment)"  [2IxROQ1]  ✗ brak pliku
+✗  Przenoszenie ciężaru na maszynie (pullover)  → „lever pullover"  [4U7iLb5]  ✗ brak pliku
+✗  Przyciąganie hantli wzdłuż tułowia jednorącz  → „dumbbell one arm upright row"  [6cKQC5E]  ✗ brak pliku
+✗  Przyciąganie hantli wzdłuż tułowia oburącz (historia)  → „dumbbell upright row"  [ainizkb]  ✗ brak pliku
+✗  Przyciąganie sztangi wzdłuż tułowia stojąc (wersja 2)  → „barbell upright row v. 2"  [83HoW9X]  ✗ brak pliku
+✗  Przyciąganie wzdłuż tułowia na Maszynie Smitha  → „smith upright row"  [1DN3iz4]  ✗ brak pliku
+✗  Przyciąganie z rotacją na wyciągu (ze zwiększonym oporem)  → „cable twisting pull with intensified"  [3nvEbbF]  ✗ brak pliku
+✗  Przysiad bułgarski (Bulgarian split squat)  → „split squats"  [9E25EOx]  ✗ brak pliku
+✗  Przysiad Hack ze sztangą z tyłu  → „barbell hack squat"  [5VCj6iH]  ✗ brak pliku
+✗  Przysiad na jednej nodze z kettlebellem (Pistolet)  → „kettlebell pistol squat"  [5bpPTHv]  ✗ brak pliku
+✗  Przysiad Sissy z obciążeniem  → „weighted sissy squat"  [0lQnxMZ]  ✗ brak pliku
+✗  Przysiad z hantlami (Goblet squat)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [yn8yg1r]  ✗ brak pliku
+✗  Przysiad z wyskokiem ze sztangą  → „barbell jump squat"  [1gFNTZV]  ✗ brak pliku
+✗  Przysiad ze sztangą  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [qXTaZnJ]  ✗ brak pliku
+✗  Przysiad ze sztangą (Squat)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [qXTaZnJ]  ✗ brak pliku
+✗  Przysiady z wyskokiem (Jump squat)  → „semi squat jump (male)"  [6FMU51h]  ✗ brak pliku
+✗  Rolka do brzuszków (Ab wheel)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [NAgVB3t]  ✗ brak pliku
+✗  Rotacja nadgarstka z hantlą jednorącz siedząc  → „dumbbell seated one arm rotate"  [7f2jsqP]  ✗ brak pliku
+✗  Rotacyjne unoszenie nóg po okręgu  → „rounded twisted leg raise (female)"  [6Wr0F3W]  ✗ brak pliku
+✗  Rower stacjonarny  → „stationary bike walk"  [a8VDgLw]  ✗ brak pliku
+✗  Rowerek w powietrzu (ćwiczenie na brzuch)  → „air bike"  [1ZFqTDN]  ✗ brak pliku
+✗  Rozciągający wykrok z obciążeniem (historia)  → „weighted stretch lunge"  [13VW2VO]  ✗ brak pliku
+✗  Rozpiętki na wyciągu (krzyżowanie linek)  → „cable cross-over variation"  [0CXGHya]  ✗ brak pliku
+✗  Rozpiętki na wyciągu na ławce skośnej w dół  → „cable cross-over variation"  [0CXGHya]  ✗ brak pliku
+✗  Rozpiętki z hantlami na ławce poziomej (historia)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [yz9nUhF]  ✗ brak pliku
+✗  Rozpiętki z rotacją (supinacją) na ławce skośnej  → „dumbbell incline twisted flyes"  [1PLE8e9]  ✗ brak pliku
+✗  Rwanie hantli jednorącz  → „dumbbell one arm snatch"  [6pTkI99]  ✗ brak pliku
+✗  Ściąganie drążka na maszynie z przodu (historia)  → „lever front pulldown"  [7F1DVzn]  ✗ brak pliku
+✗  Ściąganie drążka wyciągu do klatki (podchwytem)  → „band underhand pulldown with classic"  [0I5fUyn]  ✗ brak pliku
+✗  Ściąganie drążka wyciągu do klatki (szerokim nachwytem) (historia)  → „squared reverse grip machine lat pulldown"  [AwAIlSo]  ✗ brak pliku
+✗  Ściąganie gumy oporowej podchwytem  → „band underhand pulldown with classic"  [0I5fUyn]  ✗ brak pliku
+✗  Ściąganie gumy oporowej w wąskim chwycie (plecy ustabilizowane)  → „band fixed back close grip pulldown"  [4LoWllp]  ✗ brak pliku
+✗  Ściąganie liny na wyciągu górnym do brzucha  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [WW95auq]  ✗ brak pliku
+✗  Ściąganie wyciągu górnego jednorącz z uchwytem V  → „cable lateral pulldown with v-bar"  [4c9BhzB]  ✗ brak pliku
+✗  Skakanka  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [e1e76I2]  ✗ brak pliku
+✗  Skłony boczne tułowia z obciążeniem (historia)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [IpONWYv]  ✗ brak pliku
+✗  Skłony tułowia na wyciągu górnym stojąc (Allahy stojąc ze sznurem)  → „single style cable standing crunch (with rope attachment)"  [8gQo5Ss]  ✗ brak pliku
+✗  Skłony tułowia na wyciągu siedząc  → „cable seated crunch"  [8xUv4J7]  ✗ brak pliku
+✗  Skłony tułowia z przyciąganiem nóg (Kokony) z obciążeniem  → „cocoons with mega"  [7i4msxz]  ✗ brak pliku
+✗  Skręty kręgosłupa  → „spine twist"  [2jl9K55]  ✗ brak pliku
+✗  Skręty miednicy leżąc na plecach ze zgiętymi kolanami  → „bent knee lying twist (male)"  [6sYyrRX]  ✗ brak pliku
+✗  Skręty tułowia (Russian twist)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [XVDdcoj]  ✗ brak pliku
+✗  Skręty tułowia na maszynie  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [dFSNDOA]  ✗ brak pliku
+✗  Sumo deadlift  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [KgI0tqW]  ✗ brak pliku
+✗  Szrugi (historia)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [trmte8s]  ✗ brak pliku
+✗  Szrugi z hantlami  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [NJzBsGJ]  ✗ brak pliku
+✗  Szrugi ze sztangą  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [dG7tG5y]  ✗ brak pliku
+✗  Uginanie młotkowe na ławce skośnej (historia)  → „dumbbell hammer curl v. 2"  [2NpxjC1]  ✗ brak pliku
+—  Uginanie nadgarstków nachwytem ze sztangą z tyłu (historia)  →  BRAK exerciseDbId (nie pokaże GIF-a)
+✗  Uginanie nadgarstków ze sztangą podchwytem  → „barbell wrist curl"  [82LxxkW]  ✗ brak pliku
+✗  Uginanie nóg leżąc na maszynie (historia)  → „lever lying leg curl"  [17lJ1kr]  ✗ brak pliku
+✗  Uginanie nóg na maszynie (stojąc)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [C5jncD2]  ✗ brak pliku
+✗  Uginanie przedramion sztangą łamaną w oparciu klatki o ławkę (Spider Curl)  → „ez barbell spider curl"  [2kattbR]  ✗ brak pliku
+✗  Uginanie przedramion z hantlami nachwytem stojąc  → „dumbbell standing reverse curl"  [0IgNjSM]  ✗ brak pliku
+✗  Uginanie przedramion z hantlami stojąc  → „dumbbell standing biceps curl"  [3s4NnTh]  ✗ brak pliku
+✗  Uginanie przedramion z wyciągiem dolnym w przysiadzie  → „cable squatting curl"  [3XFdb1Z]  ✗ brak pliku
+✗  Uginanie przedramion ze sztangą w opadzie w wąskim chwycie (koncentryczne)  → „barbell seated close-grip concentration curl"  [1V1gj1u]  ✗ brak pliku
+✗  Uginanie przedramion ze sztangą w wąskim chwycie stojąc  → „barbell standing close grip curl"  [4dUn2iv]  ✗ brak pliku
+—  Uginanie ramion na drążku (historia)  →  BRAK exerciseDbId (nie pokaże GIF-a)
+✗  Uginanie ramion na ławce  → „dumbbell incline curl"  [ae9UoXQ]  ✗ brak pliku
+✗  Uginanie ramion na modlitewniku (Scott curl) (historia)  → „dumbbell one arm hammer preacher curl"  [4dF3maG]  ✗ brak pliku
+—  Uginanie ramion na modlitewniku ze sztangą - chwyt szeroki (historia)  →  BRAK exerciseDbId (nie pokaże GIF-a)
+—  Uginanie ramion na modlitewniku ze sztangą - chwyt wąski (historia)  →  BRAK exerciseDbId (nie pokaże GIF-a)
+✗  Uginanie ramion na wyciągu dolnym  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [G08RZcQ]  ✗ brak pliku
+—  Uginanie ramion sztangielkami z supinacją nadgarstka (historia)  →  BRAK exerciseDbId (nie pokaże GIF-a)
+✗  Uginanie ramion z hantlami (jednocześnie) (historia)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [NbVPDMW]  ✗ brak pliku
+✗  Uginanie ramion z hantlami naprzemiennie  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [BU15nH4]  ✗ brak pliku
+✗  Uginanie ramion z hantlem (Hammer curl)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [slDvUAU]  ✗ brak pliku
+✗  Uginanie ramion ze sztangą (biceps) (historia)  → „barbell curl"  [25GPyDY]  ✗ brak pliku
+—  Unoszenie barków w zwisie na drążku (historia)  →  BRAK exerciseDbId (nie pokaże GIF-a)
+✗  Unoszenie bioder leżąc (przy zgiętych kolanach)  → „hip raise (bent knee)"  [196HJGw]  ✗ brak pliku
+✗  Unoszenie kolan do klatki w zwisie (historia)  → „assisted hanging knee raise"  [03lzqwk]  ✗ brak pliku
+✗  Unoszenie kolan w zwisie na drążku ze wsparciem  → „assisted hanging knee raise"  [03lzqwk]  ✗ brak pliku
+✗  Unoszenie kolan w zwisie z odrzutem nóg (ze wsparciem)  → „assisted hanging knee raise with throw down"  [8K0w2yA]  ✗ brak pliku
+✗  Unoszenie nóg w zwisie  → „assisted hanging knee raise"  [03lzqwk]  ✗ brak pliku
+✗  Unoszenie prostych nóg w zwisie na drążku  → „hanging straight leg raise"  [4Ml7QFO]  ✗ brak pliku
+✗  Unoszenie prostych nóg w zwisie na podwyższeniu (historia)  → „hanging straight leg raise with elevated"  [6vcvsLS]  ✗ brak pliku
+✗  Unoszenie sztangi przodem z przenoszeniem (pullover)  → „barbell front raise and pullover"  [33AzZeV]  ✗ brak pliku
+✗  Wąskie wyciskanie sztangi  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [gx7s7uF]  ✗ brak pliku
+✗  Wiosłowanie hantlami w oparciu o ławkę skośną  → „dumbbell incline row"  [7vG5o25]  ✗ brak pliku
+✗  Wiosłowanie hantlem jednoręcznie  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [BJ0Hz5L]  ✗ brak pliku
+—  Wiosłowanie na ergometrze  →  BRAK exerciseDbId (nie pokaże GIF-a)
+✗  Wiosłowanie na maszynie (siedząc) (historia)  → „lever seated row"  [7I6LNUG]  ✗ brak pliku
+✗  Wiosłowanie na Maszynie Smitha w opadzie tułowia  → „smith bent over row with declined"  [5lE7XRz]  ✗ brak pliku
+✗  Wiosłowanie na wyciągu dolnym stojąc (uchwyt V)  → „cable standing row (v-bar)"  [4f8RXP8]  ✗ brak pliku
+✗  Wiosłowanie sztangą w opadzie tułowia (historia)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [eZyBC3j]  ✗ brak pliku
+✗  Wiosłowanie w wąskim chwycie siedząc na maszynie z podparciem klatki  → „stability lever narrow grip seated row"  [1u36hhy]  ✗ brak pliku
+✗  Wiosłowanie w zawieszeniu (np. TRX)  → „suspended row"  [4OaumBr]  ✗ brak pliku
+✗  Wspięcia na palce (Calf raises, stojąc)  → „one leg floor calf raise"  [0jp9Rlz]  ✗ brak pliku
+✗  Wspięcia na palce jednonóż na maszynie Hack  → „one leg floor calf raise"  [0jp9Rlz]  ✗ brak pliku
+✗  Wspięcia na palce na maszynie (siedząc)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [bOOdeyc]  ✗ brak pliku
+✗  Wspięcia na palce stojąc na Maszynie Smitha (historia)  → „one leg floor calf raise"  [0jp9Rlz]  ✗ brak pliku
+✗  Wyciskanie Arnolda  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [eOrFCnx]  ✗ brak pliku
+✗  Wyciskanie hantli chwytem młotkowym na ławce poziomej  → „dumbbell lying hammer press"  [7gdLIXa]  ✗ brak pliku
+✗  Wyciskanie hantli chwytem młotkowym na ławce skośnej w dół  → „dumbbell decline hammer press"  [1qrWgZ2]  ✗ brak pliku
+✗  Wyciskanie hantli na barki jednorącz (historia)  → „dumbbell one arm shoulder press"  [84RyJf8]  ✗ brak pliku
+✗  Wyciskanie hantli na ławce poziomej  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [SpYC0Kp]  ✗ brak pliku
+✗  Wyciskanie hantli na ławce skośnej (górnej) (historia)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [ns0SIbU]  ✗ brak pliku
+✗  Wyciskanie hantli nad głowę (siedząc)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [znQUdHY]  ✗ brak pliku
+✗  Wyciskanie hantli nad głowę stojąc (żołnierskie)  → „dumbbell standing overhead press"  [A6wtbuL]  ✗ brak pliku
+✗  Wyciskanie kettlebelli siedząc z wysokim uniesieniem  → „kettlebell seated press with high"  [89HVjEp]  ✗ brak pliku
+✗  Wyciskanie na barki jednorącz na maszynie  → „lever one arm shoulder press"  [2KGnL6M]  ✗ brak pliku
+✗  Wyciskanie na barki na maszynie  → „lever shoulder press"  [67n3r98]  ✗ brak pliku
+✗  Wyciskanie na barki na Maszynie Smitha  → „smith shoulder press"  [903mzG8]  ✗ brak pliku
+✗  Wyciskanie na klatkę przy użyciu wyciągów na ławce poziomej  → „cable bench press"  [7xI5MXA]  ✗ brak pliku
+✗  Wyciskanie na maszynie (klatka)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [Gu2ENkm]  ✗ brak pliku
+—  Wyciskanie na maszynie siedząc (historia)  →  BRAK exerciseDbId (nie pokaże GIF-a)
+✗  Wyciskanie na Maszynie Smitha na ławce skośnej w górę  → „smith incline bench press"  [5v7KYld]  ✗ brak pliku
+✗  Wyciskanie na wyciągu na ławce skośnej w dół  → „cable decline press"  [2Pya1cP]  ✗ brak pliku
+✗  Wyciskanie nóg na suwnicy 45°  → „sled 45в° leg press"  [10Z2DXU]  ✗ brak pliku
+✗  Wyciskanie podchwytem na Maszynie Smitha na ławce skośnej w górę  → „smith incline reverse-grip press"  [78VqWQK]  ✗ brak pliku
+✗  Wyciskanie sztangi na ławce poziomej (historia)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [EIeI8Vf]  ✗ brak pliku
+✗  Wyciskanie sztangi na ławce skośnej (dolnej)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [GrO65fd]  ✗ brak pliku
+✗  Wyciskanie sztangi na ławce skośnej (górnej)  → „barbell incline bench press"  [3TZduzM]  ✗ brak pliku
+✗  Wyciskanie sztangi nad głowę (OHP)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [blBXysN]  ✗ brak pliku
+✗  Wyciskanie sztangi podchwytem w szerokim chwycie na ławce poziomej  → „barbell wide reverse grip bench press horizontal"  [3QgteDK]  ✗ brak pliku
+✗  Wykrok w tył z wymachem obciążenia  → „weighted lunge with swing"  [5WiFcYk]  ✗ brak pliku
+✗  Wykroki w tył ze sztangą  → „barbell rear lunge v. 2"  [62Nw60O]  ✗ brak pliku
+✗  Wykroki z hantlami  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [RRWFUcw]  ✗ brak pliku
+✗  Wykroki ze sztangą  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [t8iSghb]  ✗ brak pliku
+✗  Wypychanie ciężaru palcami na maszynie (historia)  → „lever calf press"  [7B4F5nZ]  ✗ brak pliku
+✗  Wypychanie jednonóż na suwnicy 45° z wysoko ułożoną stopą  → „sled 45 degrees one leg press pointed"  [4H86mXM]  ✗ brak pliku
+✗  Wypychanie nóg na maszynie (Leg press) (historia)  → „sled 45в° leg press"  [10Z2DXU]  ✗ brak pliku
+✗  Wypychanie nóg na suwnicy 45 stopni  → „sled 45° leg press (side pov)"  [2Qh2J1e]  ✗ brak pliku
+✗  Wypychanie palcami jednonóż na suwnicy (różne kąty stopy)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [Dx2RIva]  ✗ brak pliku
+✗  Wznosy bokiem z hantlami  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [DsgkuIt]  ✗ brak pliku
+✗  Wznosy przodem z hantlami  → „dumbbell front raise"  [3eGE2JC]  ✗ brak pliku
+—  Wznosy ramion w górę na wyciągu (face pull)  →  BRAK exerciseDbId (nie pokaże GIF-a)
+✗  Wznosy ramion w oparciu o ławkę skośną  → „dumbbell incline shoulder raise"  [6e2DcYX]  ✗ brak pliku
+✗  Wznosy w opadzie tułowia (Rear delt fly)  → ID spoza katalogu (możliwe złe/nieaktualne powiązanie!)  [v1qBec9]  ✗ brak pliku
+✗  Zarzut dwóch kettlebelli oburącz  → „kettlebell two arm clean"  [7Ba7bQ2]  ✗ brak pliku
