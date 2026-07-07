@@ -1,9 +1,16 @@
 import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { Navigation } from "@/components/layout/Navigation";
 import { DarkModeInit } from "@/components/DarkModeInit";
 import { WorkoutDraftBar } from "@/components/ui/WorkoutDraftBar";
 import { PwaInit } from "@/components/PwaInit";
+
+const inter = Inter({
+  subsets: ["latin", "latin-ext"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Dziennik Treningow",
@@ -25,7 +32,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pl">
+    <html lang="pl" className={inter.variable}>
       <body className="bg-gray-50 min-h-screen">
         <DarkModeInit />
         <PwaInit />

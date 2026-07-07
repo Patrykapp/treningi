@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Exercise } from '@/types';
 import { ExerciseThumb } from '@/components/ui/ExerciseThumb';
+import { Star, ChevronRight, Search, Plus } from 'lucide-react';
 
 export default function CwiczeniaPage() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -107,33 +108,37 @@ export default function CwiczeniaPage() {
           <h1 className="text-xl font-bold text-gray-900">Ćwiczenia</h1>
           <button
             onClick={() => setShowOnlyFavorites(o => !o)}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${showOnlyFavorites ? 'bg-yellow-400 text-yellow-900' : 'bg-gray-100 text-gray-700'}`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${showOnlyFavorites ? 'bg-yellow-400 text-yellow-900 hover:bg-yellow-500' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
           >
+            <Star className="w-4 h-4" strokeWidth={2} />
             Ulubione {favorites.length > 0 && `(${favorites.length})`}
           </button>
         </div>
-        <input
-          type="text"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Szukaj..."
-          className="w-full border border-gray-200 rounded-xl px-4 py-2 text-gray-900 bg-gray-50"
-        />
+        <div className="relative">
+          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" strokeWidth={2} />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Szukaj..."
+            className="w-full border border-gray-200 rounded-xl pl-9 pr-4 py-2 text-gray-900 bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+          />
+        </div>
       </div>
-      <div className="px-4 py-4 space-y-5">
+      <div className="px-4 py-4 space-y-5 md:max-w-3xl lg:max-w-4xl md:mx-auto">
         {sortedGroups.map(([group, exs]) => {
           const isCollapsed = !expandedGroups.has(group);
           return (
           <div key={group}>
             <button
               onClick={() => toggleGroup(group)}
-              className="w-full flex items-center justify-between mb-2 px-1 text-left"
+              className="w-full flex items-center justify-between mb-2 px-1 text-left rounded-lg transition-colors hover:bg-gray-100 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
             >
-              <h2 className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                {group === 'Ulubione' ? '⭐ Ulubione' : group}
+              <h2 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1">
+                {group === 'Ulubione' ? <><Star className="w-3.5 h-3.5" strokeWidth={2} /> Ulubione</> : group}
                 <span className="ml-1.5 font-normal normal-case opacity-60">({exs.length})</span>
               </h2>
-              <span className={`text-gray-400 text-sm inline-block transition-transform duration-300 ${isCollapsed ? '' : 'rotate-90'}`}>▸</span>
+              <ChevronRight className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-300 ${isCollapsed ? '' : 'rotate-90'}`} strokeWidth={2} />
             </button>
             <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isCollapsed ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]'}`}>
               <div className="overflow-hidden">
@@ -150,7 +155,7 @@ export default function CwiczeniaPage() {
                     <button
                       key={ex.id}
                       onClick={() => router.push(`/cwiczenie/${ex.id}`)}
-                      className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 text-left active:bg-gray-50 ${i > 0 ? 'border-t border-gray-100' : ''}`}
+                      className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors hover:bg-gray-50 active:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${i > 0 ? 'border-t border-gray-100' : ''}`}
                     >
                       {everExpanded.has(group) ? <ExerciseThumb ex={ex} className="w-14 h-14" /> : null}
                       <span className="font-medium text-gray-900 text-sm flex-1 min-w-0 leading-snug">{shortName}</span>
@@ -159,11 +164,11 @@ export default function CwiczeniaPage() {
                       )}
                       <button
                         onClick={(e) => toggleFavorite(ex.id, e)}
-                        className={`text-xl mr-2 transition-transform active:scale-125 ${isFav ? 'opacity-100' : 'opacity-30'}`}
+                        className={`mr-2 p-0.5 rounded transition-transform active:scale-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${isFav ? 'opacity-100' : 'opacity-30'}`}
                       >
-                        ⭐
+                        <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" strokeWidth={2} />
                       </button>
-                      <span className="text-gray-400 text-lg leading-none">›</span>
+                      <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" strokeWidth={2} />
                     </button>
                   );
                 })}
@@ -175,14 +180,18 @@ export default function CwiczeniaPage() {
         })}
         {sorted.length === 0 && (
           <div className="text-center py-12 text-gray-500">
-            <p className="text-3xl mb-2">{showOnlyFavorites ? '⭐' : '🔍'}</p>
+            {showOnlyFavorites ? (
+              <Star className="w-8 h-8 mx-auto mb-2 text-gray-400" strokeWidth={2} />
+            ) : (
+              <Search className="w-8 h-8 mx-auto mb-2 text-gray-400" strokeWidth={2} />
+            )}
             <p className="mb-3">{showOnlyFavorites ? 'Brak ulubionych. Dodaj przez gwiazdkę!' : `Brak wyników dla „${search}"`}</p>
             {!showOnlyFavorites && search && (
               <button
                 onClick={() => router.push('/trening')}
-                className="text-sm text-blue-600 font-medium hover:underline"
+                className="inline-flex items-center gap-1 text-sm text-blue-600 font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded"
               >
-                + Dodaj „{search}&quot; jako nowe ćwiczenie w treningu
+                <Plus className="w-4 h-4" strokeWidth={2} /> Dodaj „{search}&quot; jako nowe ćwiczenie w treningu
               </button>
             )}
           </div>

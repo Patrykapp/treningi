@@ -5,6 +5,8 @@ import { formatDate, formatDateInput } from '@/lib/utils';
 import { Toast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useAuth } from '@/hooks/useAuth';
+import { SkeletonCard } from '@/components/ui/Skeleton';
+import { Bike, X, Pencil, Timer, MapPin, Flame, Link2, Dumbbell, Trash2 } from 'lucide-react';
 
 interface OtherActivity {
   id: string;
@@ -181,7 +183,7 @@ export default function AktywnosPage() {
         <p className="text-sm text-gray-500">Rower, pływanie, kajak i inne</p>
       </div>
 
-      <div className="px-4 py-4 space-y-4">
+      <div className="px-4 py-4 space-y-4 max-w-2xl mx-auto md:max-w-3xl lg:max-w-4xl">
         {/* Statystyki */}
         {!loading && activities.length > 0 && (
           <div className="grid grid-cols-3 gap-3">
@@ -204,7 +206,7 @@ export default function AktywnosPage() {
         {!showForm ? (
           <button
             onClick={() => setShowForm(true)}
-            className="w-full bg-blue-600 text-white text-center py-4 rounded-2xl font-semibold text-lg shadow-sm"
+            className="w-full bg-blue-600 text-white text-center py-4 rounded-2xl font-semibold text-lg shadow-sm transition-colors hover:bg-blue-700 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
           >
             + Dodaj aktywność
           </button>
@@ -212,7 +214,9 @@ export default function AktywnosPage() {
           <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-4 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold text-gray-900">Nowa aktywność</h2>
-              <button type="button" onClick={() => setShowForm(false)} className="text-gray-400 text-xl">✕</button>
+              <button type="button" onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                <X className="w-5 h-5" strokeWidth={2} />
+              </button>
             </div>
 
             {/* Typ aktywności */}
@@ -223,8 +227,8 @@ export default function AktywnosPage() {
                   <button
                     key={t} type="button"
                     onClick={() => { setType(t); setCustomType(''); }}
-                    className={`px-3 py-1.5 rounded-xl text-sm font-medium border transition-colors ${
-                      type === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200'
+                    className={`px-3 py-1.5 rounded-xl text-sm font-medium border transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
+                      type === t ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                     }`}
                   >
                     {t}
@@ -233,11 +237,11 @@ export default function AktywnosPage() {
                 <button
                   type="button"
                   onClick={() => setType('__custom')}
-                  className={`px-3 py-1.5 rounded-xl text-sm font-medium border transition-colors ${
-                    type === '__custom' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200'
+                  className={`px-3 py-1.5 rounded-xl text-sm font-medium border transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 flex items-center gap-1 ${
+                    type === '__custom' ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                   }`}
                 >
-                  ✏️ Inne
+                  <Pencil className="w-4 h-4" strokeWidth={2} /> Inne
                 </button>
               </div>
               {type === '__custom' && (
@@ -306,7 +310,7 @@ export default function AktywnosPage() {
             </div>
 
             <button type="submit" disabled={saving || !activeType || totalMinutes <= 0}
-              className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-base disabled:opacity-50">
+              className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-base transition-colors hover:bg-blue-700 active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
               {saving ? 'Zapisuję...' : 'Zapisz aktywność'}
             </button>
           </form>
@@ -314,10 +318,14 @@ export default function AktywnosPage() {
 
         {/* Lista aktywności */}
         {loading ? (
-          <div className="text-center py-8 text-gray-500">Ładowanie...</div>
+          <div className="space-y-3">
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
         ) : activities.length === 0 ? (
           <div className="bg-white rounded-2xl p-8 text-center shadow-sm">
-            <p className="text-4xl mb-2">🚴</p>
+            <Bike className="w-8 h-8 mx-auto mb-2 text-gray-400" strokeWidth={2} />
             <p className="font-medium text-gray-700 mb-1">Brak aktywności</p>
             <p className="text-sm text-gray-400">Dodaj pierwszą — rower, pływanie, kajak...</p>
           </div>
@@ -326,7 +334,7 @@ export default function AktywnosPage() {
             {activities.map(a => {
               const mine = a.user.id === userId;
               return (
-                <div key={a.id} className="bg-white rounded-2xl p-4 shadow-sm">
+                <div key={a.id} className="bg-white rounded-2xl p-4 shadow-sm transition-shadow hover:shadow-md">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -339,18 +347,18 @@ export default function AktywnosPage() {
                         )}
                       </div>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-sm text-gray-600">
-                        <span>⏱ {formatDuration(a.durationMin)}</span>
-                        {a.distanceKm && <span>📍 {a.distanceKm} km</span>}
-                        {a.kcal && <span className="text-red-500">🔥 {a.kcal} kcal</span>}
+                        <span className="flex items-center gap-1"><Timer className="w-4 h-4" strokeWidth={2} /> {formatDuration(a.durationMin)}</span>
+                        {a.distanceKm && <span className="flex items-center gap-1"><MapPin className="w-4 h-4" strokeWidth={2} /> {a.distanceKm} km</span>}
+                        {a.kcal && <span className="flex items-center gap-1 text-red-500"><Flame className="w-4 h-4" strokeWidth={2} /> {a.kcal} kcal</span>}
                       </div>
                       {a.notes && <p className="text-sm text-gray-500 italic mt-1">{a.notes}</p>}
                     </div>
                     {mine && (
                       <button
                         onClick={() => setConfirmDelete(a.id)}
-                        className="text-gray-400 hover:text-red-500 transition-colors p-1 shrink-0"
+                        className="text-gray-400 hover:text-red-500 transition-colors p-1 shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                         title="Usuń"
-                      >🗑️</button>
+                      ><Trash2 className="w-4 h-4" strokeWidth={2} /></button>
                     )}
                   </div>
 
@@ -359,13 +367,15 @@ export default function AktywnosPage() {
                     <div className="mt-3 pt-3 border-t border-gray-100">
                       {a.sessionId ? (
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-semibold text-blue-700 bg-blue-50 rounded-lg px-2 py-1">🔗 Podłączona do treningu</span>
-                          <button onClick={() => linkTo(a.id, null)} className="text-xs text-gray-500 underline">Odepnij</button>
+                          <span className="text-xs font-semibold text-blue-700 bg-blue-50 rounded-lg px-2 py-1 flex items-center gap-1">
+                            <Link2 className="w-4 h-4" strokeWidth={2} /> Podłączona do treningu
+                          </span>
+                          <button onClick={() => linkTo(a.id, null)} className="text-xs text-gray-500 underline hover:text-gray-700 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">Odepnij</button>
                         </div>
                       ) : (
                         <>
-                          <button onClick={() => openLink(a)} className="text-xs font-semibold text-blue-600">
-                            🔗 {linkingId === a.id ? 'Anuluj' : 'Podłącz do treningu'}
+                          <button onClick={() => openLink(a)} className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                            <Link2 className="w-4 h-4" strokeWidth={2} /> {linkingId === a.id ? 'Anuluj' : 'Podłącz do treningu'}
                           </button>
                           {linkingId === a.id && (
                             <div className="mt-2 space-y-1.5">
@@ -379,8 +389,8 @@ export default function AktywnosPage() {
                                   const label = muscles.length ? muscles.join(', ') : `${s.entries.length} ćwiczeń`;
                                   return (
                                     <button key={s.id} onClick={() => linkTo(a.id, s.id)}
-                                      className="w-full text-left text-sm bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-xl px-3 py-2 transition-colors">
-                                      🏋️ Trening · {label}
+                                      className="w-full text-left text-sm bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-xl px-3 py-2 transition-colors active:scale-[0.99] flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                                      <Dumbbell className="w-4 h-4" strokeWidth={2} /> Trening · {label}
                                     </button>
                                   );
                                 })

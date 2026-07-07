@@ -54,7 +54,7 @@ export function ExerciseThumb({ ex, className = 'w-14 h-14' }: { ex: Exercise; c
         src={frames[0]}
         alt=""
         loading="lazy"
-        className={`${className} rounded-lg object-cover bg-gray-100 shrink-0`}
+        className={`${className} rounded-lg object-cover skeleton shrink-0`}
         onError={e => { e.currentTarget.style.visibility = 'hidden'; }}
       />
     );

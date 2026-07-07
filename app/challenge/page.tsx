@@ -6,6 +6,17 @@ import { useAuth } from '@/hooks/useAuth';
 import { Toast } from '@/components/ui/Toast';
 import { ExercisePicker } from '@/components/ui/ExercisePicker';
 import { Exercise } from '@/types';
+import {
+  Zap,
+  BarChart3,
+  X,
+  Minus,
+  Plus,
+  Trophy,
+  Save,
+  Check,
+  ArrowRight,
+} from 'lucide-react';
 
 type Phase = 'setup' | 'prep' | 'active' | 'rest' | 'summary';
 
@@ -301,19 +312,29 @@ export default function ChallengePage() {
         <div className="bg-white border-b px-4 pt-4 pb-3 sticky top-0 z-10">
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-xl font-bold text-gray-900">⚡ Challenge</h1>
+              <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2"><Zap className="w-5 h-5 text-blue-600" strokeWidth={2} /> Challenge</h1>
               <p className="text-sm text-gray-500">Serie do upadku mięśniowego</p>
             </div>
-            <Link href="/challenge/historia" className="text-sm font-medium bg-gray-100 text-gray-700 rounded-xl px-3 py-2 shrink-0">📊 Postępy</Link>
+            <Link
+              href="/challenge/historia"
+              className="text-sm font-medium bg-gray-100 text-gray-700 rounded-xl px-3 py-2 shrink-0 flex items-center gap-1.5 transition-colors hover:bg-gray-200 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            >
+              <BarChart3 className="w-4 h-4" strokeWidth={2} /> Postępy
+            </Link>
           </div>
         </div>
-        <div className="px-4 py-4 space-y-4">
+        <div className="px-4 py-4 space-y-4 md:max-w-2xl lg:max-w-3xl md:mx-auto">
           <div className="bg-white rounded-2xl shadow-sm p-4 space-y-2">
             <label className="text-sm font-medium text-gray-700 block">Ćwiczenie</label>
             {selectedExercise ? (
               <div className="flex items-center gap-2 bg-blue-50 rounded-xl px-3 py-2">
                 <span className="text-blue-600 text-sm font-medium flex-1 min-w-0 truncate">{selectedExercise.name}</span>
-                <button onClick={() => setSelectedExercise(null)} className="text-gray-500 text-xs font-medium shrink-0">zmień ✕</button>
+                <button
+                  onClick={() => setSelectedExercise(null)}
+                  className="text-gray-500 text-xs font-medium shrink-0 flex items-center gap-1 rounded-lg transition-colors hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                >
+                  zmień <X className="w-3.5 h-3.5" strokeWidth={2} />
+                </button>
               </div>
             ) : (
               <ExercisePicker exercises={exercises} favorites={favorites} onSelect={setSelectedExercise} />
@@ -327,10 +348,14 @@ export default function ChallengePage() {
                 <label className="text-xs text-gray-500 block mb-1">Liczba serii</label>
                 <div className="flex items-center gap-2">
                   <button onClick={() => setNumSets(s => Math.max(1, s - 1))}
-                    className="w-8 h-8 rounded-full bg-gray-100 text-gray-700 font-bold text-lg flex items-center justify-center">−</button>
+                    className="w-8 h-8 rounded-full bg-gray-100 text-gray-700 font-bold text-lg flex items-center justify-center transition-colors hover:bg-gray-200 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                    <Minus className="w-4 h-4" strokeWidth={2} />
+                  </button>
                   <span className="text-xl font-bold text-gray-900 w-6 text-center">{numSets}</span>
                   <button onClick={() => setNumSets(s => Math.min(10, s + 1))}
-                    className="w-8 h-8 rounded-full bg-gray-100 text-gray-700 font-bold text-lg flex items-center justify-center">+</button>
+                    className="w-8 h-8 rounded-full bg-gray-100 text-gray-700 font-bold text-lg flex items-center justify-center transition-colors hover:bg-gray-200 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                    <Plus className="w-4 h-4" strokeWidth={2} />
+                  </button>
                 </div>
               </div>
               <div>
@@ -338,7 +363,7 @@ export default function ChallengePage() {
                 <div className="flex flex-wrap gap-1">
                   {[60, 120, 180, 300].map(s => (
                     <button key={s} onClick={() => setRestSeconds(s)}
-                      className={`px-2 py-1 rounded-lg text-xs font-medium transition-colors ${restSeconds === s ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
+                      className={`px-2 py-1 rounded-lg text-xs font-medium transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${restSeconds === s ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
                       {s < 60 ? `${s}s` : `${s / 60}min`}
                     </button>
                   ))}
@@ -348,7 +373,7 @@ export default function ChallengePage() {
           </div>
 
           <button onClick={startChallenge} disabled={!selectedExercise || !isLoggedIn}
-            className="w-full bg-blue-600 text-white py-4 rounded-2xl text-lg font-bold disabled:opacity-40 shadow-sm active:scale-95 transition-transform">
+            className="w-full bg-blue-600 text-white py-4 rounded-2xl text-lg font-bold disabled:opacity-40 shadow-sm active:scale-95 transition-transform hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
             {!isLoggedIn ? 'Zaloguj się aby kontynuować' : !selectedExercise ? 'Wybierz ćwiczenie' : `🔥 Start — ${numSets} serie`}
           </button>
         </div>
@@ -368,7 +393,10 @@ export default function ChallengePage() {
               <p className="text-xs text-gray-500 uppercase tracking-wide">Przygotuj się</p>
               <h1 className="text-3xl font-black text-gray-900">Za chwilę start</h1>
             </div>
-            <button onClick={restartChallenge} className="text-sm text-gray-400 underline">Anuluj</button>
+            <button
+              onClick={restartChallenge}
+              className="text-sm text-gray-400 underline transition-colors hover:text-gray-600 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            >Anuluj</button>
           </div>
           <p className="text-sm text-blue-600 font-medium mt-1 truncate">{selectedExercise?.name}</p>
         </div>
@@ -380,7 +408,10 @@ export default function ChallengePage() {
           <div className="w-full max-w-xs bg-gray-200 rounded-full h-2">
             <div className="bg-blue-500 h-2 rounded-full transition-all duration-1000" style={{ width: `${pct}%` }} />
           </div>
-          <button onClick={startNow} className="text-sm text-blue-600 underline">Start teraz →</button>
+          <button
+            onClick={startNow}
+            className="text-sm text-blue-600 underline transition-colors hover:text-blue-700 flex items-center gap-1 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+          >Start teraz <ArrowRight className="w-4 h-4" strokeWidth={2} /></button>
         </div>
       </div>
     );
@@ -397,7 +428,10 @@ export default function ChallengePage() {
               <p className="text-xs text-gray-500 uppercase tracking-wide">Seria</p>
               <h1 className="text-3xl font-black text-gray-900">{currentSet} / {numSets}</h1>
             </div>
-            <button onClick={restartChallenge} className="text-sm text-gray-400 underline">Anuluj</button>
+            <button
+              onClick={restartChallenge}
+              className="text-sm text-gray-400 underline transition-colors hover:text-gray-600 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            >Anuluj</button>
           </div>
           <p className="text-sm text-blue-600 font-medium mt-1 truncate">{selectedExercise?.name}</p>
         </div>
@@ -424,8 +458,12 @@ export default function ChallengePage() {
               autoFocus />
           </div>
           <button onClick={finishSet} disabled={!pendingReps}
-            className="w-full max-w-xs bg-blue-600 text-white py-4 rounded-2xl text-lg font-bold disabled:opacity-40 shadow active:scale-95 transition-transform">
-            {currentSet < numSets ? `Koniec serii → odpoczynek ${formatTime(restSeconds)}` : 'Koniec ostatniej serii ✓'}
+            className="w-full max-w-xs bg-blue-600 text-white py-4 rounded-2xl text-lg font-bold disabled:opacity-40 shadow active:scale-95 transition-transform hover:bg-blue-700 flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+            {currentSet < numSets ? (
+              <>Koniec serii <ArrowRight className="w-4 h-4" strokeWidth={2} /> odpoczynek {formatTime(restSeconds)}</>
+            ) : (
+              <>Koniec ostatniej serii <Check className="w-4 h-4" strokeWidth={2} /></>
+            )}
           </button>
         </div>
       </div>
@@ -444,7 +482,10 @@ export default function ChallengePage() {
               <p className="text-xs text-gray-500 uppercase tracking-wide">Następna</p>
               <h1 className="text-3xl font-black text-gray-900">Seria {currentSet} / {numSets}</h1>
             </div>
-            <button onClick={restartChallenge} className="text-sm text-gray-400 underline">Anuluj</button>
+            <button
+              onClick={restartChallenge}
+              className="text-sm text-gray-400 underline transition-colors hover:text-gray-600 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            >Anuluj</button>
           </div>
           <p className="text-sm text-blue-600 font-medium mt-1 truncate">{selectedExercise?.name}</p>
         </div>
@@ -473,7 +514,10 @@ export default function ChallengePage() {
               ))}
             </div>
           )}
-          <button onClick={skipRest} className="text-sm text-blue-600 underline">Pomiń odpoczynek →</button>
+          <button
+            onClick={skipRest}
+            className="text-sm text-blue-600 underline transition-colors hover:text-blue-700 flex items-center gap-1 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+          >Pomiń odpoczynek <ArrowRight className="w-4 h-4" strokeWidth={2} /></button>
         </div>
       </div>
     );
@@ -484,10 +528,10 @@ export default function ChallengePage() {
     <div className="min-h-screen bg-gray-50 pb-24">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       <div className="bg-white border-b px-4 pt-4 pb-3">
-        <h1 className="text-xl font-bold text-gray-900">🏆 Challenge zakończony!</h1>
+        <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2"><Trophy className="w-5 h-5 text-yellow-500" strokeWidth={2} /> Challenge zakończony!</h1>
         <p className="text-sm text-blue-600 font-medium mt-0.5 truncate">{selectedExercise?.name}</p>
       </div>
-      <div className="px-4 py-4 space-y-4">
+      <div className="px-4 py-4 space-y-4 md:max-w-2xl lg:max-w-3xl md:mx-auto">
         <div className="bg-blue-600 rounded-2xl p-6 text-center text-white shadow">
           <div className="text-xs uppercase tracking-widest opacity-80 mb-1">Łącznie</div>
           <div className="text-6xl font-black">{totalReps}</div>
@@ -529,8 +573,8 @@ export default function ChallengePage() {
             <div className="flex gap-2">
               {users.map(u => (
                 <button key={u.id} onClick={() => setSaveAsUserId(u.id)}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
-                    (saveAsUserId || userId) === u.id ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200'
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
+                    (saveAsUserId || userId) === u.id ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                   }`}>
                   {u.name}
                 </button>
@@ -541,17 +585,17 @@ export default function ChallengePage() {
 
         <div className="space-y-2">
           {saved ? (
-            <div className="w-full bg-green-50 border border-green-200 text-green-700 py-4 rounded-2xl text-lg font-bold text-center">
-              ✓ Zapisano
+            <div className="w-full bg-green-50 border border-green-200 text-green-700 py-4 rounded-2xl text-lg font-bold text-center flex items-center justify-center gap-1.5">
+              <Check className="w-5 h-5" strokeWidth={2} /> Zapisano
             </div>
           ) : (
             <button onClick={saveChallenge} disabled={saving}
-              className="w-full bg-blue-600 text-white py-4 rounded-2xl text-lg font-bold disabled:opacity-50 shadow active:scale-95 transition-transform">
-              {saving ? 'Zapisuję...' : '💾 Zapisz wynik'}
+              className="w-full bg-blue-600 text-white py-4 rounded-2xl text-lg font-bold disabled:opacity-50 shadow active:scale-95 transition-transform hover:bg-blue-700 flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+              {saving ? 'Zapisuję...' : <><Save className="w-5 h-5" strokeWidth={2} /> Zapisz wynik</>}
             </button>
           )}
           <button onClick={restartChallenge}
-            className="w-full bg-white border border-gray-200 text-gray-600 py-3 rounded-2xl text-sm font-medium">
+            className="w-full bg-white border border-gray-200 text-gray-600 py-3 rounded-2xl text-sm font-medium transition-colors hover:bg-gray-50 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
             Nowy challenge
           </button>
         </div>

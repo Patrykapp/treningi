@@ -9,6 +9,11 @@ import { Toast } from '@/components/ui/Toast';
 import { ExerciseAnimation } from '@/components/ui/ExerciseAnimation';
 import { useAuth } from '@/hooks/useAuth';
 import { activeSession } from '@/hooks/useActiveSession';
+import { SkeletonCard, Skeleton } from '@/components/ui/Skeleton';
+import {
+  ChevronLeft, Undo2, Plus, X, Users, AlertTriangle,
+  ChevronUp, ChevronDown, BarChart3, Trash2,
+} from 'lucide-react';
 
 interface EntryWithSession {
   id: string;
@@ -400,7 +405,24 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
   const handleAddToExisting = () => saveEntry(true);
   const handleSaveAlone = () => saveEntry(false);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Ładowanie...</div>;
+  if (loading) return (
+    <div className="min-h-screen bg-gray-50 pb-20">
+      <div className="bg-white border-b px-4 pt-4 pb-3 sticky top-0 z-10">
+        <Skeleton className="h-4 w-24 mb-3" />
+        <Skeleton className="h-6 w-40" />
+      </div>
+      <div className="px-4 py-4 space-y-4 max-w-2xl mx-auto md:max-w-3xl lg:max-w-4xl">
+        <div className="grid grid-cols-4 gap-2">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+        <Skeleton className="h-48 w-full md:h-64" />
+        <SkeletonCard />
+      </div>
+    </div>
+  );
   if (!exercise) return <div className="min-h-screen flex items-center justify-center text-gray-500">Nie znaleziono ćwiczenia</div>;
 
   const shortName = exercise.name.includes(' - ') ? exercise.name.split(' - ').slice(1).join(' - ') : exercise.name;
@@ -410,7 +432,9 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       <div className="bg-white border-b px-4 pt-4 pb-3 sticky top-0 z-10">
-        <Link href="/cwiczenia" className="text-blue-600 text-sm mb-2 block">← Ćwiczenia</Link>
+        <Link href="/cwiczenia" className="text-blue-600 text-sm mb-2 flex items-center gap-1 w-fit rounded-lg hover:text-blue-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+          <ChevronLeft className="w-4 h-4" strokeWidth={2} /> Ćwiczenia
+        </Link>
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-xl font-bold text-gray-900">{shortName}</h1>
@@ -421,24 +445,24 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
               {lastEntry && !showForm && (
                 <button
                   onClick={() => openForm(true)}
-                  className="bg-gray-100 text-gray-700 px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-1"
+                  className="bg-gray-100 text-gray-700 px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-1 transition-colors hover:bg-gray-200 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                   title="Otwórz z ostatnimi wartościami"
                 >
-                  ↩ {calcMax(lastEntry) > 0 ? `${calcMax(lastEntry)} kg` : `${lastEntry.reps} powt.`}
+                  <Undo2 className="w-4 h-4" strokeWidth={2} /> {calcMax(lastEntry) > 0 ? `${calcMax(lastEntry)} kg` : `${lastEntry.reps} powt.`}
                 </button>
               )}
               <button
                 onClick={() => showForm ? setShowForm(false) : openForm(!!lastEntry)}
-                className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium"
+                className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-1 transition-colors hover:bg-blue-700 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
               >
-                {showForm ? 'Anuluj' : '+ Dodaj'}
+                {showForm ? 'Anuluj' : <><Plus className="w-4 h-4" strokeWidth={2} /> Dodaj</>}
               </button>
             </div>
           )}
         </div>
       </div>
 
-      <div className="px-4 py-4 space-y-4">
+      <div className="px-4 py-4 space-y-4 max-w-2xl mx-auto md:max-w-3xl lg:max-w-4xl">
 
         {entries.length > 0 && (
           <div className={`grid gap-2 ${isBodyweightExercise ? 'grid-cols-3' : 'grid-cols-4'}`}>
@@ -486,7 +510,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs text-gray-500">Własna masa ciała</span>
               <button onClick={() => { setFormBodyweight(b => !b); if (!formBodyweight) setFormWeight(0); }}
-                className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors ${formBodyweight ? 'bg-green-500' : 'bg-gray-200'}`}>
+                className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${formBodyweight ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-200 hover:bg-gray-300'}`}>
                 <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${formBodyweight ? 'translate-x-5' : 'translate-x-1'}`} />
               </button>
             </div>
@@ -497,26 +521,26 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                     <label className="text-xs text-gray-500 block mb-1">Serie</label>
                     <div className="flex items-center">
                       <button type="button" onClick={() => { setFormPrefilled(false); setFormSets(s => Math.max(1, s - 1)); }}
-                        className="h-10 w-9 bg-gray-100 rounded-l-xl font-bold text-gray-600 text-lg shrink-0 border border-r-0 border-gray-200">−</button>
+                        className="h-10 w-9 bg-gray-100 rounded-l-xl font-bold text-gray-600 text-lg shrink-0 border border-r-0 border-gray-200 transition-colors hover:bg-gray-200 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">−</button>
                       <input type="number" inputMode="numeric"
                         value={formSets === 0 ? '' : formSets} placeholder="0"
                         onChange={e => { setFormPrefilled(false); setFormSets(e.target.value === '' ? 0 : Math.max(1, Number(e.target.value))); }} min={1}
                         className="flex-1 border border-gray-200 py-2 text-base text-center font-semibold min-w-0 h-10" />
                       <button type="button" onClick={() => { setFormPrefilled(false); setFormSets(s => s + 1); }}
-                        className="h-10 w-9 bg-gray-100 rounded-r-xl font-bold text-gray-600 text-lg shrink-0 border border-l-0 border-gray-200">+</button>
+                        className="h-10 w-9 bg-gray-100 rounded-r-xl font-bold text-gray-600 text-lg shrink-0 border border-l-0 border-gray-200 transition-colors hover:bg-gray-200 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">+</button>
                     </div>
                   </div>
                   <div>
                     <label className="text-xs text-gray-500 block mb-1">Powtórzenia</label>
                     <div className="flex items-center">
                       <button type="button" onClick={() => { setFormPrefilled(false); setFormReps(r => Math.max(1, r - 1)); }}
-                        className="h-10 w-9 bg-gray-100 rounded-l-xl font-bold text-gray-600 text-lg shrink-0 border border-r-0 border-gray-200">−</button>
+                        className="h-10 w-9 bg-gray-100 rounded-l-xl font-bold text-gray-600 text-lg shrink-0 border border-r-0 border-gray-200 transition-colors hover:bg-gray-200 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">−</button>
                       <input type="number" inputMode="numeric"
                         value={formReps === 0 ? '' : formReps} placeholder="0"
                         onChange={e => { setFormPrefilled(false); setFormReps(e.target.value === '' ? 0 : Number(e.target.value)); }} min={1}
                         className="flex-1 border border-gray-200 py-2 text-base text-center font-semibold min-w-0 h-10" />
                       <button type="button" onClick={() => { setFormPrefilled(false); setFormReps(r => r + 1); }}
-                        className="h-10 w-9 bg-gray-100 rounded-r-xl font-bold text-gray-600 text-lg shrink-0 border border-l-0 border-gray-200">+</button>
+                        className="h-10 w-9 bg-gray-100 rounded-r-xl font-bold text-gray-600 text-lg shrink-0 border border-l-0 border-gray-200 transition-colors hover:bg-gray-200 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">+</button>
                     </div>
                   </div>
                 </div>
@@ -531,10 +555,10 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                       {([-5, -2.5, -1, 1, 2.5, 5] as number[]).map(delta => (
                         <button key={delta} type="button"
                           onClick={() => { setFormPrefilled(false); setFormWeight(w => Math.max(0, Math.round((w + delta) * 10) / 10)); }}
-                          className={`py-2 rounded-lg text-xs font-bold border transition-colors ${
+                          className={`py-2 rounded-lg text-xs font-bold border transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
                             delta > 0
-                              ? 'bg-blue-50 text-blue-600 border-blue-100 active:bg-blue-100'
-                              : 'bg-gray-50 text-gray-600 border-gray-200 active:bg-gray-100'
+                              ? 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 active:bg-blue-100'
+                              : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100 active:bg-gray-100'
                           }`}>
                           {delta > 0 ? `+${delta}` : delta}
                         </button>
@@ -542,7 +566,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                     </div>
                   </div>
                 )}
-                <button onClick={initCustomSets} className="text-sm text-blue-600">+ Rozpisz serie osobno</button>
+                <button onClick={initCustomSets} className="text-sm text-blue-600 hover:text-blue-700 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">+ Rozpisz serie osobno</button>
               </>
             ) : (
               <div className="space-y-2">
@@ -556,10 +580,10 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                           onClick={() => setFormSetsData(prev => prev.map(s => ({
                             ...s, weight: Math.max(0, Math.round(((s.weight || 0) + delta) * 10) / 10)
                           })))}
-                          className={`py-1.5 rounded-lg text-xs font-bold border ${
+                          className={`py-1.5 rounded-lg text-xs font-bold border transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
                             delta > 0
-                              ? 'bg-blue-50 text-blue-600 border-blue-100'
-                              : 'bg-gray-50 text-gray-600 border-gray-200'
+                              ? 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100'
+                              : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
                           }`}>
                           {delta > 0 ? `+${delta}` : delta}
                         </button>
@@ -571,13 +595,13 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                   <div key={i} className="flex items-center gap-1.5">
                     <span className="text-xs text-gray-400 shrink-0 w-6">S{i + 1}</span>
                     <button type="button" onClick={() => updateSet(i, 'reps', Math.max(1, (s.reps || 0) - 1))}
-                      className="w-7 h-9 bg-gray-100 rounded-l-lg font-bold text-gray-600 shrink-0 border border-r-0 border-gray-200">−</button>
+                      className="w-7 h-9 bg-gray-100 rounded-l-lg font-bold text-gray-600 shrink-0 border border-r-0 border-gray-200 transition-colors hover:bg-gray-200 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">−</button>
                     <input type="number" inputMode="numeric"
                       value={s.reps === 0 ? '' : s.reps} placeholder="powt."
                       onChange={e => updateSet(i, 'reps', e.target.value === '' ? 0 : Number(e.target.value))} min={1}
                       className="w-10 border border-gray-200 py-1.5 text-sm text-center font-semibold h-9" />
                     <button type="button" onClick={() => updateSet(i, 'reps', (s.reps || 0) + 1)}
-                      className="w-7 h-9 bg-gray-100 rounded-r-lg font-bold text-gray-600 shrink-0 border border-l-0 border-gray-200">+</button>
+                      className="w-7 h-9 bg-gray-100 rounded-r-lg font-bold text-gray-600 shrink-0 border border-l-0 border-gray-200 transition-colors hover:bg-gray-200 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">+</button>
                     {!formBodyweight && (
                       <>
                         <span className="text-xs text-gray-300 shrink-0">×</span>
@@ -588,10 +612,12 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                         <span className="text-xs text-gray-400 shrink-0">kg</span>
                       </>
                     )}
-                    <button onClick={() => removeSet(i)} className="text-gray-300 hover:text-red-400 px-1 shrink-0 text-lg leading-none">✕</button>
+                    <button onClick={() => removeSet(i)} className="text-gray-300 hover:text-red-400 px-1 shrink-0 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                      <X className="w-4 h-4" strokeWidth={2} />
+                    </button>
                   </div>
                 ))}
-                <button onClick={addSet} className="text-sm text-blue-600">+ Dodaj serię</button>
+                <button onClick={addSet} className="text-sm text-blue-600 hover:text-blue-700 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">+ Dodaj serię</button>
               </div>
             )}
             <div className="grid grid-cols-2 gap-2">
@@ -608,50 +634,50 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                 <div className="flex gap-2">
                   {users.map(u => (
                     <button key={u.id} onClick={() => setSaveAsUserId(u.id)}
-                      className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${
+                      className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
                         saveAsUserId === u.id
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white text-gray-600 border-gray-200'
+                          ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
+                          : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                       }`}>
                       {u.name}
                     </button>
                   ))}
                   <button onClick={() => setSaveAsUserId('all')}
-                    className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${
+                    className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 flex items-center justify-center gap-1 ${
                       saveAsUserId === 'all'
-                        ? 'bg-green-600 text-white border-green-600'
-                        : 'bg-white text-gray-600 border-gray-200'
+                        ? 'bg-green-600 text-white border-green-600 hover:bg-green-700'
+                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                     }`}>
-                    Oboje 👥
+                    Oboje <Users className="w-4 h-4" strokeWidth={2} />
                   </button>
                 </div>
               </div>
             )}
             {existingSessionId && (
-              <p className="text-xs text-amber-600 bg-amber-50 rounded-xl px-3 py-2 text-center font-medium">
-                ⚠️ Masz już trening z tego dnia
+              <p className="text-xs text-amber-600 bg-amber-50 rounded-xl px-3 py-2 text-center font-medium flex items-center justify-center gap-1">
+                <AlertTriangle className="w-4 h-4" strokeWidth={2} /> Masz już trening z tego dnia
               </p>
             )}
             <div className="flex gap-2">
               {activeSession.getId() && (
-                <button onClick={handleAddToDraft} className="flex-1 bg-green-600 text-white py-2 rounded-xl text-sm font-medium">
+                <button onClick={handleAddToDraft} className="flex-1 bg-green-600 text-white py-2 rounded-xl text-sm font-medium transition-colors hover:bg-green-700 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                   Dodaj do treningu
                 </button>
               )}
               {existingSessionId ? (
                 <>
                   <button onClick={handleAddToExisting} disabled={saving}
-                    className="flex-1 bg-blue-600 text-white py-2 rounded-xl text-sm font-medium disabled:opacity-50">
+                    className="flex-1 bg-blue-600 text-white py-2 rounded-xl text-sm font-medium transition-colors hover:bg-blue-700 active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                     {saving ? 'Zapisuję...' : '+ Dodaj do istniejącego'}
                   </button>
                   <button onClick={handleSaveAlone} disabled={saving}
-                    className="flex-1 bg-gray-600 text-white py-2 rounded-xl text-sm font-medium disabled:opacity-50">
+                    className="flex-1 bg-gray-600 text-white py-2 rounded-xl text-sm font-medium transition-colors hover:bg-gray-700 active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                     Osobno
                   </button>
                 </>
               ) : (
                 <button onClick={handleSaveAlone} disabled={saving}
-                  className="flex-1 bg-blue-600 text-white py-2 rounded-xl text-sm font-medium disabled:opacity-50">
+                  className="flex-1 bg-blue-600 text-white py-2 rounded-xl text-sm font-medium transition-colors hover:bg-blue-700 active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                   {saving ? 'Zapisuję...' : 'Zapisz'}
                 </button>
               )}
@@ -668,20 +694,21 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                   : (['weight', 'volume', 'reps'] as const)
                 ).map(t => (
                   <button key={t} onClick={() => setChartType(t)}
-                    className={`px-3 py-1 rounded-full text-xs font-medium ${chartType === t ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${chartType === t ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
                     {t === 'weight' ? 'Ciężar' : t === 'reps' ? 'Powtórzenia' : 'Wolumen'}
                   </button>
                 ))}
               </div>
               {otherUsers.length > 0 && (
                 <select value={compareUserId} onChange={e => setCompareUserId(e.target.value)}
-                  className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600">
+                  className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 transition-colors hover:border-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                   <option value="">+ Porównaj</option>
                   {otherUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                 </select>
               )}
             </div>
-            <ResponsiveContainer width="100%" height={220}>
+            <div className="h-[220px] md:h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gradBlue" x1="0" y1="0" x2="0" y2="1">
@@ -751,13 +778,14 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                 )}
               </AreaChart>
             </ResponsiveContainer>
+            </div>
           </div>
         )}
 
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <button onClick={() => setShowCalc(!showCalc)} className="w-full flex items-center justify-between px-4 py-3 text-left">
+          <button onClick={() => setShowCalc(!showCalc)} className="w-full flex items-center justify-between px-4 py-3 text-left transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
             <span className="font-medium text-gray-900 text-sm">Kalkulator 1RM</span>
-            <span className="text-gray-400 text-xs">{showCalc ? '▲' : '▼'}</span>
+            {showCalc ? <ChevronUp className="w-4 h-4 text-gray-400" strokeWidth={2} /> : <ChevronDown className="w-4 h-4 text-gray-400" strokeWidth={2} />}
           </button>
           {showCalc && (
             <div className="px-4 pb-4 border-t border-gray-100 space-y-3">
@@ -786,13 +814,13 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <button onClick={() => setShowTechnika(!showTechnika)} className="w-full flex items-center justify-between px-4 py-3 text-left">
+          <button onClick={() => setShowTechnika(!showTechnika)} className="w-full flex items-center justify-between px-4 py-3 text-left transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
             <div className="flex items-center gap-2">
               <span className="font-medium text-gray-900 text-sm">Technika i opis</span>
               {linkedDb && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">powiazane</span>}
               {!linkedDb && <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">nie powiazane</span>}
             </div>
-            <span className="text-gray-400 text-xs">{showTechnika ? '▲' : '▼'}</span>
+            {showTechnika ? <ChevronUp className="w-4 h-4 text-gray-400" strokeWidth={2} /> : <ChevronDown className="w-4 h-4 text-gray-400" strokeWidth={2} />}
           </button>
 
           {showTechnika && (
@@ -832,7 +860,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                     </ol>
                   </div>
                   )}
-                  {isLoggedIn && <button onClick={unlinkExercise} className="text-xs text-gray-400 underline">Zmien powiazanie</button>}
+                  {isLoggedIn && <button onClick={unlinkExercise} className="text-xs text-gray-400 underline hover:text-gray-600 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">Zmien powiazanie</button>}
                 </div>
               ) : (
                 <div className="p-4">
@@ -851,7 +879,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                         <div className="space-y-2 max-h-96 overflow-y-auto -mx-1 px-1">
                           {suggestions.map(ex => (
                             <button key={ex.exerciseId} onClick={() => linkExercise(ex)} disabled={linking}
-                              className="w-full flex items-center gap-3 p-2 rounded-xl border border-gray-100 active:bg-blue-50 text-left disabled:opacity-50">
+                              className="w-full flex items-center gap-3 p-2 rounded-xl border border-gray-100 transition-colors hover:bg-gray-50 hover:border-gray-200 active:bg-blue-50 active:scale-[0.99] text-left disabled:opacity-50 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                               {ex.gifUrl ? (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img src={ex.gifUrl} alt={ex.name} loading="lazy"
@@ -902,9 +930,9 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                             if (res.ok) { setToast({ message: 'Usunięto', type: 'success' }); loadData(); }
                             else setToast({ message: 'Błąd usuwania', type: 'error' });
                           }}
-                          className="text-gray-300 hover:text-red-400 text-lg leading-none transition-colors"
+                          className="text-gray-300 hover:text-red-400 leading-none transition-colors p-1 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                           title="Usuń"
-                        >✕</button>
+                        ><Trash2 className="w-4 h-4" strokeWidth={2} /></button>
                       </div>
                     </div>
                     <div className="text-xs text-gray-500">
@@ -925,7 +953,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
 
         {entries.length === 0 && !loading && (
           <div className="text-center py-12 text-gray-500">
-            <p className="text-3xl mb-2">📊</p>
+            <BarChart3 className="w-8 h-8 mx-auto mb-2 text-gray-400" strokeWidth={2} />
             <p>Brak historii dla tego ćwiczenia.</p>
           </div>
         )}

@@ -7,8 +7,23 @@ import { WorkoutSession } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { Toast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { SkeletonCard } from '@/components/ui/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { sessionCalories, runCalories, latestWeight } from '@/lib/calories';
+import {
+  Dumbbell,
+  Calendar,
+  Link2,
+  Flame,
+  MapPin,
+  Timer,
+  Zap,
+  Trophy,
+  BarChart3,
+  Pencil,
+  Trash2,
+  Footprints,
+} from 'lucide-react';
 
 interface Run {
   id: string;
@@ -305,8 +320,8 @@ function HistoriaPage() {
                 <button
                   key={u.id}
                   onClick={() => setViewUserId(u.id === authUserId ? null : u.id)}
-                  className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${
-                    active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200'
+                  className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
+                    active ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
                   }`}
                 >
                   {u.id === authUserId ? 'Ty' : u.name}
@@ -319,7 +334,7 @@ function HistoriaPage() {
           <select
             value={filterExerciseId}
             onChange={e => setFilterExerciseId(e.target.value)}
-            className="flex-1 min-w-0 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white"
+            className="flex-1 min-w-0 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="">Wszystkie ćwiczenia</option>
             {exercises.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
@@ -327,27 +342,37 @@ function HistoriaPage() {
         </div>
         <div className="flex gap-2">
           <input type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)}
-            className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm" />
+            className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
           <input type="date" value={filterTo} onChange={e => setFilterTo(e.target.value)}
-            className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm" />
+            className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
           {(filterExerciseId || filterFrom || filterTo) && (
-            <button onClick={clearFilters} className="px-3 py-2 text-sm text-blue-600 font-medium">Reset</button>
+            <button
+              onClick={clearFilters}
+              className="px-3 py-2 text-sm text-blue-600 font-medium rounded-xl transition-colors hover:bg-blue-50 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            >Reset</button>
           )}
         </div>
       </div>
 
-      <div className="px-4 py-4">
+      <div className="px-4 py-4 max-w-2xl mx-auto md:max-w-3xl lg:max-w-4xl">
         {loading ? (
-          <div className="text-center py-8 text-gray-600">Ładowanie...</div>
+          <div className="space-y-3">
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
         ) : sessions.length === 0 && activities.length === 0 && runs.length === 0 ? (
           <div className="text-center py-8 text-gray-600 bg-white rounded-2xl px-6">
-            <p className="text-4xl mb-2">🏋️</p>
+            <Dumbbell className="w-8 h-8 mx-auto mb-2 text-gray-400" strokeWidth={2} />
             <p className="font-medium mb-1">Brak treningów</p>
             <p className="text-sm text-gray-400 mb-4">
               {filterExerciseId || filterFrom || filterTo ? 'Brak wyników dla wybranych filtrów.' : 'Nie masz jeszcze żadnych treningów.'}
             </p>
             {!filterExerciseId && !filterFrom && !filterTo && (
-              <Link href="/trening" className="inline-block bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold text-sm">
+              <Link
+                href="/trening"
+                className="inline-block bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold text-sm transition-colors hover:bg-blue-700 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+              >
                 + Dodaj pierwszy trening
               </Link>
             )}
@@ -385,8 +410,8 @@ function HistoriaPage() {
               const itemWeekHeader = itemWk !== lastWeekKey ? (
                 <div key={`wk-${itemWk}`} className="sticky top-[120px] z-10 -mx-0 px-0 py-1">
                   <div className="bg-gray-100 rounded-xl px-3 py-1.5 flex items-center">
-                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">
-                      📅 {weekLabel(item.date)}
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-gray-500 uppercase tracking-wide">
+                      <Calendar className="w-3.5 h-3.5" strokeWidth={2} /> {weekLabel(item.date)}
                     </span>
                   </div>
                 </div>
@@ -414,25 +439,30 @@ function HistoriaPage() {
                         )}
                       </div>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-sm text-gray-600">
-                        <span>⏱ {dur}</span>
-                        {a.distanceKm && <span>📍 {a.distanceKm} km</span>}
-                        {a.kcal && <span className="text-red-500">🔥 {a.kcal} kcal</span>}
+                        <span className="inline-flex items-center gap-1"><Timer className="w-4 h-4" strokeWidth={2} /> {dur}</span>
+                        {a.distanceKm && <span className="inline-flex items-center gap-1"><MapPin className="w-4 h-4" strokeWidth={2} /> {a.distanceKm} km</span>}
+                        {a.kcal && <span className="inline-flex items-center gap-1 text-red-500"><Flame className="w-4 h-4" strokeWidth={2} /> {a.kcal} kcal</span>}
                       </div>
                       {a.notes && <p className="text-sm text-gray-500 italic mt-1">{a.notes}</p>}
                       {mine && daySess.length > 0 && (
                         <div className="mt-3 pt-3 border-t border-gray-100">
-                          <button onClick={() => setLinkingId(linkingId === a.id ? null : a.id)}
-                            className="text-xs font-semibold text-blue-600">
-                            🔗 {linkingId === a.id ? 'Anuluj' : 'Podłącz do treningu'}
+                          <button
+                            onClick={() => setLinkingId(linkingId === a.id ? null : a.id)}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 rounded-lg px-1 -mx-1 transition-colors hover:text-blue-700 hover:bg-blue-50 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                          >
+                            <Link2 className="w-3.5 h-3.5" strokeWidth={2} /> {linkingId === a.id ? 'Anuluj' : 'Podłącz do treningu'}
                           </button>
                           {linkingId === a.id && (
                             <div className="mt-2 space-y-1.5">
                               {daySess.map(s => {
                                 const muscles = [...new Set(s.entries.map(e => normalizeMuscle(e.exercise?.muscleGroup)))];
                                 return (
-                                  <button key={s.id} onClick={() => linkActivity(a.id, s.id)}
-                                    className="w-full text-left text-sm bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-xl px-3 py-2 transition-colors">
-                                    🏋️ Trening · {muscles.length ? muscles.join(', ') : `${s.entries.length} ćwiczeń`}
+                                  <button
+                                    key={s.id}
+                                    onClick={() => linkActivity(a.id, s.id)}
+                                    className="w-full text-left text-sm bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-xl px-3 py-2 transition-colors active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 inline-flex items-center gap-1.5"
+                                  >
+                                    <Dumbbell className="w-4 h-4" strokeWidth={2} /> Trening · {muscles.length ? muscles.join(', ') : `${s.entries.length} ćwiczeń`}
                                   </button>
                                 );
                               })}
@@ -464,7 +494,7 @@ function HistoriaPage() {
                   <div key={`run-${r.id}`} className="bg-white rounded-2xl p-4 shadow-sm border-l-4 border-orange-300">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-gray-900">🏃 Bieg</span>
+                        <span className="inline-flex items-center gap-1.5 font-bold text-gray-900"><Footprints className="w-4 h-4" strokeWidth={2} /> Bieg</span>
                         <span className="text-sm text-gray-500">{formatDate(r.date)}</span>
                         <span className="text-[10px] font-semibold rounded-md px-1.5 py-0.5 bg-orange-100 text-orange-700">Bieg</span>
                         {!mine && owner && (
@@ -472,10 +502,10 @@ function HistoriaPage() {
                         )}
                       </div>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-sm text-gray-600">
-                        <span>📍 {r.distance} km</span>
-                        <span>⏱ {durStr}</span>
-                        {pace && <span>⚡ {pace}</span>}
-                        {kcal > 0 && <span className="text-red-500">🔥 ~{kcal} kcal</span>}
+                        <span className="inline-flex items-center gap-1"><MapPin className="w-4 h-4" strokeWidth={2} /> {r.distance} km</span>
+                        <span className="inline-flex items-center gap-1"><Timer className="w-4 h-4" strokeWidth={2} /> {durStr}</span>
+                        {pace && <span className="inline-flex items-center gap-1"><Zap className="w-4 h-4" strokeWidth={2} /> {pace}</span>}
+                        {kcal > 0 && <span className="inline-flex items-center gap-1 text-red-500"><Flame className="w-4 h-4" strokeWidth={2} /> ~{kcal} kcal</span>}
                       </div>
                       {r.notes && <p className="text-sm text-gray-500 italic mt-1">{r.notes}</p>}
                     </div>
@@ -518,29 +548,31 @@ function HistoriaPage() {
                         const sc = sessionCalories(session, weightKg);
                         if (sc.kcal <= 0) return null;
                         return (
-                          <span className="ml-2 text-xs text-red-500 font-medium whitespace-nowrap">
-                            🔥 {sc.estimated ? '~' : ''}{sc.kcal} kcal{!sc.estimated && ' ⌚'}
+                          <span className="ml-2 inline-flex items-center gap-1 text-xs text-red-500 font-medium whitespace-nowrap">
+                            <Flame className="w-3.5 h-3.5" strokeWidth={2} /> {sc.estimated ? '~' : ''}{sc.kcal} kcal{!sc.estimated && ' ⌚'}
                           </span>
                         );
                       })()}
                       {session.notes?.startsWith('Challenge:') && (
-                        <Link href={`/challenge/wynik/${session.id}`}
-                          className="ml-2 text-xs font-semibold bg-blue-100 text-blue-700 rounded-lg px-2 py-0.5">
-                          ⚡ Challenge →
+                        <Link
+                          href={`/challenge/wynik/${session.id}`}
+                          className="ml-2 inline-flex items-center gap-1 text-xs font-semibold bg-blue-100 text-blue-700 rounded-lg px-2 py-0.5 transition-colors hover:bg-blue-200 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                        >
+                          <Zap className="w-3.5 h-3.5" strokeWidth={2} /> Challenge →
                         </Link>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
                       {/* Gwiazdki oceny + PR badge */}
                       {rating?.prCount > 0 && (
-                        <span className="text-sm font-bold bg-yellow-400 text-yellow-900 rounded-xl px-2.5 py-1 leading-none">
-                          🏆 ×{rating.prCount}
+                        <span className="inline-flex items-center gap-1 text-sm font-bold bg-yellow-400 text-yellow-900 rounded-xl px-2.5 py-1 leading-none">
+                          <Trophy className="w-4 h-4" strokeWidth={2} /> ×{rating.prCount}
                         </span>
                       )}
                       {rating ? (
                         <button
                           onClick={() => setExpandedRating(isExpanded ? null : session.id)}
-                          className="flex items-center gap-1.5 bg-gray-50 rounded-xl px-2.5 py-1.5"
+                          className="flex items-center gap-1.5 bg-gray-50 rounded-xl px-2.5 py-1.5 transition-colors hover:bg-gray-100 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                           title="Kliknij aby zobaczyć ocenę i wskazówki"
                         >
                           <Stars count={rating.stars} />
@@ -553,31 +585,31 @@ function HistoriaPage() {
                       <div className="flex gap-1 items-center">
                         <Link
                           href={session.notes?.startsWith('Challenge:') ? `/challenge/wynik/${session.id}` : `/trening/podsumowanie/${session.id}`}
-                          className="p-2 rounded-xl text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-colors"
+                          className="p-2 rounded-xl text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                           title="Podsumowanie"
-                        >📊</Link>
+                        ><BarChart3 className="w-4 h-4" strokeWidth={2} /></Link>
                         {isLoggedIn && session.userId === authUserId && (
                           <>
                             {sameDaySessions.length > 1 && session.id !== mainSession.id && (
                               <button
                                 onClick={() => handleMerge(mainSession.id, session.id)}
                                 disabled={merging === session.id}
-                                className="px-2 py-1.5 rounded-xl text-xs font-semibold text-orange-600 bg-orange-50 hover:bg-orange-100 transition-colors disabled:opacity-50"
+                                className="inline-flex items-center gap-1 px-2 py-1.5 rounded-xl text-xs font-semibold text-orange-600 bg-orange-50 hover:bg-orange-100 transition-colors active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                                 title="Połącz z głównym treningiem tego dnia"
                               >
-                                {merging === session.id ? '...' : '🔗 Połącz'}
+                                {merging === session.id ? '...' : (<><Link2 className="w-3.5 h-3.5" strokeWidth={2} /> Połącz</>)}
                               </button>
                             )}
                             <button
                               onClick={() => router.push(`/trening?sessionId=${session.id}`)}
-                              className="p-2 rounded-xl text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                              className="p-2 rounded-xl text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                               title="Edytuj trening"
-                            >✏️</button>
+                            ><Pencil className="w-4 h-4" strokeWidth={2} /></button>
                             <button
                               onClick={() => setConfirmDelete(session.id)}
-                              className="p-2 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                              className="p-2 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                               title="Usuń trening"
-                            >🗑️</button>
+                            ><Trash2 className="w-4 h-4" strokeWidth={2} /></button>
                           </>
                         )}
                       </div>
@@ -605,7 +637,7 @@ function HistoriaPage() {
                         <div className="bg-white rounded-lg p-2">
                           <p className="text-gray-500 mb-0.5">Progres</p>
                           <p className="font-semibold text-gray-800">{rating.breakdown.progress.score}/10</p>
-                          {rating.prCount > 0 && <p className="text-yellow-600">🏆 {rating.prCount} PR!</p>}
+                          {rating.prCount > 0 && <p className="inline-flex items-center gap-1 text-yellow-600"><Trophy className="w-3.5 h-3.5" strokeWidth={2} /> {rating.prCount} PR!</p>}
                         </div>
                         {rating.breakdown.rpe && (
                           <div className="bg-white rounded-lg p-2">
@@ -648,11 +680,13 @@ function HistoriaPage() {
                         <div className="space-y-1">
                           {entries.map(entry => (
                             <div key={entry.id} className="flex items-start justify-between gap-3 py-1">
-                              <Link href={`/cwiczenie/${entry.exerciseId}`}
-                                className="text-sm font-medium text-gray-900 flex-1 min-w-0 break-words leading-snug">
+                              <Link
+                                href={`/cwiczenie/${entry.exerciseId}`}
+                                className="text-sm font-medium text-gray-900 flex-1 min-w-0 break-words leading-snug rounded-md transition-colors hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                              >
                                 {entry.exercise?.name}
                                 {rating?.prExerciseIds?.includes(entry.exerciseId) && (
-                                  <span className="ml-1" title="Nowy rekord!">🏆</span>
+                                  <Trophy className="inline w-3.5 h-3.5 ml-1 text-yellow-500" strokeWidth={2} aria-label="Nowy rekord!" />
                                 )}
                               </Link>
                               <div className="text-sm text-gray-700 text-right shrink-0 max-w-[55%] leading-snug">
@@ -683,16 +717,20 @@ function HistoriaPage() {
                       {session.activities.map(a => (
                         <div key={`pin-${a.id}`} className="flex items-center justify-between gap-2 bg-cyan-50 rounded-xl px-3 py-2">
                           <div className="min-w-0">
-                            <span className="text-sm font-semibold text-cyan-800">🔗 {a.type}</span>
-                            <span className="ml-2 text-xs text-gray-600">
-                              ⏱ {formatActDuration(a.durationMin)}
-                              {a.distanceKm ? ` · 📍 ${a.distanceKm} km` : ''}
-                              {a.kcal ? ` · 🔥 ${a.kcal} kcal` : ''}
+                            <span className="inline-flex items-center gap-1 text-sm font-semibold text-cyan-800">
+                              <Link2 className="w-3.5 h-3.5" strokeWidth={2} /> {a.type}
+                            </span>
+                            <span className="ml-2 inline-flex items-center gap-1 text-xs text-gray-600">
+                              <Timer className="w-3.5 h-3.5" strokeWidth={2} /> {formatActDuration(a.durationMin)}
+                              {a.distanceKm ? (<> · <MapPin className="inline w-3.5 h-3.5" strokeWidth={2} /> {a.distanceKm} km</>) : ''}
+                              {a.kcal ? (<> · <Flame className="inline w-3.5 h-3.5" strokeWidth={2} /> {a.kcal} kcal</>) : ''}
                             </span>
                           </div>
                           {isLoggedIn && a.userId === authUserId && (
-                            <button onClick={() => linkActivity(a.id, null)}
-                              className="text-xs text-gray-500 underline shrink-0">Odepnij</button>
+                            <button
+                              onClick={() => linkActivity(a.id, null)}
+                              className="text-xs text-gray-500 underline shrink-0 rounded-md transition-colors hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                            >Odepnij</button>
                           )}
                         </div>
                       ))}

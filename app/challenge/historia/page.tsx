@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDate } from '@/lib/utils';
+import { SkeletonCard } from '@/components/ui/Skeleton';
+import { BarChart3, Zap, Trophy, ArrowLeft, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface Challenge {
   sessionId: string;
@@ -55,17 +57,34 @@ export default function ChallengeHistoriaPage() {
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
       <div className="bg-white border-b px-4 pt-4 pb-3 sticky top-0 z-10">
-        <Link href="/challenge" className="text-blue-600 text-sm mb-2 block">← Challenge</Link>
-        <h1 className="text-xl font-bold text-gray-900">📊 Postępy w challengach</h1>
+        <Link
+          href="/challenge"
+          className="inline-flex items-center gap-1 text-blue-600 text-sm mb-2 rounded-md px-1 -mx-1 transition-colors hover:text-blue-700 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" strokeWidth={2} /> Challenge
+        </Link>
+        <h1 className="text-xl font-bold text-gray-900 inline-flex items-center gap-2">
+          <BarChart3 className="w-5 h-5" strokeWidth={2} /> Postępy w challengach
+        </h1>
         <p className="text-sm text-gray-500">Porównanie tylko w obrębie tej samej liczby serii</p>
       </div>
 
-      <div className="px-4 py-4 space-y-5">
+      <div className="px-4 py-4 space-y-5 max-w-2xl mx-auto md:max-w-3xl lg:max-w-4xl">
+        {!ready && (
+          <div className="space-y-3">
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
+        )}
         {ready && groupArr.length === 0 && (
           <div className="text-center py-16 text-gray-500">
-            <p className="text-3xl mb-2">⚡</p>
+            <Zap className="w-8 h-8 mx-auto mb-2 text-gray-400" strokeWidth={2} />
             <p>Brak zapisanych challengy.</p>
-            <Link href="/challenge" className="text-blue-600 text-sm font-medium hover:underline">Zrób pierwszy →</Link>
+            <Link
+              href="/challenge"
+              className="text-blue-600 text-sm font-medium rounded-md px-1 -mx-1 transition-colors hover:underline hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            >Zrób pierwszy →</Link>
           </div>
         )}
 
@@ -99,7 +118,7 @@ export default function ChallengeHistoriaPage() {
               <div className="divide-y divide-gray-100">
                 {view.map(a => (
                   <Link key={a.sessionId} href={`/challenge/wynik/${a.sessionId}`}
-                    className="block px-4 py-3 active:bg-gray-50">
+                    className="block px-4 py-3 transition-colors hover:bg-gray-50 active:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium text-gray-900">{formatDate(a.date)}</span>
                       <div className="flex items-center gap-2">
@@ -114,7 +133,9 @@ export default function ChallengeHistoriaPage() {
                       ))}
                       <span className="text-xs bg-blue-50 text-blue-600 rounded-md px-1.5 py-0.5 font-medium">{setsLabel(a.setsCount)}</span>
                       {a.isRecord && (
-                        <span className="text-xs bg-amber-100 text-amber-700 rounded-md px-1.5 py-0.5 font-medium">🏆 rekord</span>
+                        <span className="inline-flex items-center gap-1 text-xs bg-amber-100 text-amber-700 rounded-md px-1.5 py-0.5 font-medium">
+                          <Trophy className="w-3 h-3" strokeWidth={2} /> rekord
+                        </span>
                       )}
                     </div>
 
@@ -125,8 +146,8 @@ export default function ChallengeHistoriaPage() {
                         <span className="text-gray-300">przerwa: b/d</span>
                       )}
                       {a.delta !== null && (
-                        <span className={a.delta > 0 ? 'text-green-600 font-medium' : a.delta < 0 ? 'text-red-500 font-medium' : 'text-gray-400'}>
-                          {a.delta > 0 ? `▲ +${a.delta}` : a.delta < 0 ? `▼ ${a.delta}` : '= bez zmian'} vs poprzednia
+                        <span className={`inline-flex items-center gap-0.5 ${a.delta > 0 ? 'text-green-600 font-medium' : a.delta < 0 ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
+                          {a.delta > 0 ? (<><TrendingUp className="w-3.5 h-3.5" strokeWidth={2} /> +{a.delta}</>) : a.delta < 0 ? (<><TrendingDown className="w-3.5 h-3.5" strokeWidth={2} /> {a.delta}</>) : '= bez zmian'} vs poprzednia
                         </span>
                       )}
                     </div>

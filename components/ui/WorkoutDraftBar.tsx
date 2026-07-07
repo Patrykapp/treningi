@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { activeSession } from '@/hooks/useActiveSession';
 import { useAuth } from '@/hooks/useAuth';
+import { Dumbbell, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface SessionEntry {
   id: string;
@@ -97,16 +98,16 @@ export function WorkoutDraftBar() {
           {/* Header */}
           <button
             onClick={() => setOpen(o => !o)}
-            className="w-full flex items-center justify-between px-4 py-3"
+            className="w-full flex items-center justify-between px-4 py-3 transition hover:bg-blue-500 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
           >
             <div className="flex items-center gap-2">
-              <span className="text-white text-lg">💪</span>
+              <Dumbbell className="w-5 h-5 text-white" strokeWidth={2} />
               <span className="text-white font-semibold text-sm">
                 Trening w toku · {session.entries.length}{' '}
                 {session.entries.length === 1 ? 'ćwiczenie' : session.entries.length < 5 ? 'ćwiczenia' : 'ćwiczeń'}
               </span>
             </div>
-            <span className="text-blue-200 text-xs">{open ? '▴' : '▾'}</span>
+            {open ? <ChevronUp className="w-4 h-4 text-blue-200" strokeWidth={2} /> : <ChevronDown className="w-4 h-4 text-blue-200" strokeWidth={2} />}
           </button>
 
           {/* Lista ćwiczeń */}
@@ -133,13 +134,13 @@ export function WorkoutDraftBar() {
           <div className="flex gap-2 px-4 pb-3 pt-1">
             <button
               onClick={handleFinish}
-              className="flex-1 bg-white text-blue-600 font-bold py-2.5 rounded-xl text-sm"
+              className="flex-1 bg-white text-blue-600 font-bold py-2.5 rounded-xl text-sm transition hover:bg-blue-50 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
             >
               Zakończ trening →
             </button>
             <button
               onClick={handleDiscard}
-              className="bg-blue-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium"
+              className="bg-blue-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition hover:bg-blue-400 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
             >
               Anuluj
             </button>

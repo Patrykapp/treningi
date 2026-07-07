@@ -6,6 +6,20 @@ import { useAuth } from '@/hooks/useAuth';
 import { formatDateInput } from '@/lib/utils';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { runCalories, latestWeight } from '@/lib/calories';
+import { SkeletonCard } from '@/components/ui/Skeleton';
+import {
+  ArrowLeft,
+  Trophy,
+  X,
+  Pencil,
+  Trash2,
+  ChevronUp,
+  ChevronDown,
+  Check,
+  Flame,
+  CircleDot,
+  Bike,
+} from 'lucide-react';
 
 interface RunSession {
   id: string;
@@ -301,8 +315,12 @@ export default function BieganiePage() {
   const paceRange = maxPace - minPace || 1;
 
   if (loading) return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="text-gray-500">Ładowanie...</div>
+    <div className="min-h-screen bg-gray-50 pb-24">
+      <div className="max-w-lg md:max-w-3xl lg:max-w-4xl mx-auto px-4 pt-6 space-y-6">
+        <SkeletonCard />
+        <SkeletonCard />
+        <SkeletonCard />
+      </div>
     </div>
   );
 
@@ -318,14 +336,19 @@ export default function BieganiePage() {
       )}
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-4 py-4 flex items-center gap-3">
-        <button onClick={() => router.back()} className="text-gray-500 hover:text-gray-700 text-xl">←</button>
+        <button
+          onClick={() => router.back()}
+          className="text-gray-500 hover:text-gray-700 rounded-lg p-1 -m-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+        >
+          <ArrowLeft className="w-5 h-5" strokeWidth={2} />
+        </button>
         <div>
-          <h1 className="text-xl font-bold text-gray-900">🏃 Bieganie</h1>
+          <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2"><Bike className="w-5 h-5 text-blue-600" strokeWidth={2} /> Bieganie</h1>
           <p className="text-sm text-gray-500">{runs.length} biegów</p>
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 pt-6 space-y-6">
+      <div className="max-w-lg md:max-w-3xl lg:max-w-4xl mx-auto px-4 pt-6 space-y-6">
 
         {/* User switcher */}
         {users.length > 1 && (
@@ -334,10 +357,10 @@ export default function BieganiePage() {
               <button
                 key={u.id}
                 onClick={() => setViewAsUserId(u.id === userId ? null : u.id)}
-                className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${
+                className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
                   activeUserId === u.id
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-gray-600 border-gray-200'
+                    ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                 }`}
               >
                 {u.name}
@@ -410,8 +433,12 @@ export default function BieganiePage() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-gray-800">{editingRunId ? 'Edytuj bieg' : 'Zapisz bieg'}</h2>
             {editingRunId && (
-              <button type="button" onClick={cancelEdit} className="text-sm text-gray-400 hover:text-gray-600">
-                ✕ Anuluj edycję
+              <button
+                type="button"
+                onClick={cancelEdit}
+                className="text-sm text-gray-400 hover:text-gray-600 transition-colors flex items-center gap-1 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+              >
+                <X className="w-4 h-4" strokeWidth={2} /> Anuluj edycję
               </button>
             )}
           </div>
@@ -480,8 +507,8 @@ export default function BieganiePage() {
                   })}
                 </div>
                 {allSplitsFilled && (
-                  <div className="mt-2 text-xs text-green-600 font-medium">
-                    ✓ Łączny czas z splitów: {formatDuration(totalDurFromSplits)}
+                  <div className="mt-2 text-xs text-green-600 font-medium flex items-center gap-1">
+                    <Check className="w-4 h-4" strokeWidth={2} /> Łączny czas z splitów: {formatDuration(totalDurFromSplits)}
                   </div>
                 )}
               </div>
@@ -539,12 +566,12 @@ export default function BieganiePage() {
             </div>
 
             {error && <div className="text-red-600 text-sm bg-red-50 rounded-xl px-3 py-2">{error}</div>}
-            {success && <div className="text-green-700 text-sm bg-green-50 rounded-xl px-3 py-2">✓ {success}</div>}
+            {success && <div className="text-green-700 text-sm bg-green-50 rounded-xl px-3 py-2 flex items-center gap-1"><Check className="w-4 h-4" strokeWidth={2} /> {success}</div>}
 
             <button
               type="submit"
               disabled={saving}
-              className="w-full bg-blue-600 text-white rounded-xl py-3 font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              className="w-full bg-blue-600 text-white rounded-xl py-3 font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
             >
               {saving ? 'Zapisywanie...' : editingRunId ? 'Aktualizuj bieg' : 'Zapisz bieg'}
             </button>
@@ -555,7 +582,11 @@ export default function BieganiePage() {
         <div>
           <h2 className="font-semibold text-gray-800 mb-3">Historia biegów</h2>
           {loadingRuns ? (
-            <div className="text-center text-gray-400 py-8">Ładowanie...</div>
+            <div className="space-y-3">
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
           ) : runs.length === 0 ? (
             <div className="text-center text-gray-400 py-8 bg-white rounded-2xl">
               Brak biegów. Zapisz pierwszy!
@@ -577,7 +608,9 @@ export default function BieganiePage() {
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-gray-900 text-lg">{run.distance} km</span>
                             {isPR && runs.length > 1 && (
-                              <span className="text-xs font-bold bg-yellow-400 text-yellow-900 rounded-xl px-2 py-0.5">🏆 PR</span>
+                              <span className="text-xs font-bold bg-yellow-400 text-yellow-900 rounded-xl px-2 py-0.5 flex items-center gap-1">
+                                <Trophy className="w-4 h-4" strokeWidth={2} /> PR
+                              </span>
                             )}
                           </div>
                           <div className="text-sm text-gray-500 mt-0.5">
@@ -594,7 +627,9 @@ export default function BieganiePage() {
                           <div className="text-sm text-gray-500">{avgKmh(run.distance, run.duration)} km/h</div>
                           <div className="text-sm text-gray-400">{formatDuration(run.duration)}</div>
                           {weightKg > 0 && (
-                            <div className="text-xs text-red-400 font-medium">🔥 ~{runCalories(weightKg, run.distance)} kcal</div>
+                            <div className="text-xs text-red-400 font-medium flex items-center justify-end gap-1">
+                              <Flame className="w-4 h-4" strokeWidth={2} /> ~{runCalories(weightKg, run.distance)} kcal
+                            </div>
                           )}
                         </div>
                       </div>
@@ -603,22 +638,26 @@ export default function BieganiePage() {
                         {hasSplits && (
                           <button
                             onClick={() => setExpandedRun(isExpanded ? null : run.id)}
-                            className="text-xs text-blue-500 hover:text-blue-700 font-medium"
+                            className="text-xs text-blue-500 hover:text-blue-700 font-medium transition-colors flex items-center gap-1 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                           >
-                            {isExpanded ? '▲ Ukryj splity' : `▼ Splity per km (${run.splits.length})`}
+                            {isExpanded ? (
+                              <><ChevronUp className="w-4 h-4" strokeWidth={2} /> Ukryj splity</>
+                            ) : (
+                              <><ChevronDown className="w-4 h-4" strokeWidth={2} /> Splity per km ({run.splits.length})</>
+                            )}
                           </button>
                         )}
                         <span className="flex-1" />
                         <button
                           onClick={() => startEditRun(run)}
-                          className="text-xs text-gray-400 hover:text-blue-600 font-medium"
+                          className="text-xs text-gray-400 hover:text-blue-600 font-medium transition-colors flex items-center gap-1 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                           title="Edytuj bieg"
-                        >✏️ Edytuj</button>
+                        ><Pencil className="w-4 h-4" strokeWidth={2} /> Edytuj</button>
                         <button
                           onClick={() => setConfirmDeleteRun(run.id)}
-                          className="text-xs text-gray-400 hover:text-red-500 font-medium"
+                          className="text-xs text-gray-400 hover:text-red-500 font-medium transition-colors flex items-center gap-1 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                           title="Usuń bieg"
-                        >🗑️ Usuń</button>
+                        ><Trash2 className="w-4 h-4" strokeWidth={2} /> Usuń</button>
                       </div>
                     </div>
 
@@ -658,15 +697,15 @@ export default function BieganiePage() {
                                     {paceToKmh(pace)}
                                   </span>
                                 </div>
-                                {isFastest && <span className="text-xs">🟢</span>}
-                                {isSlowest && <span className="text-xs">🔴</span>}
+                                {isFastest && <CircleDot className="w-3.5 h-3.5 text-green-500" strokeWidth={2} />}
+                                {isSlowest && <CircleDot className="w-3.5 h-3.5 text-red-500" strokeWidth={2} />}
                               </div>
                             );
                           })}
                         </div>
                         <div className="mt-2 flex gap-4 text-xs text-gray-400">
-                          <span>🟢 najszybszy</span>
-                          <span>🔴 najwolniejszy</span>
+                          <span className="flex items-center gap-1"><CircleDot className="w-3.5 h-3.5 text-green-500" strokeWidth={2} /> najszybszy</span>
+                          <span className="flex items-center gap-1"><CircleDot className="w-3.5 h-3.5 text-red-500" strokeWidth={2} /> najwolniejszy</span>
                         </div>
                       </div>
                     )}

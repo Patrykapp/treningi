@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { Maximize2, X } from 'lucide-react';
 
 interface Props {
   userId?: string;
@@ -207,13 +208,11 @@ export function ActivityHeatmap({ userId }: Props) {
             </span>
             <button
               onClick={() => setFullscreen(true)}
-              className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100"
+              className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
               title="Pełny ekran"
               aria-label="Pełny ekran"
             >
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M1.5 1h4v1.5h-2.5v2.5h-1.5v-4zm9 0h4v4h-1.5v-2.5h-2.5v-1.5zm-9 9h1.5v2.5h2.5v1.5h-4v-4zm10.5 2.5v-2.5h1.5v4h-4v-1.5h2.5z"/>
-              </svg>
+              <Maximize2 className="w-4 h-4" strokeWidth={2} />
             </button>
           </div>
         </div>
@@ -241,10 +240,10 @@ export function ActivityHeatmap({ userId }: Props) {
             </div>
             <button
               onClick={() => setFullscreen(false)}
-              className="text-gray-500 hover:text-gray-900 text-2xl w-10 h-10 flex items-center justify-center rounded-xl hover:bg-gray-100"
+              className="text-gray-500 hover:text-gray-900 w-10 h-10 flex items-center justify-center rounded-xl hover:bg-gray-100 transition active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
               aria-label="Zamknij"
             >
-              ✕
+              <X className="w-5 h-5" strokeWidth={2} />
             </button>
           </div>
 

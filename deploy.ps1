@@ -1,12 +1,16 @@
-# deploy.ps1 - commit i push zmian
-# Uruchom:        .\deploy.ps1
-#   wszystkie:    .\deploy.ps1 -All
-#   bez buildu:   .\deploy.ps1 -SkipBuild
-# Vercel zdeployuje automatycznie po push na branch main.
+# deploy.ps1 - install + commit + push (Vercel deployuje automatycznie po push)
+# Uruchom (domyslnie wszystkie zmiany):
+#   .\deploy.ps1
+#   .\deploy.ps1 -Message "moj opis commitu"
+#   .\deploy.ps1 -Only "app/page.tsx","app/historia/page.tsx"   # tylko wybrane pliki
+#   .\deploy.ps1 -SkipBuild      # pomin lokalny 'npm run build'
+#   .\deploy.ps1 -SkipInstall    # pomin 'npm install'
 
 param(
-    [switch]$All,        # dodaj wszystkie zmiany (git add -A) zamiast listy ponizej
-    [switch]$SkipBuild   # pomin lokalny 'npm run build' przed commitem
+    [string]$Message = "refresh UI: ikony lucide-react, hover/focus states, skeletony, responsywnosc md/lg na wszystkich podstronach",
+    [string[]]$Only,       # jesli podane -> commit tylko tych plikow (git add -- <lista>)
+    [switch]$SkipBuild,    # pomin lokalny 'npm run build' przed commitem
+    [switch]$SkipInstall   # pomin 'npm install' (np. gdy node_modules juz aktualne)
 )
 
 $ErrorActionPreference = 'Stop'
@@ -20,20 +24,25 @@ if (-not (Test-Path ".git")) {
     exit 1
 }
 
+if (-not $SkipInstall) {
+    Write-Host ""
+    Write-Host "npm install (aktualizacja node_modules / package-lock.json)..." -ForegroundColor Cyan
+    npm install
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host ""
+        Write-Host "BLAD: npm install sie nie powiodl." -ForegroundColor Red
+        exit 1
+    }
+}
+
 Write-Host ""
 Write-Host "Zmiany przed commitem:" -ForegroundColor Cyan
 git status --short
 
-# Pliki tej poprawki
-$files = @(
-    "app/historia/page.tsx",
-    "app/page.tsx"
-)
-
-if ($All) {
-    git add -A
+if ($Only) {
+    git add -- $Only
 } else {
-    git add -- $files
+    git add -A
 }
 
 $staged = git diff --cached --name-only
@@ -60,8 +69,7 @@ if (-not $SkipBuild) {
     Write-Host "Build OK." -ForegroundColor Green
 }
 
-$msg = "fix: biegi w historii + aktywnosc podpieta do treningu nie liczy sie jako osobny trening (spojnosc dashboardu z historia)"
-git commit -m $msg
+git commit -m $Message
 
 $branch = git rev-parse --abbrev-ref HEAD
 

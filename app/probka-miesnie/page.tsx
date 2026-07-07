@@ -17,7 +17,7 @@ const SAMPLES: { name: string; primary: string[]; secondary: string[] }[] = [
 
 export default function ProbkaMiesniePage() {
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-6 md:max-w-3xl lg:max-w-5xl md:mx-auto">
       <h1 className="text-xl font-bold text-gray-900 mb-1">Próbka: mapa mięśni</h1>
       <p className="text-sm text-gray-500 mb-6">
         Podgląd komponentu <code>react-body-highlighter</code> na przykładowych ćwiczeniach.

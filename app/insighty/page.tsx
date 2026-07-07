@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { Sparkles, Loader2, Dumbbell, PersonStanding, Bike, ChevronUp, ChevronDown, Bot } from 'lucide-react';
 
 interface InsightRecord {
   insight: string;
@@ -97,11 +98,11 @@ export default function InsightyPage() {
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       <div className="bg-white border-b px-4 py-4 sticky top-0 z-10">
-        <h1 className="text-xl font-bold text-gray-900">✨ AI Insighty</h1>
+        <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2"><Sparkles className="w-5 h-5 text-violet-600" strokeWidth={2} /> AI Insighty</h1>
         <p className="text-sm text-gray-500">Analiza Twoich treningów przez AI</p>
       </div>
 
-      <div className="px-4 py-4 space-y-4">
+      <div className="px-4 py-4 space-y-4 md:max-w-3xl lg:max-w-4xl md:mx-auto">
         {/* Przycisk generowania */}
         <div className="bg-white rounded-2xl p-4 shadow-sm">
           <p className="text-sm text-gray-600 mb-3">
@@ -117,16 +118,20 @@ export default function InsightyPage() {
           <button
             onClick={generate}
             disabled={loading || !refreshAllowed}
-            className="w-full bg-violet-600 text-white py-4 rounded-2xl font-bold text-base disabled:opacity-50 transition-opacity"
+            className="w-full bg-violet-600 text-white py-4 rounded-2xl font-bold text-base disabled:opacity-50 transition-colors hover:bg-violet-700 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
-                <span className="animate-spin">⏳</span> Analizuję...
+                <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} /> Analizuję...
               </span>
             ) : refreshAllowed ? (
-              '✨ Generuj analizę tygodnia'
+              <span className="flex items-center justify-center gap-2">
+                <Sparkles className="w-4 h-4" strokeWidth={2} /> Generuj analizę tygodnia
+              </span>
             ) : (
-              `✨ Odśwież za ${nextRefreshIn}h`
+              <span className="flex items-center justify-center gap-2">
+                <Sparkles className="w-4 h-4" strokeWidth={2} /> Odśwież za {nextRefreshIn}h
+              </span>
             )}
           </button>
 
@@ -146,9 +151,9 @@ export default function InsightyPage() {
                 <span className="text-xs text-violet-500 ml-2">{timeAgo(latest.generatedAt)}</span>
               </div>
               <div className="flex gap-2 text-xs text-violet-600">
-                {latest.stats.sessions > 0 && <span>💪 {latest.stats.sessions}</span>}
-                {latest.stats.runs > 0 && <span>🏃 {latest.stats.runs}</span>}
-                {latest.stats.activities > 0 && <span>🚴 {latest.stats.activities}</span>}
+                {latest.stats.sessions > 0 && <span className="flex items-center gap-1"><Dumbbell className="w-3.5 h-3.5" strokeWidth={2} /> {latest.stats.sessions}</span>}
+                {latest.stats.runs > 0 && <span className="flex items-center gap-1"><PersonStanding className="w-3.5 h-3.5" strokeWidth={2} /> {latest.stats.runs}</span>}
+                {latest.stats.activities > 0 && <span className="flex items-center gap-1"><Bike className="w-3.5 h-3.5" strokeWidth={2} /> {latest.stats.activities}</span>}
               </div>
             </div>
             <div className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
@@ -168,13 +173,17 @@ export default function InsightyPage() {
                 <div key={record.generatedAt} className="bg-white rounded-2xl shadow-sm overflow-hidden">
                   <button
                     onClick={() => setExpanded(expanded === record.generatedAt ? null : record.generatedAt)}
-                    className="w-full flex items-center justify-between px-4 py-3 text-left"
+                    className="w-full flex items-center justify-between px-4 py-3 text-left transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                   >
                     <div>
                       <span className="text-sm font-medium text-gray-800">Tydzień {record.weekLabel}</span>
                       <span className="text-xs text-gray-400 ml-2">{timeAgo(record.generatedAt)}</span>
                     </div>
-                    <span className="text-gray-400 text-sm">{expanded === record.generatedAt ? '▲' : '▼'}</span>
+                    {expanded === record.generatedAt ? (
+                      <ChevronUp className="w-4 h-4 text-gray-400" strokeWidth={2} />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-gray-400" strokeWidth={2} />
+                    )}
                   </button>
                   {expanded === record.generatedAt && (
                     <div className="px-4 pb-4 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed border-t border-gray-100 pt-3">
@@ -189,7 +198,7 @@ export default function InsightyPage() {
 
         {history.length === 0 && !loading && (
           <div className="bg-white rounded-2xl p-8 text-center shadow-sm">
-            <p className="text-4xl mb-2">🤖</p>
+            <Bot className="w-8 h-8 mx-auto mb-2 text-gray-400" strokeWidth={2} />
             <p className="font-medium text-gray-700 mb-1">Brak analiz</p>
             <p className="text-sm text-gray-400">Kliknij przycisk powyżej, żeby wygenerować pierwszą analizę</p>
           </div>

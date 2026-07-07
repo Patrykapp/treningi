@@ -9,6 +9,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { activeSession } from '@/hooks/useActiveSession';
 import Papa from 'papaparse';
+import { X, Pencil, Trash2, Link2, Download, Upload, LogOut, ChevronRight } from 'lucide-react';
 
 function useDarkMode() {
   const [dark, setDark] = useState(false);
@@ -170,14 +171,15 @@ export default function UstawieniaPage() {
         <h1 className="text-xl font-bold text-gray-900">Ustawienia</h1>
       </div>
 
-      <div className="px-4 py-4 space-y-6">
+      <div className="px-4 py-4 space-y-6 md:max-w-3xl lg:max-w-4xl md:mx-auto">
         <section className="bg-white rounded-2xl p-4 shadow-sm">
           <h2 className="font-bold text-gray-800 mb-3">Konto</h2>
           <div className="space-y-1 mb-4">
             <p className="text-sm text-gray-700"><span className="font-medium">Imie:</span> {authName || '...'}</p>
             <p className="text-sm text-gray-700"><span className="font-medium">Email:</span> {authEmail || '...'}</p>
           </div>
-          <button onClick={handleLogout} className="w-full bg-red-50 text-red-600 py-3 rounded-xl font-medium text-sm">
+          <button onClick={handleLogout} className="w-full bg-red-50 text-red-600 py-3 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-colors hover:bg-red-100 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+            <LogOut className="w-4 h-4" strokeWidth={2} />
             Wyloguj sie
           </button>
         </section>
@@ -190,10 +192,10 @@ export default function UstawieniaPage() {
                 <Link
                   key={u.id}
                   href={`/profil/${u.id}`}
-                  className="flex items-center justify-between py-2 px-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
+                  className="flex items-center justify-between py-2 px-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 >
                   <span className="text-sm font-medium text-gray-800">{u.name}</span>
-                  <span className="text-xs text-blue-600">Zobacz profil</span>
+                  <span className="text-xs text-blue-600 flex items-center gap-1">Zobacz profil <ChevronRight className="w-4 h-4" strokeWidth={2} /></span>
                 </Link>
               ))}
             </div>
@@ -204,7 +206,7 @@ export default function UstawieniaPage() {
           <div className="flex items-center justify-between">
             <h2 className="font-bold text-gray-800">Wyglad</h2>
             <button onClick={toggleDark}
-              className={`relative inline-flex h-6 w-12 items-center rounded-full transition-colors ${dark ? 'bg-blue-600' : 'bg-gray-200'}`}>
+              className={`relative inline-flex h-6 w-12 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${dark ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-200 hover:bg-gray-300'}`}>
               <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${dark ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>
           </div>
@@ -223,7 +225,9 @@ export default function UstawieniaPage() {
             />
             {exSearch && (
               <button onClick={() => setExSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg leading-none">×</button>
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded">
+                <X className="w-4 h-4" strokeWidth={2} />
+              </button>
             )}
           </div>
           <div className="space-y-1 mb-3 max-h-72 overflow-y-auto">
@@ -240,8 +244,8 @@ export default function UstawieniaPage() {
                     <input type="text" value={editingEx.muscleGroup} onChange={e => setEditingEx({ ...editingEx, muscleGroup: e.target.value })}
                       placeholder="Grupa miesniowa" className="w-full border border-blue-300 rounded-lg px-3 py-2 text-sm" />
                     <div className="flex gap-2">
-                      <button onClick={saveEditExercise} className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium">Zapisz</button>
-                      <button onClick={() => setEditingEx(null)} className="flex-1 bg-gray-100 text-gray-700 rounded-lg py-2 text-sm">Anuluj</button>
+                      <button onClick={saveEditExercise} className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium transition-colors hover:bg-blue-700 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">Zapisz</button>
+                      <button onClick={() => setEditingEx(null)} className="flex-1 bg-gray-100 text-gray-700 rounded-lg py-2 text-sm transition-colors hover:bg-gray-200 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">Anuluj</button>
                     </div>
                   </div>
                 ) : (
@@ -252,9 +256,13 @@ export default function UstawieniaPage() {
                     </div>
                     <div className="flex gap-1 shrink-0 ml-2">
                       <button onClick={() => setEditingEx({ id: ex.id, name: ex.name, muscleGroup: ex.muscleGroup || '' })}
-                        className="text-blue-500 text-sm px-2 py-1">Edit</button>
+                        className="text-blue-500 hover:text-blue-700 text-sm px-2 py-1 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                        <Pencil className="w-4 h-4" strokeWidth={2} />
+                      </button>
                       <button onClick={() => setConfirmDelete({ type: 'exercise', id: ex.id })}
-                        className="text-red-400 text-sm px-2 py-1">Del</button>
+                        className="text-red-400 hover:text-red-600 text-sm px-2 py-1 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                        <Trash2 className="w-4 h-4" strokeWidth={2} />
+                      </button>
                     </div>
                   </div>
                 )}
@@ -267,7 +275,7 @@ export default function UstawieniaPage() {
               onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addExercise())} />
             <input type="text" value={newExGroup} onChange={e => setNewExGroup(e.target.value)} placeholder="Grupa miesniowa (opcjonalnie)"
               className="w-full border border-gray-200 rounded-xl px-4 py-2 text-sm" />
-            <button onClick={addExercise} className="w-full bg-blue-600 text-white py-2.5 rounded-xl font-medium text-sm">
+            <button onClick={addExercise} className="w-full bg-blue-600 text-white py-2.5 rounded-xl font-medium text-sm transition-colors hover:bg-blue-700 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
               Dodaj cwiczenie
             </button>
           </div>
@@ -300,20 +308,23 @@ export default function UstawieniaPage() {
               </select>
             </div>
             <button onClick={mergeExercises} disabled={!mergeFrom || !mergeTo || merging}
-              className="w-full bg-orange-500 text-white py-2.5 rounded-xl font-medium text-sm disabled:opacity-40">
-              {merging ? 'Scalanie...' : '🔗 Scal ćwiczenia'}
+              className="w-full bg-orange-500 text-white py-2.5 rounded-xl font-medium text-sm disabled:opacity-40 flex items-center justify-center gap-2 transition-colors hover:bg-orange-600 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+              <Link2 className="w-4 h-4" strokeWidth={2} />
+              {merging ? 'Scalanie...' : 'Scal ćwiczenia'}
             </button>
           </div>
         </section>
 
         <section className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
           <h2 className="font-bold text-gray-800">Dane</h2>
-          <button onClick={handleExport} className="w-full bg-gray-100 text-gray-700 py-3 rounded-xl text-sm font-medium">
+          <button onClick={handleExport} className="w-full bg-gray-100 text-gray-700 py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-colors hover:bg-gray-200 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+            <Download className="w-4 h-4" strokeWidth={2} />
             Eksportuj dane (CSV)
           </button>
           <div>
             <input ref={fileInputRef} type="file" accept=".csv" onChange={handleImport} className="hidden" id="csv-import" />
-            <label htmlFor="csv-import" className={`block w-full text-center bg-gray-100 text-gray-700 py-3 rounded-xl text-sm font-medium cursor-pointer ${importing ? 'opacity-50' : ''}`}>
+            <label htmlFor="csv-import" className={`block w-full text-center bg-gray-100 text-gray-700 py-3 rounded-xl text-sm font-medium cursor-pointer flex items-center justify-center gap-2 transition-colors hover:bg-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${importing ? 'opacity-50' : ''}`}>
+              <Upload className="w-4 h-4" strokeWidth={2} />
               {importing ? 'Importuje...' : 'Importuj dane (CSV)'}
             </label>
           </div>

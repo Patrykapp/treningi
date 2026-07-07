@@ -11,6 +11,11 @@ import { RestTimer } from '@/components/ui/RestTimer';
 import { activeSession } from '@/hooks/useActiveSession';
 import { useAuth } from '@/hooks/useAuth';
 import { parseTcx, TcxSummary } from '@/lib/tcx';
+import { SkeletonCard, Skeleton } from '@/components/ui/Skeleton';
+import {
+  X, Plus, Minus, Check, Trash2, Sparkles, RotateCcw, ArrowRight, Watch,
+  Flame, Timer, HeartPulse, Users, Clipboard, AlertTriangle,
+} from 'lucide-react';
 
 function formatDur(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -645,7 +650,7 @@ function TreningPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="px-4 py-4 space-y-4">
+      <form onSubmit={handleSubmit} className="px-4 py-4 space-y-4 md:max-w-3xl lg:max-w-4xl md:mx-auto">
         <div className="bg-white rounded-2xl p-4 space-y-3">
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-1">Data</label>
@@ -661,24 +666,28 @@ function TreningPage() {
 
         <div className="flex gap-2">
           <button type="button" onClick={copyLastWorkout}
-            className="flex-1 bg-white border border-gray-200 text-gray-700 py-2.5 rounded-xl text-sm font-medium">
+            className="flex-1 bg-white border border-gray-200 text-gray-700 py-2.5 rounded-xl text-sm font-medium transition-colors hover:bg-gray-50 hover:border-gray-300 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
             Kopiuj ostatni
           </button>
           <button type="button" onClick={() => setShowTemplates(o => !o)}
-            className="flex-1 bg-white border border-gray-200 text-gray-700 py-2.5 rounded-xl text-sm font-medium">
+            className="flex-1 bg-white border border-gray-200 text-gray-700 py-2.5 rounded-xl text-sm font-medium transition-colors hover:bg-gray-50 hover:border-gray-300 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
             Szablony ({templates.length})
           </button>
           <button type="button" onClick={() => { setShowAiPlanner(o => !o); setAiPlan(null); setAiError(''); }}
-            className="flex-1 bg-violet-600 text-white py-2.5 rounded-xl text-sm font-medium">
-            ✨ AI Plan
+            className="flex-1 bg-violet-600 text-white py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-1.5 transition-colors hover:bg-violet-700 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+            <Sparkles className="w-4 h-4" strokeWidth={2} />
+            AI Plan
           </button>
         </div>
 
         {showAiPlanner && (
           <div className="bg-white rounded-2xl p-4 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-gray-900">✨ AI dobierze ćwiczenia</h2>
-              <button type="button" onClick={() => setShowAiPlanner(false)} className="text-gray-400 text-lg">✕</button>
+              <h2 className="text-sm font-bold text-gray-900 flex items-center gap-1.5"><Sparkles className="w-4 h-4" strokeWidth={2} /> AI dobierze ćwiczenia</h2>
+              <button type="button" onClick={() => setShowAiPlanner(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                <X className="w-5 h-5" strokeWidth={2} />
+              </button>
             </div>
 
             {/* Wybór partii */}
@@ -691,10 +700,10 @@ function TreningPage() {
                     onClick={() => setAiMuscles(prev =>
                       prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]
                     )}
-                    className={`px-3 py-1.5 rounded-xl text-sm font-medium border transition-colors ${
+                    className={`px-3 py-1.5 rounded-xl text-sm font-medium border transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
                       aiMuscles.includes(g)
-                        ? 'bg-violet-600 text-white border-violet-600'
-                        : 'bg-white text-gray-600 border-gray-200'
+                        ? 'bg-violet-600 text-white border-violet-600 hover:bg-violet-700'
+                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
                     }`}
                   >
                     {g}
@@ -724,15 +733,15 @@ function TreningPage() {
                 </div>
                 <button
                   type="button" onClick={loadAiPlan}
-                  className="w-full bg-violet-600 text-white py-3 rounded-xl font-bold text-sm"
+                  className="w-full bg-violet-600 text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 transition-colors hover:bg-violet-700 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 >
-                  Załaduj plan do treningu →
+                  Załaduj plan do treningu <ArrowRight className="w-4 h-4" strokeWidth={2} />
                 </button>
                 <button
                   type="button" onClick={generateAiPlan} disabled={aiLoading}
-                  className="w-full bg-white border border-violet-200 text-violet-700 py-2 rounded-xl text-sm font-medium"
+                  className="w-full bg-white border border-violet-200 text-violet-700 py-2 rounded-xl text-sm font-medium flex items-center justify-center gap-1.5 transition-colors hover:bg-violet-50 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 >
-                  ↺ Wygeneruj inny plan
+                  <RotateCcw className="w-4 h-4" strokeWidth={2} /> Wygeneruj inny plan
                 </button>
               </div>
             )}
@@ -741,11 +750,11 @@ function TreningPage() {
               <button
                 type="button" onClick={generateAiPlan}
                 disabled={aiLoading || aiMuscles.length === 0}
-                className="w-full bg-violet-600 text-white py-3 rounded-xl font-bold text-sm disabled:opacity-50"
+                className="w-full bg-violet-600 text-white py-3 rounded-xl font-bold text-sm disabled:opacity-50 transition-colors hover:bg-violet-700 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
               >
                 {aiLoading
                   ? <span className="flex items-center justify-center gap-2"><span className="animate-spin inline-block">⏳</span> AI planuje...</span>
-                  : aiMuscles.length === 0 ? 'Wybierz partie mięśniowe' : `✨ Generuj plan (${aiMuscles.join(', ')})`
+                  : aiMuscles.length === 0 ? 'Wybierz partie mięśniowe' : <span className="flex items-center justify-center gap-1.5"><Sparkles className="w-4 h-4" strokeWidth={2} /> Generuj plan ({aiMuscles.join(', ')})</span>
                 }
               </button>
             )}
@@ -758,24 +767,27 @@ function TreningPage() {
               <p className="text-sm text-gray-500 text-center py-2">Brak szablonów</p>
             ) : templates.map(tpl => (
               <div key={tpl.id} className="flex items-center justify-between">
-                <button type="button" onClick={() => loadTemplate(tpl)} className="text-sm font-medium text-blue-600 flex-1 text-left">
+                <button type="button" onClick={() => loadTemplate(tpl)}
+                  className="text-sm font-medium text-blue-600 flex-1 text-left transition-colors hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded">
                   {tpl.name}
                 </button>
                 <button type="button" onClick={() => deleteTemplate(tpl.id)}
-                  className="text-red-400 text-xs px-2">usuń</button>
+                  className="text-red-400 hover:text-red-600 text-xs px-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded">
+                  <Trash2 className="w-4 h-4" strokeWidth={2} />
+                </button>
               </div>
             ))}
             {!showSaveTemplate ? (
               <button type="button" onClick={() => setShowSaveTemplate(true)}
-                className="w-full text-sm text-gray-500 border border-dashed border-gray-300 rounded-xl py-2 mt-2">
-                + Zapisz obecny jako szablon
+                className="w-full text-sm text-gray-500 border border-dashed border-gray-300 rounded-xl py-2 mt-2 flex items-center justify-center gap-1.5 transition-colors hover:bg-gray-50 hover:border-gray-400 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                <Plus className="w-4 h-4" strokeWidth={2} /> Zapisz obecny jako szablon
               </button>
             ) : (
               <div className="flex gap-2 mt-2">
                 <input value={templateName} onChange={e => setTemplateName(e.target.value)} placeholder="Nazwa szablonu"
                   className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm" />
                 <button type="button" onClick={saveTemplate} disabled={savingTemplate}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium disabled:opacity-50">
+                  className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium disabled:opacity-50 transition-colors hover:bg-blue-700 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                   {savingTemplate ? '...' : 'Zapisz'}
                 </button>
               </div>
@@ -788,7 +800,10 @@ function TreningPage() {
             <div className="flex items-center justify-between">
               <span className="text-sm font-bold text-gray-500">Ćwiczenie {idx + 1}</span>
               {entries.length > 1 && (
-                <button type="button" onClick={() => removeEntry(entry.key)} className="text-red-400 text-sm">Usuń</button>
+                <button type="button" onClick={() => removeEntry(entry.key)}
+                  className="text-red-400 hover:text-red-600 text-sm flex items-center gap-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded px-1">
+                  <Trash2 className="w-4 h-4" strokeWidth={2} /> Usuń
+                </button>
               )}
             </div>
             <ExerciseSearch
@@ -816,7 +831,7 @@ function TreningPage() {
               <div className="flex gap-2 items-center">
                 <label className="text-xs text-gray-500">Rozpisz serie osobno</label>
                 <button type="button" onClick={() => toggleCustomSets(entry.key, !entry.customSets)}
-                  className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors ${entry.customSets ? 'bg-blue-600' : 'bg-gray-200'}`}>
+                  className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${entry.customSets ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-200 hover:bg-gray-300'}`}>
                   <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${entry.customSets ? 'translate-x-5' : 'translate-x-1'}`} />
                 </button>
               </div>
@@ -826,7 +841,7 @@ function TreningPage() {
                   onClick={() => setEntries(prev => prev.map(e =>
                     e.key === entry.key ? { ...e, bodyweight: !e.bodyweight, weight: 0, setsData: (e.setsData || []).map(s => ({ ...s, weight: 0 })) } : e
                   ))}
-                  className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors ${entry.bodyweight ? 'bg-green-500' : 'bg-gray-200'}`}>
+                  className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${entry.bodyweight ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-200 hover:bg-gray-300'}`}>
                   <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${entry.bodyweight ? 'translate-x-5' : 'translate-x-1'}`} />
                 </button>
               </div>
@@ -864,39 +879,39 @@ function TreningPage() {
                     <div className="flex items-center gap-1.5">
                       <button type="button" onClick={() => toggleSetDone(entry.key, si)}
                         title="Odhacz serię i odpal timer przerwy"
-                        className={`w-7 h-7 rounded-full border text-xs shrink-0 transition-colors ${
+                        className={`w-7 h-7 rounded-full border text-xs shrink-0 flex items-center justify-center transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
                           doneSets[`${entry.key}-${si}`]
-                            ? 'bg-green-500 border-green-500 text-white'
-                            : 'border-gray-300 text-gray-300'
-                        }`}>✓</button>
+                            ? 'bg-green-500 border-green-500 text-white hover:bg-green-600'
+                            : 'border-gray-300 text-gray-300 hover:border-gray-400 hover:text-gray-400'
+                        }`}><Check className="w-4 h-4" strokeWidth={2.5} /></button>
                       <span className="text-xs text-gray-400 w-4 text-center shrink-0">{si + 1}.</span>
                       <button type="button"
                         onClick={() => updateSet(entry.key, si, 'reps', Math.max(1, s.reps - 1))}
-                        className="w-8 h-8 rounded-lg bg-gray-100 font-bold text-gray-600 flex items-center justify-center shrink-0 text-lg active:bg-gray-200">−</button>
+                        className="w-8 h-8 rounded-lg bg-gray-100 font-bold text-gray-600 flex items-center justify-center shrink-0 text-lg transition-colors hover:bg-gray-200 active:scale-[0.97] active:bg-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"><Minus className="w-4 h-4" strokeWidth={2} /></button>
                       <input type="number" min="1" inputMode="numeric"
                         value={s.reps === 0 ? '' : s.reps} placeholder="0"
                         onChange={e => updateSet(entry.key, si, 'reps', parseInt(e.target.value) || 1)}
                         className="w-12 border border-gray-200 rounded-lg px-1 py-1.5 text-sm text-center font-medium" />
                       <button type="button"
                         onClick={() => updateSet(entry.key, si, 'reps', s.reps + 1)}
-                        className="w-8 h-8 rounded-lg bg-gray-100 font-bold text-gray-600 flex items-center justify-center shrink-0 text-lg active:bg-gray-200">+</button>
+                        className="w-8 h-8 rounded-lg bg-gray-100 font-bold text-gray-600 flex items-center justify-center shrink-0 text-lg transition-colors hover:bg-gray-200 active:scale-[0.97] active:bg-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"><Plus className="w-4 h-4" strokeWidth={2} /></button>
                       <span className="text-xs text-gray-400 shrink-0">pow.</span>
                       <button type="button" onClick={() => removeSet(entry.key, si)}
-                        className="ml-auto text-red-400 text-lg w-7 h-7 flex items-center justify-center shrink-0">×</button>
+                        className="ml-auto text-red-400 w-7 h-7 flex items-center justify-center shrink-0 transition-colors hover:text-red-600 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded"><X className="w-4 h-4" strokeWidth={2} /></button>
                     </div>
                     {/* Weight row */}
                     {!entry.bodyweight && (
                       <div className="flex items-center gap-1.5 pl-11">
                         <button type="button"
                           onClick={() => updateSet(entry.key, si, 'weight', Math.max(0, Math.round((s.weight - 2.5) * 10) / 10))}
-                          className="w-10 h-8 rounded-lg bg-gray-100 text-xs font-bold text-gray-600 flex items-center justify-center shrink-0 active:bg-gray-200">−2.5</button>
+                          className="w-10 h-8 rounded-lg bg-gray-100 text-xs font-bold text-gray-600 flex items-center justify-center shrink-0 transition-colors hover:bg-gray-200 active:scale-[0.97] active:bg-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">−2.5</button>
                         <input type="number" min="0" step="0.5" inputMode="decimal"
                           value={s.weight === 0 ? '' : s.weight} placeholder="0"
                           onChange={e => updateSet(entry.key, si, 'weight', parseFloat(e.target.value) || 0)}
                           className="w-14 border border-gray-200 rounded-lg px-1 py-1.5 text-sm text-center font-medium" />
                         <button type="button"
                           onClick={() => updateSet(entry.key, si, 'weight', Math.round((s.weight + 2.5) * 10) / 10)}
-                          className="w-10 h-8 rounded-lg bg-gray-100 text-xs font-bold text-gray-600 flex items-center justify-center shrink-0 active:bg-gray-200">+2.5</button>
+                          className="w-10 h-8 rounded-lg bg-gray-100 text-xs font-bold text-gray-600 flex items-center justify-center shrink-0 transition-colors hover:bg-gray-200 active:scale-[0.97] active:bg-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">+2.5</button>
                         <span className="text-xs text-gray-400 shrink-0">kg</span>
                       </div>
                     )}
@@ -915,13 +930,13 @@ function TreningPage() {
                 })()}
                 <div className="flex gap-2 mt-1">
                   <button type="button" onClick={() => addSet(entry.key)}
-                    className="flex-1 text-sm text-blue-600 border border-dashed border-blue-300 rounded-xl py-2">
-                    + Dodaj serię
+                    className="flex-1 text-sm text-blue-600 border border-dashed border-blue-300 rounded-xl py-2 flex items-center justify-center gap-1.5 transition-colors hover:bg-blue-50 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                    <Plus className="w-4 h-4" strokeWidth={2} /> Dodaj serię
                   </button>
                   {(entry.setsData || []).length > 0 && (
                     <button type="button" onClick={() => copyLastSet(entry.key)}
-                      className="text-sm text-gray-500 border border-gray-200 rounded-xl py-2 px-3">
-                      📋 Kopiuj
+                      className="text-sm text-gray-500 border border-gray-200 rounded-xl py-2 px-3 flex items-center justify-center gap-1.5 transition-colors hover:bg-gray-50 hover:border-gray-300 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                      <Clipboard className="w-4 h-4" strokeWidth={2} /> Kopiuj
                     </button>
                   )}
                 </div>
@@ -944,46 +959,51 @@ function TreningPage() {
         ))}
 
         <button type="button" onClick={addEntry}
-          className="w-full bg-white border-2 border-dashed border-gray-300 text-gray-600 py-3 rounded-2xl text-sm font-medium">
-          + Dodaj ćwiczenie
+          className="w-full bg-white border-2 border-dashed border-gray-300 text-gray-600 py-3 rounded-2xl text-sm font-medium flex items-center justify-center gap-1.5 transition-colors hover:bg-gray-50 hover:border-gray-400 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+          <Plus className="w-4 h-4" strokeWidth={2} /> Dodaj ćwiczenie
         </button>
 
         {showNewEx ? (
           <div className="bg-white rounded-2xl p-4 flex gap-2">
             <input value={newExName} onChange={e => setNewExName(e.target.value)} placeholder="Nazwa ćwiczenia"
               className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm" />
-            <button type="button" onClick={addNewExercise} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium">Dodaj</button>
-            <button type="button" onClick={() => setShowNewEx(false)} className="text-gray-400 px-2">✕</button>
+            <button type="button" onClick={addNewExercise}
+              className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors hover:bg-blue-700 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">Dodaj</button>
+            <button type="button" onClick={() => setShowNewEx(false)}
+              className="text-gray-400 hover:text-gray-600 px-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded"><X className="w-5 h-5" strokeWidth={2} /></button>
           </div>
         ) : (
           <button type="button" onClick={() => setShowNewEx(true)}
-            className="w-full text-sm text-gray-500 py-2">
-            + Nowe ćwiczenie w bibliotece
+            className="w-full text-sm text-gray-500 py-2 flex items-center justify-center gap-1.5 transition-colors hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded">
+            <Plus className="w-4 h-4" strokeWidth={2} /> Nowe ćwiczenie w bibliotece
           </button>
         )}
 
         {!editingSession && (
           <div className="bg-white rounded-2xl p-4">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">⌚ Dane z zegarka <span className="text-gray-400">(opcjonalnie)</span></label>
+              <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5"><Watch className="w-4 h-4" strokeWidth={2} /> Dane z zegarka <span className="text-gray-400">(opcjonalnie)</span></label>
               {watchData ? (
-                <button type="button" onClick={() => setWatchData(null)} className="text-xs text-red-400">✕ usuń</button>
+                <button type="button" onClick={() => setWatchData(null)}
+                  className="text-xs text-red-400 hover:text-red-600 flex items-center gap-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded px-1">
+                  <X className="w-3.5 h-3.5" strokeWidth={2} /> usuń
+                </button>
               ) : (
-                <label className="text-sm text-blue-600 font-medium cursor-pointer">
+                <label className="text-sm text-blue-600 font-medium cursor-pointer hover:text-blue-700 transition-colors">
                   Importuj TCX
                   <input type="file" accept=".tcx,.xml" onChange={handleTcxFile} className="hidden" />
                 </label>
               )}
             </div>
             {watchData ? (
-              <p className="text-sm text-gray-700 mt-2 bg-blue-50 rounded-lg px-3 py-2">
-                🔥 <strong>{watchData.kcal} kcal</strong> · ⏱ {formatDur(watchData.durationSec)}
-                {watchData.avgHr && <> · ❤️ {watchData.avgHr}</>}
+              <p className="text-sm text-gray-700 mt-2 bg-blue-50 rounded-lg px-3 py-2 flex items-center gap-1.5 flex-wrap">
+                <Flame className="w-4 h-4 text-orange-500" strokeWidth={2} /> <strong>{watchData.kcal} kcal</strong> · <Timer className="w-4 h-4" strokeWidth={2} /> {formatDur(watchData.durationSec)}
+                {watchData.avgHr && <> · <HeartPulse className="w-4 h-4 text-red-500 inline" strokeWidth={2} /> {watchData.avgHr}</>}
                 {watchData.maxHr && <> / {watchData.maxHr} max</>}
               </p>
             ) : (
               <div className="flex items-center gap-2 mt-2">
-                <span className="text-sm text-gray-500">🔥 Kcal ręcznie:</span>
+                <span className="text-sm text-gray-500 flex items-center gap-1"><Flame className="w-4 h-4 text-orange-500" strokeWidth={2} /> Kcal ręcznie:</span>
                 <input
                   type="number" min="0" step="10" inputMode="numeric"
                   value={manualKcal}
@@ -1003,21 +1023,21 @@ function TreningPage() {
             <div className="flex gap-2">
               {users.map(u => (
                 <button key={u.id} type="button" onClick={() => setSaveAsUserId(u.id)}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
                     saveAsUserId === u.id
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white text-gray-600 border-gray-200'
+                      ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
+                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
                   }`}>
                   {u.name}
                 </button>
               ))}
               <button type="button" onClick={() => setSaveAsUserId('all')}
-                className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
+                className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors flex items-center justify-center gap-1.5 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
                   saveAsUserId === 'all'
-                    ? 'bg-green-600 text-white border-green-600'
-                    : 'bg-white text-gray-600 border-gray-200'
+                    ? 'bg-green-600 text-white border-green-600 hover:bg-green-700'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
                 }`}>
-                Oboje 👥
+                <Users className="w-4 h-4" strokeWidth={2} /> Oboje
               </button>
             </div>
             {saveAsUserId === 'all' && (
@@ -1030,25 +1050,25 @@ function TreningPage() {
 
         {existingSessionId && !editingSession ? (
           <div className="space-y-2">
-            <p className="text-sm text-center text-amber-600 font-medium bg-amber-50 rounded-xl py-2 px-3">
-              ⚠️ Masz już trening z tego dnia
+            <p className="text-sm text-center text-amber-600 font-medium bg-amber-50 rounded-xl py-2 px-3 flex items-center justify-center gap-1.5">
+              <AlertTriangle className="w-4 h-4" strokeWidth={2} /> Masz już trening z tego dnia
             </p>
             <div className="flex gap-2">
               <button type="button" onClick={handleSaveTogether}
                 disabled={saving || !entries.some(e => e.exerciseId)}
-                className="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-bold text-base disabled:opacity-50">
-                {saving ? 'Zapisuję...' : '+ Dodaj do istniejącego'}
+                className="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-bold text-base disabled:opacity-50 flex items-center justify-center gap-1.5 transition-colors hover:bg-blue-700 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                {saving ? 'Zapisuję...' : <><Plus className="w-4 h-4" strokeWidth={2} /> Dodaj do istniejącego</>}
               </button>
               <button type="submit"
                 disabled={saving || !entries.some(e => e.exerciseId)}
-                className="flex-1 bg-gray-700 text-white py-4 rounded-2xl font-bold text-base disabled:opacity-50">
+                className="flex-1 bg-gray-700 text-white py-4 rounded-2xl font-bold text-base disabled:opacity-50 transition-colors hover:bg-gray-800 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                 Zapisz osobno
               </button>
             </div>
           </div>
         ) : (
           <button type="submit" disabled={saving || !entries.some(e => e.exerciseId)}
-            className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-lg disabled:opacity-50">
+            className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-lg disabled:opacity-50 transition-colors hover:bg-blue-700 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
             {saving ? 'Zapisuję...' : editingSession ? 'Aktualizuj trening' : 'Zapisz trening'}
           </button>
         )}
@@ -1059,7 +1079,18 @@ function TreningPage() {
 
 export default function TreningPageWrapper() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-500">Ładowanie...</div>}>
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 pb-20">
+        <div className="bg-white border-b px-4 py-4 sticky top-0 z-10">
+          <Skeleton className="h-6 w-40" />
+        </div>
+        <div className="px-4 py-4 space-y-4 md:max-w-3xl lg:max-w-4xl md:mx-auto">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+      </div>
+    }>
       <TreningPage />
     </Suspense>
   );

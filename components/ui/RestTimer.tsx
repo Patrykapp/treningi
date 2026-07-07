@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { X, PartyPopper } from 'lucide-react';
 
 interface Props {
   endsAt: number | null;        // timestamp końca przerwy (null = ukryty)
@@ -56,8 +57,15 @@ export function RestTimer({ endsAt, secs, onChangeSecs, onExtend, onClose }: Pro
       <div className={`max-w-lg mx-auto rounded-2xl shadow-lg px-4 py-3 ${left === 0 ? 'bg-green-600' : 'bg-gray-900'}`}>
         {left === 0 ? (
           <div className="flex items-center justify-between text-white">
-            <span className="font-bold">💪 Przerwa skończona — następna seria!</span>
-            <button type="button" onClick={onClose} className="text-white/70 px-2">✕</button>
+            <span className="font-bold flex items-center gap-1.5"><PartyPopper className="w-4 h-4" strokeWidth={2} /> Przerwa skończona — następna seria!</span>
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-white/70 p-2 rounded-lg transition hover:bg-white/10 hover:text-white active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
+              aria-label="Zamknij"
+            >
+              <X className="w-4 h-4" strokeWidth={2} />
+            </button>
           </div>
         ) : (
           <>
@@ -66,9 +74,9 @@ export function RestTimer({ endsAt, secs, onChangeSecs, onExtend, onClose }: Pro
               <span className="text-2xl font-bold tabular-nums">{mm}:{ss}</span>
               <div className="flex items-center gap-1">
                 <button type="button" onClick={() => onExtend(30000)}
-                  className="text-xs bg-white/10 rounded-lg px-2 py-1 text-white">+30s</button>
+                  className="text-xs bg-white/10 rounded-lg px-2 py-1 text-white transition hover:bg-white/20 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2">+30s</button>
                 <button type="button" onClick={onClose}
-                  className="text-xs bg-white/10 rounded-lg px-2 py-1 text-white">Pomiń</button>
+                  className="text-xs bg-white/10 rounded-lg px-2 py-1 text-white transition hover:bg-white/20 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2">Pomiń</button>
               </div>
             </div>
             <div className="bg-white/20 rounded-full h-1.5 mb-1.5">
@@ -77,7 +85,7 @@ export function RestTimer({ endsAt, secs, onChangeSecs, onExtend, onClose }: Pro
             <div className="flex gap-1">
               {[60, 90, 120, 180].map(s => (
                 <button key={s} type="button" onClick={() => onChangeSecs(s)}
-                  className={`flex-1 text-xs rounded-lg py-1 ${secs === s ? 'bg-white/25 text-white font-bold' : 'text-gray-400'}`}>
+                  className={`flex-1 text-xs rounded-lg py-1 transition active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 ${secs === s ? 'bg-white/25 text-white font-bold' : 'text-gray-400 hover:bg-white/10 hover:text-gray-200'}`}>
                   {s < 120 ? `${s}s` : `${s / 60}min`}
                 </button>
               ))}

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Exercise } from '@/types';
 import { ExerciseThumb } from '@/components/ui/ExerciseThumb';
+import { X, ChevronUp, ChevronDown, ChevronRight, Check, Search, Star, Clock, Flame, Sparkles } from 'lucide-react';
 
 interface Props {
   exercises: Exercise[];
@@ -243,7 +244,7 @@ export function ExerciseSearch({
       data-selected={ex.id === value}
       type="button"
       onClick={() => handleSelect(ex.id)}
-      className={`w-full text-left px-3 py-2 text-sm border-t border-gray-50 transition-colors flex items-center gap-2.5 ${
+      className={`w-full text-left px-3 py-2 text-sm border-t border-gray-50 transition-colors flex items-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
         ex.id === value
           ? 'bg-blue-50 text-blue-700 font-semibold'
           : 'text-gray-900 hover:bg-gray-50'
@@ -251,7 +252,7 @@ export function ExerciseSearch({
     >
       <Thumb ex={ex} />
       <span className="min-w-0 flex-1 leading-snug">
-        {ex.id === value && <span className="mr-1.5">✓</span>}
+        {ex.id === value && <Check className="w-3.5 h-3.5 inline-block mr-1.5 -mt-0.5" strokeWidth={2} />}
         {ex.name}
         {ex.muscleGroup && (
           <span className="ml-1.5 text-xs text-gray-400">{normalizeMuscle(ex.muscleGroup)}</span>
@@ -267,7 +268,7 @@ export function ExerciseSearch({
         type="button"
         onClick={handleOpen}
         onKeyDown={handleKeyDown}
-        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base bg-white text-left flex items-center justify-between"
+        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base bg-white text-left flex items-center justify-between transition hover:border-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
       >
         <span className={selected ? 'text-gray-900' : 'text-gray-500'}>
           {selected ? selected.name : placeholder}
@@ -277,13 +278,13 @@ export function ExerciseSearch({
             <span
               role="button"
               onClick={handleClear}
-              className="text-gray-400 hover:text-gray-600 text-lg leading-none px-1"
+              className="text-gray-400 hover:text-gray-600 leading-none p-1 rounded-lg transition hover:bg-gray-100"
               title="Wyczyść"
             >
-              ×
+              <X className="w-4 h-4" strokeWidth={2} />
             </span>
           )}
-          <span className="text-gray-400 text-sm">{open ? '▴' : '▾'}</span>
+          {open ? <ChevronUp className="w-4 h-4 text-gray-400" strokeWidth={2} /> : <ChevronDown className="w-4 h-4 text-gray-400" strokeWidth={2} />}
         </span>
       </button>
 
@@ -291,6 +292,7 @@ export function ExerciseSearch({
         <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-xl shadow-xl mt-1 overflow-hidden">
           {/* Search input */}
           <div className="p-2 border-b border-gray-100 relative">
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
             <input
               ref={inputRef}
               type="text"
@@ -298,15 +300,15 @@ export function ExerciseSearch({
               onChange={e => { setSearch(e.target.value); setFocusedIdx(0); }}
               onKeyDown={handleKeyDown}
               placeholder="Szukaj ćwiczenia..."
-              className="w-full px-3 py-2 pr-8 text-sm border border-gray-200 rounded-lg text-gray-900 bg-gray-50"
+              className="w-full pl-8 pr-8 py-2 text-sm border border-gray-200 rounded-lg text-gray-900 bg-gray-50 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
             />
             {search && (
               <button
                 type="button"
                 onClick={() => { setSearch(''); setFocusedIdx(-1); inputRef.current?.focus(); }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-lg"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded-md transition hover:bg-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
               >
-                ×
+                <X className="w-4 h-4" strokeWidth={2} />
               </button>
             )}
           </div>
@@ -321,7 +323,7 @@ export function ExerciseSearch({
                     <button
                       type="button"
                       onClick={() => { close(); onAddNew(); }}
-                      className="mt-2 text-blue-600 font-medium hover:underline"
+                      className="mt-2 text-blue-600 font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded"
                     >
                       + Dodaj nowe ćwiczenie
                     </button>
@@ -335,7 +337,7 @@ export function ExerciseSearch({
                     data-selected={ex.id === value}
                     type="button"
                     onClick={() => handleSelect(ex.id)}
-                    className={`w-full text-left px-3 py-2 text-sm transition-colors border-t border-gray-50 first:border-t-0 flex items-center gap-2.5 ${
+                    className={`w-full text-left px-3 py-2 text-sm transition-colors border-t border-gray-50 first:border-t-0 flex items-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
                       i === focusedIdx
                         ? 'bg-blue-100 text-blue-800'
                         : ex.id === value
@@ -345,7 +347,7 @@ export function ExerciseSearch({
                   >
                     <Thumb ex={ex} />
                     <span className="min-w-0 flex-1 leading-snug">
-                      {ex.id === value && <span className="mr-1.5">✓</span>}
+                      {ex.id === value && <Check className="w-3.5 h-3.5 inline-block mr-1.5 -mt-0.5" strokeWidth={2} />}
                       {ex.name}
                       {ex.muscleGroup && (
                         <span className="ml-1.5 text-xs text-gray-400">{normalizeMuscle(ex.muscleGroup)}</span>
@@ -360,7 +362,7 @@ export function ExerciseSearch({
               {favoriteExercises.length > 0 && (
                 <div>
                   <div className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold uppercase tracking-wide border-b border-gray-100 bg-yellow-50 text-yellow-700 sticky top-0 z-10">
-                    <span>★ Ulubione <span className="font-normal opacity-60">({favoriteExercises.length})</span></span>
+                    <span className="flex items-center gap-1"><Star className="w-3.5 h-3.5 fill-yellow-500" strokeWidth={2} /> Ulubione <span className="font-normal opacity-60">({favoriteExercises.length})</span></span>
                   </div>
                   {favoriteExercises.map(ex => renderRow(ex))}
                 </div>
@@ -368,7 +370,7 @@ export function ExerciseSearch({
               {recentExercises.length > 0 && (
                 <div>
                   <div className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold uppercase tracking-wide border-b border-gray-100 bg-sky-50 text-sky-700 sticky top-0 z-10">
-                    <span>🕐 Ostatnio <span className="font-normal opacity-60">({recentExercises.length})</span></span>
+                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" strokeWidth={2} /> Ostatnio <span className="font-normal opacity-60">({recentExercises.length})</span></span>
                   </div>
                   {recentExercises.map(ex => renderRow(ex))}
                 </div>
@@ -376,7 +378,7 @@ export function ExerciseSearch({
               {topExercises.length > 0 && (
                 <div>
                   <div className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold uppercase tracking-wide border-b border-gray-100 bg-amber-50 text-amber-700 sticky top-0 z-10">
-                    <span>🔥 Najczęściej <span className="font-normal opacity-60">({topExercises.length})</span></span>
+                    <span className="flex items-center gap-1"><Flame className="w-3.5 h-3.5" strokeWidth={2} /> Najczęściej <span className="font-normal opacity-60">({topExercises.length})</span></span>
                   </div>
                   {topExercises.map(ex => renderRow(
                     ex,
@@ -394,14 +396,14 @@ export function ExerciseSearch({
                     <button
                       type="button"
                       onClick={() => toggleGroup(group)}
-                      className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold uppercase tracking-wide border-b border-gray-100 sticky top-0 z-10 ${
+                      className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold uppercase tracking-wide border-b border-gray-100 sticky top-0 z-10 transition-colors ${
                         hasSelected ? 'bg-blue-50 text-blue-700'
                         : isStretching(group) ? 'bg-teal-50 text-teal-700'
                         : 'bg-gray-50 text-gray-500'
                       }`}
                     >
-                      <span>{isStretching(group) ? '🧘 ' : ''}{group} <span className="font-normal opacity-60">({groupExercises.length})</span></span>
-                      <span className="text-gray-400">{isCollapsed ? '▸' : '▾'}</span>
+                      <span className="flex items-center gap-1">{isStretching(group) ? <Sparkles className="w-3.5 h-3.5" strokeWidth={2} /> : null}{group} <span className="font-normal opacity-60">({groupExercises.length})</span></span>
+                      {isCollapsed ? <ChevronRight className="w-3.5 h-3.5 text-gray-400" strokeWidth={2} /> : <ChevronDown className="w-3.5 h-3.5 text-gray-400" strokeWidth={2} />}
                     </button>
                     {/* Exercises in group */}
                     {!isCollapsed && groupExercises.map(ex => (
@@ -411,7 +413,7 @@ export function ExerciseSearch({
                         data-selected={ex.id === value}
                         type="button"
                         onClick={() => handleSelect(ex.id)}
-                        className={`w-full text-left px-3 py-2 text-sm border-t border-gray-50 transition-colors flex items-center gap-2.5 ${
+                        className={`w-full text-left px-3 py-2 text-sm border-t border-gray-50 transition-colors flex items-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
                           ex.id === value
                             ? 'bg-blue-50 text-blue-700 font-semibold'
                             : 'text-gray-900 hover:bg-gray-50'
@@ -419,7 +421,7 @@ export function ExerciseSearch({
                       >
                         <Thumb ex={ex} />
                         <span className="min-w-0 flex-1 leading-snug">
-                          {ex.id === value && <span className="mr-1.5">✓</span>}
+                          {ex.id === value && <Check className="w-3.5 h-3.5 inline-block mr-1.5 -mt-0.5" strokeWidth={2} />}
                           {ex.name}
                         </span>
                       </button>

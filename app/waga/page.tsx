@@ -6,7 +6,9 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { formatDate, formatDateInput } from '@/lib/utils';
 import { Toast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { SkeletonCard, Skeleton } from '@/components/ui/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
+import { Scale, Lock, Trash2, ArrowLeft } from 'lucide-react';
 
 interface BodyWeightEntry {
   id: string;
@@ -93,17 +95,29 @@ export default function WagaPage() {
 
       <div className="bg-white border-b px-4 py-4 sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <Link href="/" className="text-blue-600 font-medium">← Wróć</Link>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 text-blue-600 font-medium rounded-lg px-1 -mx-1 transition-colors hover:text-blue-700 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+          >
+            <ArrowLeft className="w-4 h-4" strokeWidth={2} /> Wróć
+          </Link>
           <h1 className="text-xl font-bold text-gray-900">Śledzenie wagi</h1>
         </div>
       </div>
 
-      <div className="px-4 py-4 space-y-4">
+      <div className="px-4 py-4 space-y-4 max-w-2xl mx-auto md:max-w-3xl lg:max-w-4xl">
         {authName && (
           <p className="text-sm text-gray-500 text-center">Twoje pomiary, {authName}</p>
         )}
 
         {/* Statystyki */}
+        {loading && (
+          <div className="grid grid-cols-3 gap-3">
+            <Skeleton className="h-[72px]" />
+            <Skeleton className="h-[72px]" />
+            <Skeleton className="h-[72px]" />
+          </div>
+        )}
         {!loading && entries.length > 0 && (
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
@@ -152,7 +166,7 @@ export default function WagaPage() {
                   type="date"
                   value={formDate}
                   onChange={e => setFormDate(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-3 text-gray-900"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
@@ -165,7 +179,7 @@ export default function WagaPage() {
                   value={formWeight}
                   onChange={e => setFormWeight(e.target.value)}
                   placeholder="np. 82.5"
-                  className="w-full border border-gray-200 rounded-xl px-3 py-3 text-center text-gray-900"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-3 text-center text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
@@ -176,13 +190,13 @@ export default function WagaPage() {
                 value={formNotes}
                 onChange={e => setFormNotes(e.target.value)}
                 placeholder="np. rano, przed śniadaniem"
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
             <button
               onClick={handleSave}
               disabled={saving}
-              className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold disabled:opacity-60"
+              className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold transition-colors hover:bg-blue-700 active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
             >
               {saving ? 'Zapisuję...' : 'Zapisz pomiar'}
             </button>
@@ -192,9 +206,9 @@ export default function WagaPage() {
         {!isLoggedIn && (
           <Link
             href="/login"
-            className="block w-full bg-gray-100 text-gray-700 text-center py-4 rounded-2xl font-medium"
+            className="flex items-center justify-center gap-2 w-full bg-gray-100 text-gray-700 text-center py-4 rounded-2xl font-medium transition-colors hover:bg-gray-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
           >
-            🔒 Zaloguj się aby dodawać pomiary
+            <Lock className="w-4 h-4" strokeWidth={2} /> Zaloguj się aby dodawać pomiary
           </Link>
         )}
 
@@ -202,10 +216,14 @@ export default function WagaPage() {
         <div>
           <h3 className="font-semibold text-gray-900 mb-2">Historia</h3>
           {loading ? (
-            <div className="text-center py-8 text-gray-600">Ładowanie...</div>
+            <div className="space-y-2">
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
           ) : entries.length === 0 ? (
             <div className="text-center py-8 text-gray-600 bg-white rounded-2xl">
-              <p className="text-4xl mb-2">⚖️</p>
+              <Scale className="w-8 h-8 mx-auto mb-2 text-gray-400" strokeWidth={2} />
               <p>Brak pomiarów. Dodaj pierwszy!</p>
             </div>
           ) : (
@@ -220,10 +238,10 @@ export default function WagaPage() {
                   {isLoggedIn && (
                     <button
                       onClick={() => setConfirmDeleteId(entry.id)}
-                      className="p-2 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                      className="p-2 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                       title="Usuń pomiar"
                     >
-                      🗑️
+                      <Trash2 className="w-4 h-4" strokeWidth={2} />
                     </button>
                   )}
                 </div>

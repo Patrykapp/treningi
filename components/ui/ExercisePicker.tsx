@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Exercise } from '@/types';
+import { Star, ChevronRight } from 'lucide-react';
 
 // Przyjazny wybór ćwiczenia: pole szukania + przeglądalna lista pogrupowana
 // wg partii mięśniowej (jak w sekcji „Ćwiczenia"). Ulubione na górze, w obrębie
@@ -64,11 +65,11 @@ export function ExercisePicker({
   const Row = ({ ex, showFav }: { ex: Exercise; showFav?: boolean }) => (
     <button
       onClick={() => onSelect(ex)}
-      className="w-full text-left px-3 py-2.5 rounded-xl bg-gray-50 active:bg-blue-50 flex items-center justify-between gap-2"
+      className="w-full text-left px-3 py-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 active:bg-blue-50 active:scale-[0.99] transition flex items-center justify-between gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
     >
       <span className="text-sm font-medium text-gray-900 min-w-0 truncate">{ex.name}</span>
       {showFav && favorites.includes(ex.id)
-        ? <span className="text-xs shrink-0">⭐</span>
+        ? <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 shrink-0" strokeWidth={2} />
         : ex.muscleGroup ? <span className="text-xs text-gray-400 shrink-0">{ex.muscleGroup}</span> : null}
     </button>
   );
@@ -80,7 +81,7 @@ export function ExercisePicker({
         value={search}
         onChange={e => setSearch(e.target.value)}
         placeholder="Szukaj ćwiczenia..."
-        className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm"
+        className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
       />
 
       {q ? (
@@ -95,12 +96,15 @@ export function ExercisePicker({
             const collapsed = !expanded.has(g);
             return (
               <div key={g}>
-                <button onClick={() => toggle(g)} className="w-full flex items-center justify-between px-1 py-1 text-left">
-                  <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                    {g === 'Ulubione' ? '⭐ Ulubione' : g}
+                <button
+                  onClick={() => toggle(g)}
+                  className="w-full flex items-center justify-between px-1 py-1 text-left rounded-lg transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                >
+                  <span className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1">
+                    {g === 'Ulubione' ? <><Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" strokeWidth={2} /> Ulubione</> : g}
                     <span className="ml-1.5 font-normal normal-case opacity-60">({exs.length})</span>
                   </span>
-                  <span className={`text-gray-400 text-sm inline-block transition-transform ${collapsed ? '' : 'rotate-90'}`}>▸</span>
+                  <ChevronRight className={`w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform ${collapsed ? '' : 'rotate-90'}`} strokeWidth={2} />
                 </button>
                 {!collapsed && (
                   <div className="space-y-1 mt-1">

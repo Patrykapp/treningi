@@ -12,10 +12,13 @@
   body {
     background: var(--background);
     color: #111111;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
     /* Bezpiecznik: żaden element nie może rozepchnąć strony w poziomie (mobile) */
     overflow-x: clip;
+  }
+  a, button {
+    -webkit-tap-highlight-color: transparent;
   }
   select {
     /* Natywny select nie zwęża się poniżej najdłuższej opcji — wymuś dopasowanie */
@@ -40,6 +43,19 @@
 /* Safe area for mobile */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 16px);
+}
+
+/* Skeleton loading placeholders */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+.skeleton {
+  background-color: #e5e7eb;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+.dark .skeleton {
+  background-color: #334155;
 }
 
 /* === DARK MODE === */

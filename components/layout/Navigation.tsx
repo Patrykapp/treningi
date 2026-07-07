@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { Home, Dumbbell, Flame, Bike, History, Settings, KeyRound, LucideIcon } from 'lucide-react';
 
 export function Navigation() {
   const pathname = usePathname();
@@ -19,16 +20,16 @@ export function Navigation() {
         <div className="max-w-2xl mx-auto flex">
           <Link
             href="/"
-            className={`flex-1 flex flex-col items-center py-2 text-xs gap-1 transition-colors ${pathname === '/' ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}
+            className={`flex-1 flex flex-col items-center py-2 text-xs gap-1 transition-colors hover:bg-gray-50 active:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${pathname === '/' ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}
           >
-            <span className="text-xl">🏠</span>
+            <Home className="w-5 h-5" strokeWidth={2} />
             <span>Start</span>
           </Link>
           <Link
             href="/login"
-            className={`flex-1 flex flex-col items-center py-2 text-xs gap-1 transition-colors ${pathname === '/login' ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}
+            className={`flex-1 flex flex-col items-center py-2 text-xs gap-1 transition-colors hover:bg-gray-50 active:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${pathname === '/login' ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}
           >
-            <span className="text-xl">🔑</span>
+            <KeyRound className="w-5 h-5" strokeWidth={2} />
             <span>Zaloguj</span>
           </Link>
         </div>
@@ -36,13 +37,13 @@ export function Navigation() {
     );
   }
 
-  const navItems = [
-    { href: '/', label: 'Start', icon: '🏠' },
-    { href: '/cwiczenia', label: 'Ćwicz.', icon: '🏋️' },
-    { href: '/trening', label: 'Trening', icon: '💪' },
-    { href: '/aktywnosci', label: 'Aktyw.', icon: '🚴' },
-    { href: '/historia', label: 'Historia', icon: '📋' },
-    { href: '/ustawienia', label: 'Ustaw.', icon: '⚙️' },
+  const navItems: { href: string; label: string; icon: LucideIcon }[] = [
+    { href: '/', label: 'Start', icon: Home },
+    { href: '/cwiczenia', label: 'Ćwicz.', icon: Dumbbell },
+    { href: '/trening', label: 'Trening', icon: Flame },
+    { href: '/aktywnosci', label: 'Aktyw.', icon: Bike },
+    { href: '/historia', label: 'Historia', icon: History },
+    { href: '/ustawienia', label: 'Ustaw.', icon: Settings },
   ];
 
   return (
@@ -50,15 +51,16 @@ export function Navigation() {
       <div className="max-w-2xl mx-auto flex">
         {navItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+          const Icon = item.icon;
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex-1 flex flex-col items-center py-2 text-xs gap-1 transition-colors ${
+              className={`flex-1 flex flex-col items-center py-2 text-xs gap-1 transition-colors hover:bg-gray-50 active:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
                 isActive ? 'text-blue-600 font-semibold' : 'text-gray-500'
               }`}
             >
-              <span className="text-xl">{item.icon}</span>
+              <Icon className="w-5 h-5" strokeWidth={2} />
               <span>{item.label}</span>
             </Link>
           );

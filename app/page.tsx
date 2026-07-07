@@ -7,6 +7,11 @@ import { formatDate } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { runCalories, sessionCalories } from '@/lib/calories';
 import { ActivityHeatmap } from '@/components/ui/ActivityHeatmap';
+import { SkeletonCard } from '@/components/ui/Skeleton';
+import {
+  Plus, Flag, BarChart3, PersonStanding, Bike, Scale, Sparkles,
+  Crown, Flame, Zap, ChevronRight, Dumbbell, TrendingUp,
+} from 'lucide-react';
 
 interface Run {
   id: string;
@@ -245,13 +250,13 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      <div className="px-4 py-4 space-y-4">
+      <div className="px-4 py-4 space-y-4 md:max-w-3xl lg:max-w-4xl md:mx-auto">
         {isLoggedIn ? (
-          <Link href="/trening" className="block w-full bg-blue-600 text-white text-center py-4 rounded-2xl font-semibold text-lg shadow-sm">
-            + Dodaj trening
+          <Link href="/trening" className="flex items-center justify-center gap-2 w-full bg-blue-600 text-white text-center py-4 rounded-2xl font-semibold text-lg shadow-sm transition-colors hover:bg-blue-700 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+            <Plus className="w-5 h-5" strokeWidth={2} /> Dodaj trening
           </Link>
         ) : (
-          <Link href="/login" className="block w-full bg-gray-100 text-gray-700 text-center py-4 rounded-2xl font-medium text-base">
+          <Link href="/login" className="block w-full bg-gray-100 text-gray-700 text-center py-4 rounded-2xl font-medium text-base transition-colors hover:bg-gray-200 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
             Zaloguj się aby dodawać treningi
           </Link>
         )}
@@ -259,18 +264,18 @@ export default function DashboardPage() {
         {/* Porównanie tygodnia — widoczne od razu, motywacja dla obojga */}
         {isLoggedIn && comparison.length > 1 && (
           <div className="bg-white rounded-2xl p-4 shadow-sm">
-            <h2 className="text-sm font-bold text-gray-700 mb-3">Ten tydzień — kto prowadzi? 🏁</h2>
-            <div className="grid grid-cols-2 gap-3">
+            <h2 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-1.5"><Flag className="w-4 h-4" strokeWidth={2} /> Ten tydzień — kto prowadzi?</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {comparison.map(c => {
                 const isLeader = leader.some(l => l.id === c.id) && leader.length === 1;
                 return (
                   <button key={c.id} type="button" onClick={() => setViewUserId(c.isMe ? null : c.id)}
-                    className="text-left w-full">
-                    <div className={`rounded-xl p-3 text-center border-2 transition-colors ${
+                    className="text-left w-full transition active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded-xl">
+                    <div className={`rounded-xl p-3 text-center border-2 transition-colors hover:border-blue-300 ${
                       isLeader ? 'border-yellow-400 bg-yellow-50' : 'border-gray-100 bg-gray-50'
                     } ${activeId === c.id ? 'ring-2 ring-blue-400' : ''}`}>
-                      <div className="text-sm font-bold text-gray-800 mb-1">
-                        {isLeader && '👑 '}{c.name}
+                      <div className="text-sm font-bold text-gray-800 mb-1 flex items-center justify-center gap-1">
+                        {isLeader && <Crown className="w-4 h-4 text-yellow-500" strokeWidth={2} />}{c.name}
                       </div>
                       <div className="text-2xl font-bold text-blue-600">{c.score}</div>
                       <div className="text-xs text-gray-500">pkt</div>
@@ -283,12 +288,14 @@ export default function DashboardPage() {
                         </div>
                       )}
                       {c.weekKcal > 0 && (
-                        <div className="text-xs text-red-500 font-medium mt-0.5">
-                          🔥 ~{c.weekKcal.toLocaleString('pl-PL')} kcal
+                        <div className="text-xs text-red-500 font-medium mt-0.5 flex items-center justify-center gap-1">
+                          <Flame className="w-3.5 h-3.5" strokeWidth={2} /> ~{c.weekKcal.toLocaleString('pl-PL')} kcal
                         </div>
                       )}
                       {c.streak > 1 && (
-                        <div className="text-xs text-orange-500 font-medium mt-0.5">⚡ {c.streak} dni z rzędu</div>
+                        <div className="text-xs text-orange-500 font-medium mt-0.5 flex items-center justify-center gap-1">
+                          <Zap className="w-3.5 h-3.5" strokeWidth={2} /> {c.streak} dni z rzędu
+                        </div>
                       )}
                     </div>
                   </button>
@@ -310,7 +317,7 @@ export default function DashboardPage() {
             {activeId !== userId && (
               <p className="text-sm font-semibold text-purple-700 bg-purple-50 rounded-xl px-3 py-2">
                 Oglądasz statystyki: {activeName}
-                <button type="button" onClick={() => setViewUserId(null)} className="ml-2 text-purple-500 underline">
+                <button type="button" onClick={() => setViewUserId(null)} className="ml-2 text-purple-500 underline transition-colors hover:text-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded">
                   wróć do swoich
                 </button>
               </p>
@@ -334,7 +341,7 @@ export default function DashboardPage() {
 
             {weekStreakVal >= 2 && (
               <div className="bg-orange-50 border border-orange-200 rounded-2xl px-4 py-3 flex items-center gap-3">
-                <span className="text-2xl">🔥</span>
+                <Flame className="w-6 h-6 text-orange-500 shrink-0" strokeWidth={2} />
                 <div>
                   <p className="text-sm font-bold text-orange-700">{weekStreakVal} tygodnie z rzędu!</p>
                   <p className="text-xs text-orange-500">Nie przerywaj passy — trenuj w tym tygodniu</p>
@@ -380,7 +387,7 @@ export default function DashboardPage() {
               return (
                 <div className="bg-white rounded-2xl p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-1">
-                    <h2 className="text-sm font-bold text-gray-700">❤️ Forma — śr. tętno treningów</h2>
+                    <h2 className="text-sm font-bold text-gray-700 flex items-center gap-1.5"><TrendingUp className="w-4 h-4 text-red-500" strokeWidth={2} /> Forma — śr. tętno treningów</h2>
                     <span className={`text-xs font-bold ${trend <= 0 ? 'text-green-600' : 'text-orange-500'}`}>
                       {trend <= 0 ? '▼' : '▲'} {Math.abs(trend)} bpm
                     </span>
@@ -401,17 +408,17 @@ export default function DashboardPage() {
           </>
         )}
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {[
-            { href: '/challenge', icon: '⚡', label: 'Challenge' },
-            { href: '/historia', icon: '📊', label: 'Historia' },
-            { href: '/bieganie', icon: '🏃', label: 'Bieganie' },
-            { href: '/aktywnosci', icon: '🚴', label: 'Aktywności' },
-            { href: '/waga', icon: '⚖️', label: 'Waga' },
-            { href: '/insighty', icon: '✨', label: 'AI Insighty' },
-          ].map(({ href, icon, label }) => (
-            <Link key={href} href={href} className="bg-white rounded-2xl p-4 text-center shadow-sm block">
-              <div className="text-2xl mb-1">{icon}</div>
+            { href: '/challenge', icon: Zap, label: 'Challenge' },
+            { href: '/historia', icon: BarChart3, label: 'Historia' },
+            { href: '/bieganie', icon: PersonStanding, label: 'Bieganie' },
+            { href: '/aktywnosci', icon: Bike, label: 'Aktywności' },
+            { href: '/waga', icon: Scale, label: 'Waga' },
+            { href: '/insighty', icon: Sparkles, label: 'AI Insighty' },
+          ].map(({ href, icon: Icon, label }) => (
+            <Link key={href} href={href} className="bg-white rounded-2xl p-4 text-center shadow-sm block transition-all hover:shadow-md hover:border-gray-300 border border-transparent active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+              <Icon className="w-6 h-6 mx-auto mb-1 text-gray-700" strokeWidth={2} />
               <div className="text-xs font-medium text-gray-700">{label}</div>
             </Link>
           ))}
@@ -421,12 +428,16 @@ export default function DashboardPage() {
           <div>
             <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2">Ostatnia aktywność</h2>
             {loading && !data ? (
-              <div className="bg-white rounded-2xl p-6 text-center text-gray-400 text-sm">Ładowanie...</div>
+              <div className="space-y-3">
+                <SkeletonCard />
+                <SkeletonCard />
+                <SkeletonCard />
+              </div>
             ) : feed.length === 0 ? (
               <div className="bg-white rounded-2xl p-6 text-center">
                 <p className="text-gray-400 text-sm mb-3">Brak treningów. Zacznij pierwszy!</p>
-                <Link href="/trening" className="inline-block bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold">
-                  + Dodaj trening
+                <Link href="/trening" className="inline-flex items-center gap-1.5 bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors hover:bg-blue-700 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                  <Plus className="w-4 h-4" strokeWidth={2} /> Dodaj trening
                 </Link>
               </div>
             ) : (
@@ -451,7 +462,7 @@ export default function DashboardPage() {
                     const dur = h > 0 ? `${h} h${m > 0 ? ` ${m} min` : ''}` : `${m} min`;
                     return (
                       <Link key={`a-${a.id}`} href="/aktywnosci"
-                        className={`flex items-center justify-between gap-2 px-4 py-3 ${i > 0 ? 'border-t border-gray-100' : ''}`}>
+                        className={`flex items-center justify-between gap-2 px-4 py-3 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${i > 0 ? 'border-t border-gray-100' : ''}`}>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             {badge}
@@ -461,7 +472,7 @@ export default function DashboardPage() {
                             {a.type} · {dur}{a.distanceKm ? ` · ${a.distanceKm} km` : ''}{a.kcal ? ` · ~${a.kcal} kcal` : ''}
                           </div>
                         </div>
-                        <span className="text-gray-400 shrink-0">›</span>
+                        <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" strokeWidth={2} />
                       </Link>
                     );
                   }
@@ -471,17 +482,17 @@ export default function DashboardPage() {
                     const pace = paceSec > 0 ? `${Math.floor(paceSec / 60)}'${String(Math.round(paceSec % 60)).padStart(2, '0')}"/km` : '';
                     return (
                       <Link key={`r-${item.run.id}`} href="/bieganie"
-                        className={`flex items-center justify-between gap-2 px-4 py-3 ${i > 0 ? 'border-t border-gray-100' : ''}`}>
+                        className={`flex items-center justify-between gap-2 px-4 py-3 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${i > 0 ? 'border-t border-gray-100' : ''}`}>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             {badge}
                             <span className="font-medium text-gray-900 text-sm">{formatDate(item.run.date)}</span>
                           </div>
-                          <div className="text-xs text-gray-500 mt-0.5">
-                            🏃 {item.run.distance} km{pace && ` · ${pace}`}{kcal > 0 && ` · ~${kcal} kcal`}
+                          <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                            <PersonStanding className="w-3.5 h-3.5" strokeWidth={2} /> {item.run.distance} km{pace && ` · ${pace}`}{kcal > 0 && ` · ~${kcal} kcal`}
                           </div>
                         </div>
-                        <span className="text-gray-400 shrink-0">›</span>
+                        <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" strokeWidth={2} />
                       </Link>
                     );
                   }
@@ -491,19 +502,19 @@ export default function DashboardPage() {
                     <Link
                       key={session.id}
                       href={`/trening/podsumowanie/${session.id}`}
-                      className={`flex items-center justify-between gap-2 px-4 py-3 ${i > 0 ? 'border-t border-gray-100' : ''}`}
+                      className={`flex items-center justify-between gap-2 px-4 py-3 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${i > 0 ? 'border-t border-gray-100' : ''}`}
                     >
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           {badge}
                           <span className="font-medium text-gray-900 text-sm">{formatDate(session.date)}</span>
                         </div>
-                        <div className="text-xs text-gray-500 mt-0.5">
-                          🏋️ {session.entries?.length || 0} ćwiczeń{sc.kcal > 0 && ` · ${sc.estimated ? '~' : ''}${sc.kcal} kcal${sc.estimated ? '' : ' ⌚'}`}
+                        <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                          <Dumbbell className="w-3.5 h-3.5" strokeWidth={2} /> {session.entries?.length || 0} ćwiczeń{sc.kcal > 0 && ` · ${sc.estimated ? '~' : ''}${sc.kcal} kcal${sc.estimated ? '' : ' ⌚'}`}
                           {session.notes && <span className="italic"> · {session.notes}</span>}
                         </div>
                       </div>
-                      <span className="text-gray-400 shrink-0">›</span>
+                      <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" strokeWidth={2} />
                     </Link>
                   );
                 })}

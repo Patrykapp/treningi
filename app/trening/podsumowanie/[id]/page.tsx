@@ -8,6 +8,15 @@ import { strengthCalories, latestWeight } from '@/lib/calories';
 import { parseTcx, HR_BUCKET_SEC } from '@/lib/tcx';
 import { computeHrZones, estimateHrMax, formatZoneTime } from '@/lib/hr';
 import { useAuth } from '@/hooks/useAuth';
+import { SkeletonCard } from '@/components/ui/Skeleton';
+import {
+  ArrowLeft,
+  Trophy,
+  Timer,
+  Heart,
+  Watch,
+  Flame,
+} from 'lucide-react';
 
 function formatDur(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -156,11 +165,22 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
     }).catch(() => setLoading(false));
   }, [id]);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Ładowanie...</div>;
+  if (loading) return (
+    <div className="min-h-screen bg-gray-50 pb-24">
+      <div className="px-4 py-4 space-y-4 md:max-w-3xl lg:max-w-4xl md:mx-auto">
+        <SkeletonCard />
+        <SkeletonCard />
+        <SkeletonCard />
+      </div>
+    </div>
+  );
   if (!session) return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-gray-500">
       <p>Nie znaleziono treningu.</p>
-      <button onClick={() => router.back()} className="text-blue-600 underline text-sm">Wróć</button>
+      <button
+        onClick={() => router.back()}
+        className="text-blue-600 underline text-sm transition-colors hover:text-blue-700 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+      >Wróć</button>
     </div>
   );
 
@@ -188,12 +208,17 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
     <div className="min-h-screen bg-gray-50 pb-24">
       {/* Header */}
       <div className="bg-white border-b px-4 pt-4 pb-3 sticky top-0 z-10">
-        <button onClick={() => router.back()} className="text-blue-600 text-sm mb-2 block">← Wróć</button>
+        <button
+          onClick={() => router.back()}
+          className="text-blue-600 text-sm mb-2 flex items-center gap-1 rounded-lg transition-colors hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+        >
+          <ArrowLeft className="w-4 h-4" strokeWidth={2} /> Wróć
+        </button>
         <h1 className="text-xl font-bold text-gray-900">Podsumowanie treningu</h1>
         <p className="text-sm text-gray-500">{formatDate(session.date)} · {session.user.name}</p>
       </div>
 
-      <div className="px-4 py-4 space-y-4">
+      <div className="px-4 py-4 space-y-4 md:max-w-3xl lg:max-w-4xl md:mx-auto">
 
         {/* Ocena */}
         {rating && (
@@ -225,7 +250,11 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
               ) : (
                 <div className="bg-white/15 rounded-xl p-2.5 text-center">
                   <p className="text-xs opacity-70 mb-0.5">PR</p>
-                  <p className="font-bold text-sm">{rating.prCount > 0 ? `🏆×${rating.prCount}` : '—'}</p>
+                  <p className="font-bold text-sm">
+                    {rating.prCount > 0 ? (
+                      <span className="inline-flex items-center gap-1"><Trophy className="w-4 h-4" strokeWidth={2} /> ×{rating.prCount}</span>
+                    ) : '—'}
+                  </p>
                 </div>
               )}
             </div>
@@ -249,12 +278,12 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
           {session.kcal ? (
             <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
               <p className="text-xl font-black text-red-500">{session.kcal}</p>
-              <p className="text-xs text-gray-500 mt-0.5">kcal ⌚</p>
+              <p className="text-xs text-gray-500 mt-0.5 flex items-center justify-center gap-1">kcal <Watch className="w-3.5 h-3.5" strokeWidth={2} /></p>
             </div>
           ) : weightKg > 0 && (
             <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
               <p className="text-xl font-black text-red-500">~{strengthCalories(weightKg, totalSets)}</p>
-              <p className="text-xs text-gray-500 mt-0.5">kcal 🔥</p>
+              <p className="text-xs text-gray-500 mt-0.5 flex items-center justify-center gap-1">kcal <Flame className="w-3.5 h-3.5" strokeWidth={2} /></p>
             </div>
           )}
         </div>
@@ -265,13 +294,13 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
             <div className="flex items-center justify-around text-center">
               {session.durationSec && (
                 <div>
-                  <p className="text-base font-bold text-gray-900">⏱ {formatDur(session.durationSec)}</p>
+                  <p className="text-base font-bold text-gray-900 flex items-center justify-center gap-1.5"><Timer className="w-4 h-4" strokeWidth={2} /> {formatDur(session.durationSec)}</p>
                   <p className="text-xs text-gray-500">czas treningu</p>
                 </div>
               )}
               {session.avgHr && (
                 <div>
-                  <p className="text-base font-bold text-gray-900">❤️ {session.avgHr}{session.maxHr ? ` / ${session.maxHr}` : ''}</p>
+                  <p className="text-base font-bold text-gray-900 flex items-center justify-center gap-1.5"><Heart className="w-4 h-4" strokeWidth={2} /> {session.avgHr}{session.maxHr ? ` / ${session.maxHr}` : ''}</p>
                   <p className="text-xs text-gray-500">tętno śr. / maks.</p>
                 </div>
               )}
@@ -308,8 +337,8 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
             })()}
           </div>
         ) : authUserId === session.user.id && (
-          <label className="block w-full text-center text-sm text-blue-600 font-medium bg-white rounded-2xl shadow-sm py-3 cursor-pointer">
-            ⌚ Importuj dane z zegarka (TCX)
+          <label className="w-full text-center text-sm text-blue-600 font-medium bg-white rounded-2xl shadow-sm py-3 cursor-pointer transition-colors hover:bg-gray-50 flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+            <Watch className="w-4 h-4" strokeWidth={2} /> Importuj dane z zegarka (TCX)
             <input type="file" accept=".tcx,.xml" onChange={attachTcx} className="hidden" />
           </label>
         )}
@@ -340,7 +369,7 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
         {/* PR */}
         {rating && rating.prCount > 0 && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4">
-            <h3 className="text-sm font-semibold text-yellow-800 mb-2">🏆 Nowe rekordy ({rating.prCount})</h3>
+            <h3 className="text-sm font-semibold text-yellow-800 mb-2 flex items-center gap-1.5"><Trophy className="w-4 h-4" strokeWidth={2} /> Nowe rekordy ({rating.prCount})</h3>
             <div className="space-y-1">
               {session.entries
                 .filter(e => rating.prExerciseIds.includes(e.exerciseId))
@@ -367,9 +396,13 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
                 <div key={entry.id} className="px-4 py-3 border-b border-gray-50 last:border-0">
                   <div className="flex items-start justify-between gap-2">
                     <Link href={`/cwiczenie/${entry.exerciseId}`}
-                      className="text-sm font-semibold text-gray-900 flex-1">
+                      className="text-sm font-semibold text-gray-900 flex-1 rounded transition-colors hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                       {entry.exercise.name}
-                      {isPR && <span className="ml-1.5 text-xs bg-yellow-100 text-yellow-700 rounded px-1.5 py-0.5 font-bold">🏆 PR</span>}
+                      {isPR && (
+                        <span className="ml-1.5 text-xs bg-yellow-100 text-yellow-700 rounded px-1.5 py-0.5 font-bold inline-flex items-center gap-1">
+                          <Trophy className="w-3.5 h-3.5" strokeWidth={2} /> PR
+                        </span>
+                      )}
                     </Link>
                     {entry.rpe && (
                       <span className="text-xs text-gray-400 shrink-0">RPE {entry.rpe}</span>

@@ -5,6 +5,8 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, ReferenceLine,
 } from 'recharts';
+import { X, Trophy, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 interface ProgressPoint {
   date: string;
@@ -91,24 +93,30 @@ export function ExerciseProgressModal({ exerciseId, exerciseName, userId, onClos
     : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'rgba(0,0,0,0.5)' }}
+    <div className="fixed inset-0 z-50 flex flex-col transition-opacity duration-200" style={{ background: 'rgba(0,0,0,0.5)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="mt-auto bg-white rounded-t-3xl w-full max-h-[85vh] flex flex-col">
+      <div className="mt-auto bg-white rounded-t-3xl w-full max-h-[85vh] flex flex-col transition-all duration-200">
         {/* Header */}
         <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0">
           <div>
             <h2 className="text-base font-bold text-gray-900">{exerciseName}</h2>
             <p className="text-xs text-gray-500">Postęp — {points.length} sesji</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 text-2xl w-10 h-10 flex items-center justify-center">✕</button>
+          <button
+            onClick={onClose}
+            className="text-gray-400 w-10 h-10 flex items-center justify-center rounded-xl transition hover:bg-gray-100 hover:text-gray-600 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            aria-label="Zamknij"
+          >
+            <X className="w-5 h-5" strokeWidth={2} />
+          </button>
         </div>
 
         {/* Tabs */}
         <div className="flex gap-1 px-4 pb-3 shrink-0">
           {(Object.keys(MODE_LABELS) as Mode[]).map(m => (
             <button key={m} onClick={() => setMode(m)}
-              className={`flex-1 py-1.5 text-xs font-semibold rounded-xl transition-colors ${
-                mode === m ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600'
+              className={`flex-1 py-1.5 text-xs font-semibold rounded-xl transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
+                mode === m ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}>
               {MODE_LABELS[m]}
             </button>
@@ -120,7 +128,7 @@ export function ExerciseProgressModal({ exerciseId, exerciseName, userId, onClos
           <div className="flex gap-3 px-4 pb-3 shrink-0">
             {prPoint && (
               <div className="flex-1 bg-purple-50 rounded-xl px-3 py-2 text-center">
-                <div className="text-xs text-purple-600 font-medium">🏆 Rekord</div>
+                <div className="text-xs text-purple-600 font-medium flex items-center justify-center gap-1"><Trophy className="w-3.5 h-3.5" strokeWidth={2} /> Rekord</div>
                 <div className="text-lg font-bold text-purple-800">
                   {prPoint[dataKey]} {mode === 'volume' ? '' : 'kg'}
                 </div>
@@ -134,8 +142,9 @@ export function ExerciseProgressModal({ exerciseId, exerciseName, userId, onClos
                   {last[dataKey]} {mode === 'volume' ? '' : 'kg'}
                 </div>
                 {trend !== null && (
-                  <div className={`text-[10px] font-medium ${trend > 0 ? 'text-green-600' : trend < 0 ? 'text-red-500' : 'text-gray-400'}`}>
-                    {trend > 0 ? '▲' : trend < 0 ? '▼' : '='} {Math.abs(trend)} {mode === 'volume' ? '' : 'kg'}
+                  <div className={`text-[10px] font-medium flex items-center justify-center gap-0.5 ${trend > 0 ? 'text-green-600' : trend < 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                    {trend > 0 ? <TrendingUp className="w-3 h-3" strokeWidth={2} /> : trend < 0 ? <TrendingDown className="w-3 h-3" strokeWidth={2} /> : <Minus className="w-3 h-3" strokeWidth={2} />}
+                    {Math.abs(trend)} {mode === 'volume' ? '' : 'kg'}
                   </div>
                 )}
               </div>
@@ -146,7 +155,11 @@ export function ExerciseProgressModal({ exerciseId, exerciseName, userId, onClos
         {/* Wykres */}
         <div className="flex-1 overflow-auto px-2 pb-6">
           {loading ? (
-            <div className="flex items-center justify-center h-40 text-gray-400 text-sm">Ładowanie...</div>
+            <div className="h-40 flex flex-col justify-center gap-2 px-4">
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-3 w-1/3" />
+            </div>
           ) : points.length < 2 ? (
             <div className="flex items-center justify-center h-40 text-gray-400 text-sm">
               {points.length === 0 ? 'Brak danych' : 'Potrzebujesz min. 2 sesji do wykresu'}
