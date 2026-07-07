@@ -590,7 +590,7 @@ function HistoriaPage() {
                     <div className="flex gap-1 items-center shrink-0">
                       <Link
                         href={session.notes?.startsWith('Challenge:') ? `/challenge/wynik/${session.id}` : `/trening/podsumowanie/${session.id}`}
-                        className="p-2 rounded-xl text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                        className="p-2 rounded-xl text-purple-500 bg-purple-50 hover:text-purple-700 hover:bg-purple-100 transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                         title="Podsumowanie"
                       ><BarChart3 className="w-4 h-4" strokeWidth={2} /></Link>
                       {isLoggedIn && session.userId === authUserId && (
@@ -607,12 +607,12 @@ function HistoriaPage() {
                           )}
                           <button
                             onClick={() => router.push(`/trening?sessionId=${session.id}`)}
-                            className="p-2 rounded-xl text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                            className="p-2 rounded-xl text-blue-500 bg-blue-50 hover:text-blue-700 hover:bg-blue-100 transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                             title="Edytuj trening"
                           ><Pencil className="w-4 h-4" strokeWidth={2} /></button>
                           <button
                             onClick={() => setConfirmDelete(session.id)}
-                            className="p-2 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                            className="p-2 rounded-xl text-red-500 bg-red-50 hover:text-red-700 hover:bg-red-100 transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                             title="Usuń trening"
                           ><Trash2 className="w-4 h-4" strokeWidth={2} /></button>
                         </>

@@ -18,17 +18,24 @@ function weekStart(d: Date): Date {
   return dd;
 }
 
+// Skala niebieska (marka apki), zamiast zielonej — lepszy kontrast na białej
+// karcie i konsekwentna z resztą UI.
 function cellColor(count: number): string {
   if (count === 0) return 'bg-gray-100';
-  if (count === 1) return 'bg-green-200';
-  if (count === 2) return 'bg-green-400';
-  return 'bg-green-600';
+  if (count === 1) return 'bg-blue-200';
+  if (count === 2) return 'bg-blue-400';
+  return 'bg-blue-600';
 }
 
 const MONTHS_PL = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'];
 
+function formatDayLabel(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
 function HeatmapGrid({
-  weeks, counts, today, cellSize, gap, dayLabelWidth, fontSize,
+  weeks, counts, today, cellSize, gap, dayLabelWidth, fontSize, selected, onSelectDay,
 }: {
   weeks: Date[][];
   counts: Record<string, number>;
@@ -37,10 +44,12 @@ function HeatmapGrid({
   gap: number;
   dayLabelWidth: number;
   fontSize: number;
+  selected: string | null;
+  onSelectDay: (dateStr: string, count: number) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const MONTHS_PL = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'];
   const DAY_LABELS = ['Pn', '', 'Śr', '', 'Pt', '', 'Nd'];
+  const todayStr = toDateStr(today);
 
   const monthLabels: { label: string; col: number }[] = [];
   let lastMonth = -1;
@@ -89,11 +98,18 @@ function HeatmapGrid({
                   const key = toDateStr(day);
                   const count = counts[key] || 0;
                   const isFuture = day > today;
+                  const isToday = key === todayStr;
+                  const isSelected = key === selected;
                   return (
-                    <div
+                    <button
                       key={di}
+                      type="button"
+                      disabled={isFuture}
+                      onClick={() => onSelectDay(key, count)}
                       title={isFuture ? '' : `${key}: ${count} ${count === 1 ? 'trening' : 'treningów'}`}
-                      className={`rounded-sm ${isFuture ? 'opacity-0' : cellColor(count)}`}
+                      className={`rounded-sm transition-transform ${isFuture ? 'opacity-0 pointer-events-none' : cellColor(count)} ${
+                        isSelected ? 'ring-2 ring-offset-1 ring-blue-600' : isToday ? 'ring-1 ring-offset-1 ring-gray-400' : ''
+                      } ${!isFuture ? 'hover:scale-125 active:scale-95' : ''}`}
                       style={{ width: cellSize, height: cellSize }}
                     />
                   );
@@ -111,6 +127,7 @@ export function ActivityHeatmap({ userId }: Props) {
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [loaded, setLoaded] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const [selected, setSelected] = useState<{ date: string; count: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -150,17 +167,6 @@ export function ActivityHeatmap({ userId }: Props) {
     weeks.push(week);
   }
 
-  // Month label positions — show label on the first week of each new month
-  const monthLabels: { label: string; col: number }[] = [];
-  let lastMonth = -1;
-  weeks.forEach((week, wi) => {
-    const m = week[0].getMonth();
-    if (m !== lastMonth) {
-      monthLabels.push({ label: MONTHS_PL[m], col: wi });
-      lastMonth = m;
-    }
-  });
-
   const closeOnEsc = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') setFullscreen(false);
   }, []);
@@ -183,16 +189,28 @@ export function ActivityHeatmap({ userId }: Props) {
   const activeDays = Object.keys(counts).length;
   if (totalSessions === 0) return null;
 
-  // Day labels (Mon, Wed, Fri)
-  const DAY_LABELS = ['Pn', '', 'Śr', '', 'Pt', '', 'Nd'];
+  const selectDay = (date: string, count: number) => {
+    setSelected(prev => (prev?.date === date ? null : { date, count }));
+  };
 
   const legend = (cellSize: number) => (
     <div className="flex items-center gap-1 mt-3 justify-end">
       <span className="text-gray-400" style={{ fontSize: 10 }}>Mniej</span>
-      {(['bg-gray-100', 'bg-green-200', 'bg-green-400', 'bg-green-600'] as const).map((c, i) => (
+      {(['bg-gray-100', 'bg-blue-200', 'bg-blue-400', 'bg-blue-600'] as const).map((c, i) => (
         <div key={i} className={`rounded-sm ${c}`} style={{ width: cellSize, height: cellSize }} />
       ))}
       <span className="text-gray-400" style={{ fontSize: 10 }}>Więcej</span>
+    </div>
+  );
+
+  // Pasek z informacją o zaznaczonym dniu — działa też na dotyk (title
+  // z hoverem nic nie daje na telefonie, więc tap na komórkę pokazuje to tutaj).
+  const selectedInfo = selected && (
+    <div className="mt-2 flex items-center justify-between bg-blue-50 rounded-xl px-3 py-2 text-sm">
+      <span className="font-medium text-blue-900 capitalize">{formatDayLabel(selected.date)}</span>
+      <span className="text-blue-700 font-semibold">
+        {selected.count} {selected.count === 1 ? 'trening' : 'treningów'}
+      </span>
     </div>
   );
 
@@ -219,9 +237,11 @@ export function ActivityHeatmap({ userId }: Props) {
 
         <HeatmapGrid
           weeks={weeks} counts={counts} today={today}
-          cellSize={9} gap={2} dayLabelWidth={16} fontSize={9}
+          cellSize={11} gap={2.5} dayLabelWidth={18} fontSize={10}
+          selected={selected?.date ?? null} onSelectDay={selectDay}
         />
-        {legend(9)}
+        {legend(11)}
+        {selectedInfo}
       </div>
 
       {/* Fullscreen modal */}
@@ -247,13 +267,15 @@ export function ActivityHeatmap({ userId }: Props) {
             </button>
           </div>
 
-          {/* Grid — większe komórki */}
+          {/* Grid — większe komórki, wygodniejsze do dotyku */}
           <div className="flex-1 overflow-auto px-4 py-4">
             <HeatmapGrid
               weeks={weeks} counts={counts} today={today}
-              cellSize={16} gap={3} dayLabelWidth={22} fontSize={11}
+              cellSize={18} gap={3.5} dayLabelWidth={24} fontSize={11}
+              selected={selected?.date ?? null} onSelectDay={selectDay}
             />
             {legend(16)}
+            {selectedInfo}
           </div>
         </div>
       )}

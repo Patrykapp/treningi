@@ -2,21 +2,18 @@
 
 import { Exercise } from '@/types';
 
-// Miniatura ćwiczenia — statyczny podgląd (pierwsza klatka z free-exercise-db).
-// Wczesniej klatki start/koniec migały co 900ms co przy wielu miniaturach na
-// liście (np. wyszukiwarka ćwiczeń) wygladało jak strobowanie — usunięte.
-// Bez obrazka: nic nie pokazujemy (media tymczasowo wyłączone).
+// Miniatura ćwiczenia — prawdziwy, w pełni animowany plik .gif (samohostowany
+// w public/exercise-gifs/), wyświetlany wprost, bez wycinania/podmiany klatek.
+// Ustalone z Patrykiem 2026-07-07: żadnej syntetycznej statycznej klatki ani
+// własnego crossfade — ma być realna animacja ćwiczenia, taka jak plik daje.
 export function ExerciseThumb({ ex, className = 'w-14 h-14' }: { ex: Exercise; className?: string }) {
-  const frame = (ex.images && ex.images.length > 0)
-    ? ex.images[0]
-    : (ex.gifUrl || null);
-
-  if (!frame) return null;
+  const src = ex.gifUrl || (ex.images && ex.images.length > 0 ? ex.images[0] : null);
+  if (!src) return null;
 
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={frame}
+      src={src}
       alt=""
       loading="lazy"
       className={`${className} rounded-lg object-cover skeleton shrink-0`}

@@ -6,6 +6,7 @@ import { Exercise, NewEntryForm, SetData } from '@/types';
 import { formatDateInput } from '@/lib/utils';
 import { fetchExercises, invalidateExerciseCache } from '@/lib/exerciseCache';
 import { Toast } from '@/components/ui/Toast';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ExerciseSearch } from '@/components/ui/ExerciseSearch';
 import { RestTimer } from '@/components/ui/RestTimer';
 import { activeSession } from '@/hooks/useActiveSession';
@@ -82,6 +83,7 @@ function TreningPage() {
   const [showNewEx, setShowNewEx] = useState(false);
   const [editingSession, setEditingSession] = useState<string | null>(null);
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [confirmDeleteTemplate, setConfirmDeleteTemplate] = useState<{ id: string; name: string } | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [templateName, setTemplateName] = useState('');
@@ -333,6 +335,7 @@ function TreningPage() {
   };
 
   const deleteTemplate = async (id: string) => {
+    setConfirmDeleteTemplate(null);
     const res = await fetch(`/api/templates/${id}`, { method: 'DELETE' });
     if (res.ok) {
       setTemplates(prev => prev.filter(t => t.id !== id));
@@ -635,6 +638,14 @@ function TreningPage() {
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      {confirmDeleteTemplate && (
+        <ConfirmDialog
+          isOpen={true}
+          message={`Usunąć szablon "${confirmDeleteTemplate.name}"? Nie można cofnąć.`}
+          onConfirm={() => deleteTemplate(confirmDeleteTemplate.id)}
+          onCancel={() => setConfirmDeleteTemplate(null)}
+        />
+      )}
       <RestTimer
         endsAt={restEndsAt}
         secs={restSecs}
@@ -771,8 +782,8 @@ function TreningPage() {
                   className="text-sm font-medium text-blue-600 flex-1 text-left transition-colors hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded">
                   {tpl.name}
                 </button>
-                <button type="button" onClick={() => deleteTemplate(tpl.id)}
-                  className="text-red-400 hover:text-red-600 text-xs px-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded">
+                <button type="button" onClick={() => setConfirmDeleteTemplate({ id: tpl.id, name: tpl.name })}
+                  className="text-red-500 bg-red-50 hover:text-red-700 hover:bg-red-100 text-xs p-1.5 rounded-lg transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                   <Trash2 className="w-4 h-4" strokeWidth={2} />
                 </button>
               </div>
