@@ -122,6 +122,13 @@ export function ExerciseSearch({
     return () => document.removeEventListener('mousedown', handler);
   }, [close]);
 
+  // Blokada scrolla tła, gdy pełnoekranowy panel wyszukiwania jest otwarty
+  useEffect(() => {
+    if (open) document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = '';
+    return () => { document.body.style.overflow = ''; };
+  }, [open]);
+
   const handleOpen = () => {
     setOpen(o => !o);
     setFocusedIdx(-1);
@@ -289,31 +296,51 @@ export function ExerciseSearch({
       </button>
 
       {open && (
-        <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-xl shadow-xl mt-1 overflow-hidden">
-          {/* Search input */}
-          <div className="p-2 border-b border-gray-100 relative">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
-            <input
-              ref={inputRef}
-              type="text"
-              value={search}
-              onChange={e => { setSearch(e.target.value); setFocusedIdx(0); }}
-              onKeyDown={handleKeyDown}
-              placeholder="Szukaj ćwiczenia..."
-              className="w-full pl-8 pr-8 py-2 text-sm border border-gray-200 rounded-lg text-gray-900 bg-gray-50 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-            />
-            {search && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/40 transition-opacity duration-200" onClick={close} />
+
+          {/* Panel: pełnoekranowy arkusz na mobile, duże okno na desktopie —
+              zamiast dawnego wąskiego dropdownu (max-h-72), dużo wiecej miejsca
+              na szukanie, mniej scrollowania. */}
+          <div className="relative bg-white w-full sm:max-w-lg h-[88vh] sm:h-[75vh] rounded-t-2xl sm:rounded-2xl shadow-xl flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
+              <span className="font-semibold text-gray-900">Wybierz ćwiczenie</span>
               <button
                 type="button"
-                onClick={() => { setSearch(''); setFocusedIdx(-1); inputRef.current?.focus(); }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded-md transition hover:bg-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                onClick={close}
+                className="p-1.5 rounded-lg text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                aria-label="Zamknij"
               >
-                <X className="w-4 h-4" strokeWidth={2} />
+                <X className="w-5 h-5" strokeWidth={2} />
               </button>
-            )}
-          </div>
+            </div>
 
-          <div ref={listRef} className="max-h-72 overflow-y-auto">
+            {/* Search input */}
+            <div className="p-3 border-b border-gray-100 relative shrink-0">
+              <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} />
+              <input
+                ref={inputRef}
+                type="text"
+                value={search}
+                onChange={e => { setSearch(e.target.value); setFocusedIdx(0); }}
+                onKeyDown={handleKeyDown}
+                placeholder="Szukaj ćwiczenia..."
+                className="w-full pl-9 pr-9 py-2.5 text-base border border-gray-200 rounded-lg text-gray-900 bg-gray-50 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => { setSearch(''); setFocusedIdx(-1); inputRef.current?.focus(); }}
+                  className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded-md transition hover:bg-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                >
+                  <X className="w-4 h-4" strokeWidth={2} />
+                </button>
+              )}
+            </div>
+
+            <div ref={listRef} className="flex-1 overflow-y-auto">
             {search ? (
               // ── Flat search results ──────────────────────────
               filtered.length === 0 ? (
@@ -431,6 +458,7 @@ export function ExerciseSearch({
               })}
               </>
             )}
+            </div>
           </div>
         </div>
       )}
