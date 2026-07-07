@@ -24,25 +24,46 @@ function formatDur(seconds: number): string {
   return h > 0 ? `${h}h ${m}min` : `${m} min`;
 }
 
-// Lekki wykres tętna (SVG, bez bibliotek)
+// Lekki wykres tętna (SVG, bez bibliotek) — linia + gradient wypełnienia
+// pod krzywą i siatka pomocnicza, żeby wygladał jak "prawdziwy" wykres.
 function HrChart({ series }: { series: number[] }) {
   const vals = series.filter(v => v > 0);
   if (vals.length < 3) return null;
-  const min = Math.min(...vals) - 5;
-  const max = Math.max(...vals) + 5;
-  const W = 600, H = 80;
-  const pts = series
-    .map((v, i) => v > 0 ? `${(i / (series.length - 1)) * W},${H - ((v - min) / (max - min)) * H}` : null)
-    .filter(Boolean)
-    .join(' ');
+  const minVal = Math.min(...vals);
+  const maxVal = Math.max(...vals);
+  const min = minVal - 5;
+  const max = maxVal + 5;
+  const W = 600, H = 90;
+  const toX = (i: number) => (i / (series.length - 1)) * W;
+  const toY = (v: number) => H - ((v - min) / (max - min)) * H;
+  const validIdx = series.map((v, i) => (v > 0 ? i : -1)).filter(i => i >= 0);
+  const pts = validIdx.map(i => `${toX(i)},${toY(series[i])}`).join(' ');
+  const firstIdx = validIdx[0];
+  const lastIdx = validIdx[validIdx.length - 1];
+  const areaPts = validIdx.length > 0
+    ? `${toX(firstIdx)},${H} ${pts} ${toX(lastIdx)},${H}`
+    : '';
+
   return (
     <div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-20" preserveAspectRatio="none">
-        <polyline points={pts} fill="none" stroke="#ef4444" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-24" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="hrFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#ef4444" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="#ef4444" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {/* Siatka pomocnicza */}
+        {[0.25, 0.5, 0.75].map(p => (
+          <line key={p} x1="0" y1={H * p} x2={W} y2={H * p} stroke="#e5e7eb" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+        ))}
+        {areaPts && <polygon points={areaPts} fill="url(#hrFill)" />}
+        <polyline points={pts} fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
       </svg>
-      <div className="flex justify-between text-xs text-gray-400">
-        <span>start</span>
+      <div className="flex justify-between text-xs text-gray-400 mt-1">
+        <span>{minVal} bpm</span>
         <span>{Math.round(series.length * HR_BUCKET_SEC / 60)} min</span>
+        <span>{maxVal} bpm</span>
       </div>
     </div>
   );

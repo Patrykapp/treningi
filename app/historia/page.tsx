@@ -530,9 +530,11 @@ function HistoriaPage() {
               return [
                 weekHeader,
                 <div key={session.id} className="bg-white rounded-2xl p-4 shadow-sm">
-                  {/* Nagłówek karty */}
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
+                  {/* Nagłówek karty — dwa niezależne wiersze (tytuł / ocena+akcje),
+                      każdy z własnym flex-wrap, żeby przy dużej liczbie znaczków
+                      (gwiazdki + PR + ikony akcji) nic nie wychodziło poza ekran. */}
+                  <div className="mb-2">
+                    <div className="min-w-0">
                       <span className="font-bold text-gray-900">{formatDate(session.date)}</span>
                       <span className="ml-2 text-sm text-blue-600 font-medium">{session.user?.name}</span>
                       {sessionMuscles.length > 0 && (
@@ -562,7 +564,9 @@ function HistoriaPage() {
                         </Link>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <div className="flex flex-wrap items-center gap-2">
                       {/* Gwiazdki oceny + PR badge */}
                       {rating?.prCount > 0 && (
                         <span className="inline-flex items-center gap-1 text-sm font-bold bg-yellow-400 text-yellow-900 rounded-xl px-2.5 py-1 leading-none">
@@ -582,37 +586,37 @@ function HistoriaPage() {
                           <Stars count={0} />
                         </div>
                       )}
-                      <div className="flex gap-1 items-center">
-                        <Link
-                          href={session.notes?.startsWith('Challenge:') ? `/challenge/wynik/${session.id}` : `/trening/podsumowanie/${session.id}`}
-                          className="p-2 rounded-xl text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                          title="Podsumowanie"
-                        ><BarChart3 className="w-4 h-4" strokeWidth={2} /></Link>
-                        {isLoggedIn && session.userId === authUserId && (
-                          <>
-                            {sameDaySessions.length > 1 && session.id !== mainSession.id && (
-                              <button
-                                onClick={() => handleMerge(mainSession.id, session.id)}
-                                disabled={merging === session.id}
-                                className="inline-flex items-center gap-1 px-2 py-1.5 rounded-xl text-xs font-semibold text-orange-600 bg-orange-50 hover:bg-orange-100 transition-colors active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                                title="Połącz z głównym treningiem tego dnia"
-                              >
-                                {merging === session.id ? '...' : (<><Link2 className="w-3.5 h-3.5" strokeWidth={2} /> Połącz</>)}
-                              </button>
-                            )}
+                    </div>
+                    <div className="flex gap-1 items-center shrink-0">
+                      <Link
+                        href={session.notes?.startsWith('Challenge:') ? `/challenge/wynik/${session.id}` : `/trening/podsumowanie/${session.id}`}
+                        className="p-2 rounded-xl text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                        title="Podsumowanie"
+                      ><BarChart3 className="w-4 h-4" strokeWidth={2} /></Link>
+                      {isLoggedIn && session.userId === authUserId && (
+                        <>
+                          {sameDaySessions.length > 1 && session.id !== mainSession.id && (
                             <button
-                              onClick={() => router.push(`/trening?sessionId=${session.id}`)}
-                              className="p-2 rounded-xl text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                              title="Edytuj trening"
-                            ><Pencil className="w-4 h-4" strokeWidth={2} /></button>
-                            <button
-                              onClick={() => setConfirmDelete(session.id)}
-                              className="p-2 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                              title="Usuń trening"
-                            ><Trash2 className="w-4 h-4" strokeWidth={2} /></button>
-                          </>
-                        )}
-                      </div>
+                              onClick={() => handleMerge(mainSession.id, session.id)}
+                              disabled={merging === session.id}
+                              className="inline-flex items-center gap-1 px-2 py-1.5 rounded-xl text-xs font-semibold text-orange-600 bg-orange-50 hover:bg-orange-100 transition-colors active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                              title="Połącz z głównym treningiem tego dnia"
+                            >
+                              {merging === session.id ? '...' : (<><Link2 className="w-3.5 h-3.5" strokeWidth={2} /> Połącz</>)}
+                            </button>
+                          )}
+                          <button
+                            onClick={() => router.push(`/trening?sessionId=${session.id}`)}
+                            className="p-2 rounded-xl text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                            title="Edytuj trening"
+                          ><Pencil className="w-4 h-4" strokeWidth={2} /></button>
+                          <button
+                            onClick={() => setConfirmDelete(session.id)}
+                            className="p-2 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                            title="Usuń trening"
+                          ><Trash2 className="w-4 h-4" strokeWidth={2} /></button>
+                        </>
+                      )}
                     </div>
                   </div>
 
