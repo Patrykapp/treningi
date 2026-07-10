@@ -10,7 +10,7 @@ export interface RatingEntry {
   weight: number;
   rpe: number | null;
   setsData: unknown;
-  exercise: { name: string };
+  exercise: { name: string; muscleGroup?: string | null };
 }
 
 export interface RatingSession {
@@ -26,6 +26,7 @@ export interface RatingHistoryEntry {
   reps: number;
   weight: number;
   setsData: unknown;
+  exercise?: { muscleGroup?: string | null } | null;
 }
 
 export interface RatingHistorySession {
@@ -52,7 +53,22 @@ export function computeRating(session: RatingSession, history: RatingHistorySess
   }, 0);
 
   // ---- Średni wolumen z ostatnich sesji ----
-  const recentSessions = history.slice(0, 8);
+  // Porównujemy wolumen tylko do sesji trenujących te same grupy mięśniowe —
+  // inaczej dzień nóg/pleców (naturalnie inny profil obciążenia) wypadał niesprawiedliwie
+  // źle na tle np. dnia push z cięższymi wyciskaniami.
+  const currentMuscleGroups = new Set(
+    session.entries
+      .map(e => e.exercise?.muscleGroup)
+      .filter((m): m is string => !!m)
+  );
+  const sharesMuscleGroup = (s: RatingHistorySession) =>
+    currentMuscleGroups.size === 0 || // brak danych o grupach — nie filtruj, wróć do starego zachowania
+    s.entries.some(e => !!e.exercise?.muscleGroup && currentMuscleGroups.has(e.exercise.muscleGroup));
+
+  const matchedHistory = history.filter(sharesMuscleGroup);
+  // przy zbyt małej próbie (<3) dopasowanych sesji średnia byłaby zbyt szumiąca —
+  // wtedy wracamy do ogólnej historii, żeby nie liczyć średniej z 1-2 sesji
+  const recentSessions = (matchedHistory.length >= 3 ? matchedHistory : history).slice(0, 8);
   const avgVolume = recentSessions.length > 0
     ? recentSessions.reduce((sum, s) => {
         return sum + s.entries.reduce((esum, e) => {
