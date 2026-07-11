@@ -50,6 +50,22 @@ function asSetsData(v: unknown): SetData[] {
   return Array.isArray(v) ? (v as SetData[]) : [];
 }
 
+// Szacowane 1RM (wzór Epleya) — te same liczby dają różny "wolumen" w zależności
+// od schematu serii (5 serii po 5 vs 3 serie po 7), mimo że mogą reprezentować
+// podobny albo wyższy poziom siły. e1RM stawia oba schematy na wspólnej skali
+// "jak blisko maksimum", niezależnie od liczby serii/powtórzeń.
+function estimate1RM(weight: number, reps: number): number {
+  if (weight <= 0 || reps <= 0) return 0;
+  return weight * (1 + reps / 30);
+}
+
+function bestE1RM(setsData: SetData[], reps: number, weight: number): number {
+  if (setsData && setsData.length > 0) {
+    return Math.max(...setsData.map(s => estimate1RM(s.weight, s.reps)));
+  }
+  return estimate1RM(weight, reps);
+}
+
 // history: sesje TEGO użytkownika sprzed daty ocenianej sesji, posortowane malejąco po dacie (max 30)
 export function computeRating(session: RatingSession, history: RatingHistorySession[]) {
   // ---- Wolumen bieżącej sesji ----
@@ -121,30 +137,71 @@ export function computeRating(session: RatingSession, history: RatingHistorySess
     const curSd = asSetsData(entry.setsData);
     const curVol = calcVolume(curSd, entry.sets, entry.reps, entry.weight);
     const curMaxWeight = curSd.length > 0 ? Math.max(...curSd.map(s => s.weight)) : entry.weight;
+    const curE1RM = bestE1RM(curSd, entry.reps, entry.weight);
 
     const prevEntry = prevEntries[0];
     const prevSd = asSetsData(prevEntry.setsData);
     const prevVol = calcVolume(prevSd, prevEntry.sets, prevEntry.reps, prevEntry.weight);
+    const prevE1RM = bestE1RM(prevSd, prevEntry.reps, prevEntry.weight);
 
-    // PR: max waga kiedykolwiek
+    // PR: max waga kiedykolwiek LUB nowy najlepszy szacowany 1RM. Sam ciężar gubi
+    // przypadki typu "5x5 zamiast 3x7 na tym samym ciężarze" — więcej powtórzeń
+    // na tej samej wadze to realny progres siłowy, mimo że max waga się nie zmienia.
     const allMaxWeights = prevEntries.map(e => {
       const sd = asSetsData(e.setsData);
       return sd.length > 0 ? Math.max(...sd.map(s => s.weight)) : e.weight;
     });
-    const allTimeMax = Math.max(...allMaxWeights);
-    if (curMaxWeight > allTimeMax && curMaxWeight > 0) {
+    const allTimeMaxWeight = Math.max(...allMaxWeights);
+    const allTimeBestE1RM = Math.max(...prevEntries.map(e => bestE1RM(asSetsData(e.setsData), e.reps, e.weight)));
+
+    const isWeightPR = curMaxWeight > allTimeMaxWeight && curMaxWeight > 0;
+    const isE1RMPR = !isWeightPR && curE1RM > allTimeBestE1RM * 1.01 && curE1RM > 0;
+    if (isWeightPR) {
       prCount++;
       prExerciseIds.push(entry.exerciseId);
       progressDetail.push(`🏆 PR: ${entry.exercise.name} (${curMaxWeight}kg)`);
+    } else if (isE1RMPR) {
+      prCount++;
+      prExerciseIds.push(entry.exerciseId);
+      progressDetail.push(`🏆 PR siły: ${entry.exercise.name} (szac. 1RM ${Math.round(curE1RM)}kg)`);
     }
 
-    // Progres wolumenu vs poprzedni
-    if (prevVol > 0) {
-      const pct = ((curVol - prevVol) / prevVol) * 100;
-      if (pct > 5) progressDetail.push(`📈 ${entry.exercise.name}: +${pct.toFixed(0)}% wolumenu`);
-      else if (pct < -5) progressDetail.push(`📉 ${entry.exercise.name}: ${pct.toFixed(0)}% wolumenu`);
+    // Progres: wolumen ORAZ szacowany 1RM. Schemat serii (np. 3 serie po 7 zamiast
+    // 5 po 5) zmienia wolumen, nawet gdy realna siła rośnie lub stoi w miejscu —
+    // dlatego regres liczymy tylko, gdy OBIE miary spadają (albo e1RM jest
+    // niedostępne, np. ćwiczenia na masie własnej), a poprawę - gdy rośnie
+    // którakolwiek z nich.
+    const volPct = prevVol > 0 ? ((curVol - prevVol) / prevVol) * 100 : null;
+    const e1rmPct = prevE1RM > 0 ? ((curE1RM - prevE1RM) / prevE1RM) * 100 : null;
+    const volImproved = volPct !== null && volPct > 5;
+    const e1rmImproved = e1rmPct !== null && e1rmPct > 2;
+    const volRegressed = volPct !== null && volPct < -5;
+    const e1rmRegressed = e1rmPct !== null && e1rmPct < -2;
+
+    if (volImproved) {
+      progressDetail.push(`📈 ${entry.exercise.name}: +${(volPct as number).toFixed(0)}% wolumenu`);
+    } else if (e1rmImproved) {
+      progressDetail.push(`💪 ${entry.exercise.name}: +${(e1rmPct as number).toFixed(0)}% szac. siły (inny schemat serii)`);
+    } else if (volRegressed && (e1rmRegressed || e1rmPct === null)) {
+      progressDetail.push(`📉 ${entry.exercise.name}: ${(volPct as number).toFixed(0)}% wolumenu`);
     }
   }
+
+  // ---- Typ sesji wg śr. powtórzeń na serię (informacyjne, nie wpływa na wynik) ----
+  // 5 serii po 5 i 3 serie po 7 to różne bodźce treningowe (siła vs hipertrofia) —
+  // ta etykieta pokazuje, jaki typ zarejestrował system, żeby wskazówki miały sens
+  // (np. "dodaj serię" nie pasuje do czysto siłowego dnia niskopowtórzeniowego).
+  const totalSets = session.entries.reduce((sum, e) => {
+    const sd = asSetsData(e.setsData);
+    return sum + (sd.length > 0 ? sd.length : e.sets);
+  }, 0);
+  const totalReps = session.entries.reduce((sum, e) => {
+    const sd = asSetsData(e.setsData);
+    return sum + (sd.length > 0 ? sd.reduce((s, x) => s + x.reps, 0) : e.sets * e.reps);
+  }, 0);
+  const avgRepsPerSet = totalSets > 0 ? totalReps / totalSets : 0;
+  const sessionType: 'Siła' | 'Hipertrofia' | 'Wytrzymałość' | null =
+    avgRepsPerSet <= 0 ? null : avgRepsPerSet <= 5 ? 'Siła' : avgRepsPerSet <= 12 ? 'Hipertrofia' : 'Wytrzymałość';
 
   // ---- Wolumen score (0-10) ----
   let volumeScore = 5;
@@ -176,7 +233,7 @@ export function computeRating(session: RatingSession, history: RatingHistorySess
   );
   let progressPts = 5;
   if (progressEntries.length > 0) {
-    const improvements = progressDetail.filter(d => d.includes('📈') || d.includes('🏆')).length;
+    const improvements = progressDetail.filter(d => d.includes('📈') || d.includes('🏆') || d.includes('💪')).length;
     const regressions = progressDetail.filter(d => d.includes('📉')).length;
     progressPts = Math.min(10, Math.max(1, 5 + improvements * 1.5 - regressions * 1.5));
   }
@@ -201,7 +258,11 @@ export function computeRating(session: RatingSession, history: RatingHistorySess
   // ---- Wskazówki do poprawy ----
   const tips: string[] = [];
 
-  if (volumeScore < 5) {
+  if (volumeScore < 5 && sessionType === 'Siła') {
+    // Niski wolumen na sesji niskopowtórzeniowej (np. 5x5) to często cecha schematu,
+    // nie efekt słabszego treningu — "dodaj serię" byłoby tu mylącą podpowiedzią.
+    tips.push('🏋️ To sesja siłowa (niskie powtórzenia) — niższy wolumen jest tu normalny, liczy się progres ciężaru/szac. 1RM, nie liczba serii');
+  } else if (volumeScore < 5) {
     if (avgVolume > 0) {
       tips.push(`📦 Wolumen był o ${Math.round((1 - currentVolume / avgVolume) * 100)}% niższy niż Twoja średnia — spróbuj dodać 1 serię do każdego ćwiczenia`);
     } else {
@@ -248,5 +309,7 @@ export function computeRating(session: RatingSession, history: RatingHistorySess
     details: progressDetail,
     tips,
     breakdown,
+    sessionType,
+    avgRepsPerSet: Math.round(avgRepsPerSet * 10) / 10,
   };
 }
