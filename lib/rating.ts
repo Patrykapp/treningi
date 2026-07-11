@@ -34,11 +34,16 @@ export interface RatingHistorySession {
   entries: RatingHistoryEntry[];
 }
 
+// Ćwiczenia na masie własnej (podciąganie, pompki itp.) są zapisywane z weight=0.
+// Bez tej poprawki ich wolumen zawsze wychodzi 0 (reps*0), niezależnie od liczby
+// powtórzeń — sesje głównie na masie własnej (np. podciąganie na drążku) zawsze
+// dostawały najgorszą możliwą ocenę wolumenu, mimo realnego progresu w powtórzeniach.
+// Traktujemy 0kg jak "ciężar" 1, żeby liczyły się same powtórzenia.
 function calcVolume(setsData: SetData[], sets: number, reps: number, weight: number): number {
   if (setsData && setsData.length > 0) {
-    return setsData.reduce((sum, s) => sum + s.reps * s.weight, 0);
+    return setsData.reduce((sum, s) => sum + s.reps * Math.max(s.weight, 1), 0);
   }
-  return sets * reps * weight;
+  return sets * reps * Math.max(weight, 1);
 }
 
 function asSetsData(v: unknown): SetData[] {
@@ -63,9 +68,26 @@ export function computeRating(session: RatingSession, history: RatingHistorySess
       .filter((m): m is string => !!m)
   );
 
+  // Ćwiczenia na masie własnej (0kg) i te z zewnętrznym ciężarem mają zupełnie inną
+  // skalę "wolumenu" (same powtórzenia vs kg×powtórzenia) — więc w obrębie tej samej
+  // grupy mięśniowej trzymamy je w osobnych pulach porównawczych. Dzięki temu dzień
+  // samego podciągania (Plecy, 0kg) nie jest już zestawiany ze średnią z ciężkich
+  // wiosłowań/podciągań z obciążeniem tej samej grupy — i odwrotnie.
+  const bodyweightGroups = new Set(
+    session.entries.filter(e => e.weight === 0).map(e => e.exercise?.muscleGroup).filter((m): m is string => !!m)
+  );
+  const weightedGroups = new Set(
+    session.entries.filter(e => e.weight > 0).map(e => e.exercise?.muscleGroup).filter((m): m is string => !!m)
+  );
+  const isRelevantEntry = (e: RatingHistoryEntry): boolean => {
+    const mg = e.exercise?.muscleGroup;
+    if (!mg || !currentMuscleGroups.has(mg)) return false;
+    return e.weight === 0 ? bodyweightGroups.has(mg) : weightedGroups.has(mg);
+  };
+
   const matchedVolume = (entries: RatingHistoryEntry[]): number =>
     entries
-      .filter(e => !!e.exercise?.muscleGroup && currentMuscleGroups.has(e.exercise.muscleGroup))
+      .filter(isRelevantEntry)
       .reduce((sum, e) => sum + calcVolume(asSetsData(e.setsData), e.sets, e.reps, e.weight), 0);
 
   const matchedSessions = currentMuscleGroups.size > 0
