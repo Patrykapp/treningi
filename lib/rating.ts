@@ -53,27 +53,34 @@ export function computeRating(session: RatingSession, history: RatingHistorySess
   }, 0);
 
   // ---- Średni wolumen z ostatnich sesji ----
-  // Porównujemy wolumen tylko do sesji trenujących te same grupy mięśniowe —
-  // inaczej dzień nóg/pleców (naturalnie inny profil obciążenia) wypadał niesprawiedliwie
-  // źle na tle np. dnia push z cięższymi wyciskaniami.
+  // Do średniej liczymy TYLKO wolumen wpisów tych samych grup mięśniowych co dziś —
+  // nie cały wolumen dopasowanej sesji. Wcześniejsza wersja brała pełen wolumen
+  // każdej sesji dzielącej choć jedną grupę mięśniową, więc np. sesja "barki + nogi"
+  // zawyżała/zaniżała średnią dla treningu barków całym swoim wolumenem z nóg.
   const currentMuscleGroups = new Set(
     session.entries
       .map(e => e.exercise?.muscleGroup)
       .filter((m): m is string => !!m)
   );
-  const sharesMuscleGroup = (s: RatingHistorySession) =>
-    currentMuscleGroups.size === 0 || // brak danych o grupach — nie filtruj, wróć do starego zachowania
-    s.entries.some(e => !!e.exercise?.muscleGroup && currentMuscleGroups.has(e.exercise.muscleGroup));
 
-  const matchedHistory = history.filter(sharesMuscleGroup);
+  const matchedVolume = (entries: RatingHistoryEntry[]): number =>
+    entries
+      .filter(e => !!e.exercise?.muscleGroup && currentMuscleGroups.has(e.exercise.muscleGroup))
+      .reduce((sum, e) => sum + calcVolume(asSetsData(e.setsData), e.sets, e.reps, e.weight), 0);
+
+  const matchedSessions = currentMuscleGroups.size > 0
+    ? history.filter(s => matchedVolume(s.entries) > 0)
+    : [];
   // przy zbyt małej próbie (<3) dopasowanych sesji średnia byłaby zbyt szumiąca —
-  // wtedy wracamy do ogólnej historii, żeby nie liczyć średniej z 1-2 sesji
-  const recentSessions = (matchedHistory.length >= 3 ? matchedHistory : history).slice(0, 8);
+  // wtedy wracamy do starego zachowania (cały wolumen ostatnich 8 sesji, bez filtra)
+  const useMatched = matchedSessions.length >= 3;
+  const recentSessions = (useMatched ? matchedSessions : history).slice(0, 8);
+
   const avgVolume = recentSessions.length > 0
     ? recentSessions.reduce((sum, s) => {
-        return sum + s.entries.reduce((esum, e) => {
-          return esum + calcVolume(asSetsData(e.setsData), e.sets, e.reps, e.weight);
-        }, 0);
+        return sum + (useMatched
+          ? matchedVolume(s.entries)
+          : s.entries.reduce((esum, e) => esum + calcVolume(asSetsData(e.setsData), e.sets, e.reps, e.weight), 0));
       }, 0) / recentSessions.length
     : 0;
 
