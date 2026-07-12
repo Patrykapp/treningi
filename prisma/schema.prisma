@@ -52,6 +52,7 @@ model WorkoutSession {
   notes       String?
   entries     WorkoutEntry[]
   activities  OtherActivity[] // inne aktywności przypięte do tego treningu (ten sam dzień)
+  runs        RunSession[] // biegi przypięte do tego treningu (ten sam dzień, np. bieg + challenge)
   // Dane z zegarka (import TCX) — opcjonalne
   durationSec Int?
   kcal        Int?
@@ -129,10 +130,14 @@ model RunSession {
   kcal      Int?
   avgHr     Int?
   maxHr     Int?
+  // Opcjonalne przypięcie do treningu z tego samego dnia (np. bieg + challenge)
+  sessionId String?
+  session   WorkoutSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId, date])
+  @@index([sessionId])
 }
 
 model OtherActivity {

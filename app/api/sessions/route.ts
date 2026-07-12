@@ -31,6 +31,7 @@ export async function GET(request: Request) {
         user: true,
         entries: { include: { exercise: true } },
         activities: { include: { user: { select: { id: true, name: true } } } },
+        runs: true,
       },
       orderBy: { date: 'desc' },
       take: limit,

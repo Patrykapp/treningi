@@ -32,6 +32,7 @@ interface Run {
   distance: number;
   duration: number;
   notes?: string | null;
+  sessionId?: string | null;
 }
 
 interface OtherActivity {
@@ -47,7 +48,7 @@ interface OtherActivity {
   user?: { id: string; name: string };
 }
 
-type SessionWithActivities = WorkoutSession & { activities?: OtherActivity[] };
+type SessionWithActivities = WorkoutSession & { activities?: OtherActivity[]; runs?: Run[] };
 
 // Czas trwania aktywności w formacie "1 h 5 min"
 function formatActDuration(min: number): string {
@@ -289,6 +290,23 @@ function HistoriaPage() {
     }
   };
 
+  // Podłącz/odepnij bieg do treningu (np. bieg + challenge tego samego dnia)
+  const linkRun = async (runId: string, sessionId: string | null) => {
+    const res = await fetch(`/api/runs/${runId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId }),
+    });
+    if (res.ok) {
+      setToast({ message: sessionId ? 'Podłączono do treningu' : 'Odpięto od treningu', type: 'success' });
+      setLinkingId(null);
+      loadSessions();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      setToast({ message: err.error || 'Błąd łączenia', type: 'error' });
+    }
+  };
+
   const clearFilters = () => {
     setFilterExerciseId('');
     setFilterFrom('');
@@ -399,9 +417,9 @@ function HistoriaPage() {
                 | { kind: 'run'; date: string; run: Run };
               const timeline: TLItem[] = [
                 ...sessions.map(s => ({ kind: 'workout' as const, date: s.date, session: s })),
-                // Tylko samodzielne aktywności — przypięte pokazujemy pod treningiem
+                // Tylko samodzielne aktywności/biegi — przypięte pokazujemy pod treningiem
                 ...activities.filter(a => !a.sessionId).map(a => ({ kind: 'activity' as const, date: a.date, activity: a })),
-                ...runs.map(r => ({ kind: 'run' as const, date: r.date, run: r })),
+                ...runs.filter(r => !r.sessionId).map(r => ({ kind: 'run' as const, date: r.date, run: r })),
               ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
               let lastWeekKey = '';
               return timeline.flatMap(item => {
@@ -489,6 +507,10 @@ function HistoriaPage() {
                   ? `${Math.floor(paceSec / 60)}'${String(Math.round(paceSec % 60)).padStart(2, '0')}"/km`
                   : '';
                 const kcal = runCalories(weightKg, r.distance);
+                // Treningi z tego samego dnia (do podpięcia biegu, np. bieg + challenge)
+                const daySess = mine
+                  ? sessions.filter(s => s.date.slice(0, 10) === r.date.slice(0, 10))
+                  : [];
                 return [
                   itemWeekHeader,
                   <div key={`run-${r.id}`} className="bg-white rounded-2xl p-4 shadow-sm border-l-4 border-orange-300">
@@ -508,6 +530,34 @@ function HistoriaPage() {
                         {kcal > 0 && <span className="inline-flex items-center gap-1 text-red-500"><Flame className="w-4 h-4" strokeWidth={2} /> ~{kcal} kcal</span>}
                       </div>
                       {r.notes && <p className="text-sm text-gray-500 italic mt-1">{r.notes}</p>}
+                      {mine && daySess.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-gray-100">
+                          <button
+                            onClick={() => setLinkingId(linkingId === r.id ? null : r.id)}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 rounded-lg px-1 -mx-1 transition-colors hover:text-blue-700 hover:bg-blue-50 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                          >
+                            <Link2 className="w-3.5 h-3.5" strokeWidth={2} /> {linkingId === r.id ? 'Anuluj' : 'Podłącz do treningu'}
+                          </button>
+                          {linkingId === r.id && (
+                            <div className="mt-2 space-y-1.5">
+                              {daySess.map(s => {
+                                const muscles = [...new Set(s.entries.map(e => normalizeMuscle(e.exercise?.muscleGroup)))];
+                                const isChallenge = s.notes?.startsWith('Challenge:');
+                                return (
+                                  <button
+                                    key={s.id}
+                                    onClick={() => linkRun(r.id, s.id)}
+                                    className="w-full text-left text-sm bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-xl px-3 py-2 transition-colors active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 inline-flex items-center gap-1.5"
+                                  >
+                                    {isChallenge ? <Zap className="w-4 h-4" strokeWidth={2} /> : <Dumbbell className="w-4 h-4" strokeWidth={2} />}
+                                    {isChallenge ? 'Challenge' : 'Trening'} · {muscles.length ? muscles.join(', ') : `${s.entries.length} ćwiczeń`}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>,
                 ];
@@ -738,6 +788,42 @@ function HistoriaPage() {
                           )}
                         </div>
                       ))}
+                    </div>
+                  )}
+
+                  {/* Przypięte biegi (np. bieg + challenge tego samego dnia) */}
+                  {session.runs && session.runs.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
+                      {session.runs.map(r => {
+                        const paceSec = r.distance > 0 ? r.duration / r.distance : 0;
+                        const pace = paceSec > 0
+                          ? `${Math.floor(paceSec / 60)}'${String(Math.round(paceSec % 60)).padStart(2, '0')}"/km`
+                          : '';
+                        const hh = Math.floor(r.duration / 3600);
+                        const mm = Math.floor((r.duration % 3600) / 60);
+                        const ss = r.duration % 60;
+                        const durStr = hh > 0 ? `${hh} h ${mm} min` : `${mm}:${String(ss).padStart(2, '0')}`;
+                        return (
+                          <div key={`pin-run-${r.id}`} className="flex items-center justify-between gap-2 bg-orange-50 rounded-xl px-3 py-2">
+                            <div className="min-w-0">
+                              <span className="inline-flex items-center gap-1 text-sm font-semibold text-orange-800">
+                                <Footprints className="w-3.5 h-3.5" strokeWidth={2} /> Bieg
+                              </span>
+                              <span className="ml-2 inline-flex items-center gap-1 text-xs text-gray-600">
+                                <MapPin className="w-3.5 h-3.5" strokeWidth={2} /> {r.distance} km
+                                {' · '}<Timer className="inline w-3.5 h-3.5" strokeWidth={2} /> {durStr}
+                                {pace ? (<> · <Zap className="inline w-3.5 h-3.5" strokeWidth={2} /> {pace}</>) : ''}
+                              </span>
+                            </div>
+                            {isLoggedIn && r.userId === authUserId && (
+                              <button
+                                onClick={() => linkRun(r.id, null)}
+                                className="text-xs text-gray-500 underline shrink-0 rounded-md transition-colors hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                              >Odepnij</button>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>,

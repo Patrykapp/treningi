@@ -30,6 +30,16 @@ export async function POST(request: Request) {
         where: { sessionId: deleteId },
         data: { sessionId: keepId },
       }),
+      // Aktywności i biegi przypięte do usuwanej sesji — bez tego onDelete: SetNull
+      // po prostu odpinał je po cichu zamiast przenieść pod sesję, którą zachowujemy.
+      prisma.otherActivity.updateMany({
+        where: { sessionId: deleteId },
+        data: { sessionId: keepId },
+      }),
+      prisma.runSession.updateMany({
+        where: { sessionId: deleteId },
+        data: { sessionId: keepId },
+      }),
       prisma.workoutSession.delete({ where: { id: deleteId } }),
     ]);
 

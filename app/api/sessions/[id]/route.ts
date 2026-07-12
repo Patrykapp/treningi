@@ -13,6 +13,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         user: true,
         entries: { include: { exercise: true } },
         activities: { include: { user: { select: { id: true, name: true } } } },
+        runs: true,
       },
     });
     if (!session) return NextResponse.json({ error: 'Nie znaleziono' }, { status: 404 });
