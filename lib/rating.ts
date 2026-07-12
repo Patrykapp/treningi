@@ -106,20 +106,18 @@ export function computeRating(session: RatingSession, history: RatingHistorySess
       .filter(isRelevantEntry)
       .reduce((sum, e) => sum + calcVolume(asSetsData(e.setsData), e.sets, e.reps, e.weight), 0);
 
-  const matchedSessions = currentMuscleGroups.size > 0
-    ? history.filter(s => matchedVolume(s.entries) > 0)
-    : [];
-  // przy zbyt małej próbie (<3) dopasowanych sesji średnia byłaby zbyt szumiąca —
-  // wtedy wracamy do starego zachowania (cały wolumen ostatnich 8 sesji, bez filtra)
-  const useMatched = matchedSessions.length >= 3;
-  const recentSessions = (useMatched ? matchedSessions : history).slice(0, 8);
+  const matchedSessions = currentMuscleGroups.size > 0 ? history.filter(s => matchedVolume(s.entries) > 0) : [];
+
+  // Przy zbyt małej próbie (<3 sesji tej samej grupy mięśniowej I tej samej modalności)
+  // NIE porównujemy do niczego (zamiast do przypadkowych, niezwiązanych sesji) —
+  // wolumen zostaje neutralny (5/10). Dawny fallback "ostatnie 8 sesji w ogóle"
+  // (a nawet luźniejszy "ta sama grupa mięśniowa, dowolna modalność") wciąż mieszał
+  // niekompatybilne skale — bodyweight (proxy 1kg) vs realny ciężar to inne jednostki,
+  // więc lepiej brak porównania niż mylące.
+  const recentSessions = matchedSessions.length >= 3 ? matchedSessions.slice(0, 8) : [];
 
   const avgVolume = recentSessions.length > 0
-    ? recentSessions.reduce((sum, s) => {
-        return sum + (useMatched
-          ? matchedVolume(s.entries)
-          : s.entries.reduce((esum, e) => esum + calcVolume(asSetsData(e.setsData), e.sets, e.reps, e.weight), 0));
-      }, 0) / recentSessions.length
+    ? recentSessions.reduce((sum, s) => sum + matchedVolume(s.entries), 0) / recentSessions.length
     : 0;
 
   // ---- Progres vs ostatnia sesja z tymi samymi ćwiczeniami ----
@@ -154,8 +152,19 @@ export function computeRating(session: RatingSession, history: RatingHistorySess
     const allTimeMaxWeight = Math.max(...allMaxWeights);
     const allTimeBestE1RM = Math.max(...prevEntries.map(e => bestE1RM(asSetsData(e.setsData), e.reps, e.weight)));
 
+    // Ćwiczenia na masie własnej (0kg) mają zawsze curMaxWeight=0 i curE1RM=0 —
+    // PR wagowy i PR siły (e1RM) są więc dla nich matematycznie niemożliwe do zdobycia,
+    // nawet przy realnym rekordzie powtórzeń (np. 30 pompek zamiast dotychczasowych 20).
+    // Dla takich ćwiczeń liczymy PR po max powtórzeniach w jednej serii.
+    const curMaxReps = curSd.length > 0 ? Math.max(...curSd.map(s => s.reps)) : entry.reps;
+    const allTimeMaxReps = Math.max(...prevEntries.map(e => {
+      const sd = asSetsData(e.setsData);
+      return sd.length > 0 ? Math.max(...sd.map(s => s.reps)) : e.reps;
+    }));
+
     const isWeightPR = curMaxWeight > allTimeMaxWeight && curMaxWeight > 0;
     const isE1RMPR = !isWeightPR && curE1RM > allTimeBestE1RM * 1.01 && curE1RM > 0;
+    const isRepsPR = !isWeightPR && !isE1RMPR && entry.weight === 0 && curMaxReps > allTimeMaxReps && curMaxReps > 0;
     if (isWeightPR) {
       prCount++;
       prExerciseIds.push(entry.exerciseId);
@@ -164,6 +173,10 @@ export function computeRating(session: RatingSession, history: RatingHistorySess
       prCount++;
       prExerciseIds.push(entry.exerciseId);
       progressDetail.push(`🏆 PR siły: ${entry.exercise.name} (szac. 1RM ${Math.round(curE1RM)}kg)`);
+    } else if (isRepsPR) {
+      prCount++;
+      prExerciseIds.push(entry.exerciseId);
+      progressDetail.push(`🏆 PR: ${entry.exercise.name} (${curMaxReps} powt.)`);
     }
 
     // Progres: wolumen ORAZ szacowany 1RM. Schemat serii (np. 3 serie po 7 zamiast
