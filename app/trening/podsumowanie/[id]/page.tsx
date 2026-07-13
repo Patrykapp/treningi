@@ -4,7 +4,7 @@ import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { formatDate } from '@/lib/utils';
-import { strengthCalories, latestWeight } from '@/lib/calories';
+import { strengthCalories, latestWeight, runCalories } from '@/lib/calories';
 import { parseTcx, HR_BUCKET_SEC } from '@/lib/tcx';
 import { computeHrZones, estimateHrMax, formatZoneTime } from '@/lib/hr';
 import { useAuth } from '@/hooks/useAuth';
@@ -16,6 +16,9 @@ import {
   Heart,
   Watch,
   Flame,
+  Footprints,
+  MapPin,
+  Zap,
 } from 'lucide-react';
 
 function formatDur(seconds: number): string {
@@ -81,6 +84,13 @@ interface Entry {
   rpe?: number | null;
   setsData: SetData[];
 }
+interface Run {
+  id: string;
+  date: string;
+  distance: number;
+  duration: number;
+  notes?: string | null;
+}
 interface Session {
   id: string;
   date: string;
@@ -92,6 +102,22 @@ interface Session {
   avgHr?: number | null;
   maxHr?: number | null;
   hrSeries?: number[];
+  runs?: Run[];
+}
+
+// Tempo w formacie min'ss"/km
+function formatPace(secPerKm: number): string {
+  if (!secPerKm || secPerKm <= 0) return '—';
+  const mins = Math.floor(secPerKm / 60);
+  const secs = Math.round(secPerKm % 60);
+  return `${mins}'${secs.toString().padStart(2, '0')}"`;
+}
+function formatRunDuration(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.round(seconds % 60);
+  if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  return `${m}:${s.toString().padStart(2, '0')}`;
 }
 interface Rating {
   score: number;
@@ -144,6 +170,7 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
   const [rating, setRating] = useState<Rating | null>(null);
   const [weightKg, setWeightKg] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [compareRuns, setCompareRuns] = useState<Run[]>([]);
   const { userId: authUserId } = useAuth();
 
   const attachTcx = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -185,6 +212,16 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [id]);
+
+  // Bieg przypięty do treningu (np. bieg + challenge tego samego dnia) — do porównania
+  // (Twoje śr./najlepsze tempo) pobieramy pozostałe biegi właściciela sesji.
+  useEffect(() => {
+    if (!session?.runs?.length || !session.user?.id) { setCompareRuns([]); return; }
+    fetch(`/api/runs?userId=${session.user.id}&limit=30`)
+      .then(r => r.json())
+      .then(d => setCompareRuns(Array.isArray(d) ? d : []))
+      .catch(() => setCompareRuns([]));
+  }, [session?.runs, session?.user?.id]);
 
   if (loading) return (
     <div className="min-h-screen bg-gray-50 pb-24">
@@ -363,6 +400,57 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
             <input type="file" accept=".tcx,.xml" onChange={attachTcx} className="hidden" />
           </label>
         )}
+
+        {/* Bieg przypięty do tego treningu (np. bieg + challenge tego samego dnia) */}
+        {session.runs && session.runs.length > 0 && session.runs.map(run => {
+          const pace = run.distance > 0 ? run.duration / run.distance : 0;
+          const others = compareRuns.filter(r => r.id !== run.id);
+          const avgOthersPace = others.length > 0
+            ? others.reduce((s, r) => s + r.duration / r.distance, 0) / others.length
+            : 0;
+          const bestOthersPace = others.length > 0
+            ? Math.min(...others.map(r => r.duration / r.distance))
+            : 0;
+          const runKcal = runCalories(weightKg, run.distance);
+          const isPR = others.length > 0 && pace > 0 && pace <= bestOthersPace;
+          const pctVsAvg = avgOthersPace > 0 && pace > 0 ? ((avgOthersPace - pace) / avgOthersPace) * 100 : null;
+          return (
+            <div key={run.id} className="bg-white rounded-2xl shadow-sm p-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
+                <Footprints className="w-4 h-4" strokeWidth={2} /> Bieg tego dnia
+                {isPR && (
+                  <span className="text-xs font-bold bg-yellow-400 text-yellow-900 rounded-lg px-2 py-0.5 flex items-center gap-1">
+                    <Trophy className="w-3.5 h-3.5" strokeWidth={2} /> najlepsze tempo
+                  </span>
+                )}
+              </h3>
+              <div className="grid grid-cols-3 gap-2 text-center mb-2">
+                <div className="bg-orange-50 rounded-xl p-2.5">
+                  <p className="font-bold text-gray-900 flex items-center justify-center gap-1"><MapPin className="w-3.5 h-3.5" strokeWidth={2} /> {run.distance} km</p>
+                </div>
+                <div className="bg-orange-50 rounded-xl p-2.5">
+                  <p className="font-bold text-gray-900 flex items-center justify-center gap-1"><Timer className="w-3.5 h-3.5" strokeWidth={2} /> {formatRunDuration(run.duration)}</p>
+                </div>
+                <div className="bg-orange-50 rounded-xl p-2.5">
+                  <p className="font-bold text-gray-900 flex items-center justify-center gap-1"><Zap className="w-3.5 h-3.5" strokeWidth={2} /> {formatPace(pace)}/km</p>
+                </div>
+              </div>
+              {runKcal > 0 && (
+                <p className="text-xs text-red-500 font-medium flex items-center gap-1 mb-1"><Flame className="w-3.5 h-3.5" strokeWidth={2} /> ~{runKcal} kcal</p>
+              )}
+              {pctVsAvg !== null && (
+                <p className="text-xs text-gray-500">
+                  {pctVsAvg > 1
+                    ? `📈 Szybciej niż średnio o ${pctVsAvg.toFixed(0)}% (śr. tempo: ${formatPace(avgOthersPace)}/km)`
+                    : pctVsAvg < -1
+                      ? `📉 Wolniej niż średnio o ${Math.abs(pctVsAvg).toFixed(0)}% (śr. tempo: ${formatPace(avgOthersPace)}/km)`
+                      : `Podobnie do średniej (śr. tempo: ${formatPace(avgOthersPace)}/km)`}
+                </p>
+              )}
+              {run.notes && <p className="text-sm text-gray-500 italic mt-1">{run.notes}</p>}
+            </div>
+          );
+        })}
 
         {/* Serie per grupa mięśniowa */}
         {statsByMuscle.length > 1 && (
