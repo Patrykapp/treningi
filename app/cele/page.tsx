@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Exercise } from '@/types';
 import { formatDate, formatDateInput } from '@/lib/utils';
 import { formatPace, formatDuration, MEASUREMENT_FIELDS } from '@/lib/goals';
@@ -9,7 +10,7 @@ import { Toast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Modal } from '@/components/ui/Modal';
 import { ExercisePicker } from '@/components/ui/ExercisePicker';
-import { SkeletonCard } from '@/components/ui/Skeleton';
+import { SkeletonCard, Skeleton } from '@/components/ui/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import {
   Target, Lock, Trash2, ArrowLeft, Plus, Scale, Ruler, Dumbbell,
@@ -70,7 +71,9 @@ function formatGoalCurrentTarget(goal: GoalRecord): { current: string; target: s
   return { current: formatValue(goal, goal.currentValue), target: formatValue(goal, goal.targetValue) };
 }
 
-export default function CelePage() {
+function CelePage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [goals, setGoals] = useState<GoalRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -113,6 +116,22 @@ export default function CelePage() {
     fetch('/api/exercises').then(r => r.json()).then(data => { if (Array.isArray(data)) setExercises(data); });
     fetch('/api/favorites').then(r => r.json()).then(data => { if (Array.isArray(data)) setFavorites(data); }).catch(() => {});
   }, [isLoggedIn]);
+
+  // Prefill z Planu treningowego (link "+ Cel 1RM" z /plan) — od razu otwiera
+  // krok wpisania wartości docelowej dla wskazanego ćwiczenia.
+  useEffect(() => {
+    const exId = searchParams.get('exerciseId');
+    if (!exId) return;
+    const exName = searchParams.get('exerciseName') || '';
+    const targetDate = searchParams.get('targetDate') || '';
+    setFormType('EXERCISE_1RM');
+    setFormExerciseId(exId);
+    setFormExerciseName(exName);
+    if (targetDate) setFormTargetDate(targetDate);
+    setShowModal(true);
+    router.replace('/cele');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => setToast({ message, type });
 
@@ -499,5 +518,23 @@ export default function CelePage() {
         )}
       </Modal>
     </div>
+  );
+}
+
+export default function CelePageWrapper() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 pb-20">
+        <div className="bg-white border-b px-4 py-4 sticky top-0 z-10">
+          <Skeleton className="h-6 w-40" />
+        </div>
+        <div className="px-4 py-4 space-y-4 max-w-2xl mx-auto md:max-w-3xl lg:max-w-4xl">
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+      </div>
+    }>
+      <CelePage />
+    </Suspense>
   );
 }

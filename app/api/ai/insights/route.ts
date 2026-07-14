@@ -8,62 +8,67 @@ function formatDuration(seconds: number): string {
   return h > 0 ? `${h}h ${m}min` : `${m}min`;
 }
 
-function weekLabel(from: Date): string {
+function rangeLabel(from: Date, days: number): string {
   const to = new Date(from);
-  to.setDate(to.getDate() + 6);
+  to.setDate(to.getDate() + (days - 1));
   return `${from.getDate()}.${from.getMonth() + 1} – ${to.getDate()}.${to.getMonth() + 1}`;
 }
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
     const user = await getAuthUser();
     if (!user) return NextResponse.json({ error: 'Nieautoryzowany' }, { status: 401 });
 
+    const body = await req.json().catch(() => ({}));
+    const period: 'week' | 'month' = body?.period === 'month' ? 'month' : 'week';
+    const windowDays = period === 'month' ? 30 : 7;
+    const unitLabel = period === 'month' ? 'miesiąc' : 'tydzień';
+    const unitLabelAcc = period === 'month' ? 'miesiąca' : 'tygodnia';
+
     const now = new Date();
 
-    // Używamy kroczących 7 dni zamiast tygodnia kalendarzowego —
-    // unikamy sytuacji gdzie trening z soboty znika w poniedziałek.
-    const sevenDaysAgo = new Date(now);
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const fourteenDaysAgo = new Date(now);
-    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+    // Kroczące okno (7 lub 30 dni) zamiast kalendarzowego — unika sytuacji gdzie
+    // trening z brzegu okresu znika przy przejściu na kolejny dzień.
+    const periodStart = new Date(now);
+    periodStart.setDate(periodStart.getDate() - windowDays);
+    const prevPeriodStart = new Date(now);
+    prevPeriodStart.setDate(prevPeriodStart.getDate() - windowDays * 2);
 
-    // Aliasy dla kompatybilności z kodem poniżej
-    const thisWeekStart = sevenDaysAgo;
-    const prevWeekStart = fourteenDaysAgo;
-    const twoWeeksAgo = fourteenDaysAgo;
+    const thisStart = periodStart;
+    const prevStart = prevPeriodStart;
+    const rangeStart = prevPeriodStart;
 
-    // Pobierz dane obu tygodni równolegle
+    // Pobierz dane obu okresów równolegle
     const [sessions, runs, activities, bodyWeights] = await Promise.all([
       prisma.workoutSession.findMany({
-        where: { userId: user.userId, date: { gte: twoWeeksAgo } },
+        where: { userId: user.userId, date: { gte: rangeStart } },
         include: { entries: { include: { exercise: true } } },
         orderBy: { date: 'desc' },
       }),
       prisma.runSession.findMany({
-        where: { userId: user.userId, date: { gte: twoWeeksAgo } },
+        where: { userId: user.userId, date: { gte: rangeStart } },
         orderBy: { date: 'desc' },
       }),
       prisma.otherActivity.findMany({
-        where: { userId: user.userId, date: { gte: twoWeeksAgo } },
+        where: { userId: user.userId, date: { gte: rangeStart } },
         orderBy: { date: 'desc' },
       }),
       prisma.bodyWeight.findMany({
         where: { userId: user.userId },
         orderBy: { date: 'desc' },
-        take: 2,
+        take: period === 'month' ? 6 : 2,
       }),
     ]);
 
-    // Podziel na ten tydzień i poprzedni
-    const isThisWeek = (d: Date | string) => new Date(d) >= thisWeekStart;
-    const isPrevWeek = (d: Date | string) => new Date(d) >= prevWeekStart && new Date(d) < thisWeekStart;
+    // Podziel na ten i poprzedni okres
+    const isThis = (d: Date | string) => new Date(d) >= thisStart;
+    const isPrev = (d: Date | string) => new Date(d) >= prevStart && new Date(d) < thisStart;
 
-    const thisSessions = sessions.filter(s => isThisWeek(s.date));
-    const prevSessions = sessions.filter(s => isPrevWeek(s.date));
-    const thisRuns = runs.filter(r => isThisWeek(r.date));
-    const prevRuns = runs.filter(r => isPrevWeek(r.date));
-    const thisActivities = activities.filter(a => isThisWeek(a.date));
+    const thisSessions = sessions.filter(s => isThis(s.date));
+    const prevSessions = sessions.filter(s => isPrev(s.date));
+    const thisRuns = runs.filter(r => isThis(r.date));
+    const prevRuns = runs.filter(r => isPrev(r.date));
+    const thisActivities = activities.filter(a => isThis(a.date));
 
     // Oblicz objętość
     function calcVolume(s: typeof sessions[0]) {
@@ -78,7 +83,7 @@ export async function POST() {
     const thisVolume = thisSessions.reduce((s, sess) => s + calcVolume(sess), 0);
     const prevVolume = prevSessions.reduce((s, sess) => s + calcVolume(sess), 0);
 
-    // Grupy mięśniowe w tym tygodniu
+    // Grupy mięśniowe w tym okresie
     const muscleGroups: Record<string, number> = {};
     for (const sess of thisSessions) {
       for (const e of sess.entries) {
@@ -91,21 +96,27 @@ export async function POST() {
     // Buduj prompt
     const lines: string[] = [];
     lines.push(`Użytkownik: ${user.name}`);
-    lines.push(`Analizowany tydzień: ${weekLabel(thisWeekStart)}`);
-    lines.push(`Poprzedni tydzień: ${weekLabel(prevWeekStart)}`);
+    lines.push(`Analizowany ${unitLabel}: ${rangeLabel(thisStart, windowDays)}`);
+    lines.push(`Poprzedni ${unitLabel}: ${rangeLabel(prevStart, windowDays)}`);
     lines.push('');
 
-    lines.push(`=== TEN TYDZIEŃ ===`);
+    lines.push(`=== TEN ${unitLabel.toUpperCase()} ===`);
     lines.push(`Treningi siłowe: ${thisSessions.length} (poprzedni: ${prevSessions.length})`);
 
     if (thisSessions.length > 0) {
       lines.push(`Objętość siłowa: ${Math.round(thisVolume).toLocaleString('pl-PL')} kg (poprzedni: ${Math.round(prevVolume).toLocaleString('pl-PL')} kg)`);
       lines.push(`Główne partie: ${topMuscles.join(', ') || '—'}`);
-      for (const sess of thisSessions) {
-        const d = new Date(sess.date).toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric', month: 'short' });
-        const exercises = [...new Set(sess.entries.map(e => e.exercise?.name || '?'))].join(', ');
-        const vol = Math.round(calcVolume(sess));
-        lines.push(`  • ${d}: ${exercises}${vol > 0 ? ` | ${vol.toLocaleString('pl-PL')} kg` : ''}${sess.kcal ? ` | ${sess.kcal} kcal` : ''}`);
+      // Dla miesiąca nie wypisujemy każdego treningu z osobna (za dużo) — tylko dla tygodnia.
+      if (period === 'week') {
+        for (const sess of thisSessions) {
+          const d = new Date(sess.date).toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric', month: 'short' });
+          const exercises = [...new Set(sess.entries.map(e => e.exercise?.name || '?'))].join(', ');
+          const vol = Math.round(calcVolume(sess));
+          lines.push(`  • ${d}: ${exercises}${vol > 0 ? ` | ${vol.toLocaleString('pl-PL')} kg` : ''}${sess.kcal ? ` | ${sess.kcal} kcal` : ''}`);
+        }
+      } else {
+        const weeksInPeriod = windowDays / 7;
+        lines.push(`Średnio: ${(thisSessions.length / weeksInPeriod).toFixed(1)} treningów/tydzień`);
       }
     }
 
@@ -114,40 +125,57 @@ export async function POST() {
       const totalKm = thisRuns.reduce((s, r) => s + r.distance, 0);
       const prevKm = prevRuns.reduce((s, r) => s + r.distance, 0);
       lines.push(`Łącznie km: ${totalKm.toFixed(1)} (poprzedni: ${prevKm.toFixed(1)})`);
-      for (const r of thisRuns) {
-        const d = new Date(r.date).toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric', month: 'short' });
-        const pace = r.distance > 0 ? r.duration / r.distance : 0;
-        const paceStr = pace > 0 ? `${Math.floor(pace / 60)}'${String(Math.round(pace % 60)).padStart(2, '0')}"/km` : '';
-        lines.push(`  • ${d}: ${r.distance} km${paceStr ? ` | tempo ${paceStr}` : ''}${r.kcal ? ` | ${r.kcal} kcal` : ''}`);
+      if (period === 'week') {
+        for (const r of thisRuns) {
+          const d = new Date(r.date).toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric', month: 'short' });
+          const pace = r.distance > 0 ? r.duration / r.distance : 0;
+          const paceStr = pace > 0 ? `${Math.floor(pace / 60)}'${String(Math.round(pace % 60)).padStart(2, '0')}"/km` : '';
+          lines.push(`  • ${d}: ${r.distance} km${paceStr ? ` | tempo ${paceStr}` : ''}${r.kcal ? ` | ${r.kcal} kcal` : ''}`);
+        }
       }
     }
 
     if (thisActivities.length > 0) {
       lines.push(`Inne aktywności: ${thisActivities.length}`);
-      for (const a of thisActivities) {
-        const d = new Date(a.date).toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric', month: 'short' });
-        const dur = a.durationMin >= 60 ? `${Math.floor(a.durationMin / 60)}h ${a.durationMin % 60}min` : `${a.durationMin}min`;
-        lines.push(`  • ${d}: ${a.type} ${dur}${a.distanceKm ? ` | ${a.distanceKm} km` : ''}${a.kcal ? ` | ${a.kcal} kcal` : ''}`);
+      if (period === 'week') {
+        for (const a of thisActivities) {
+          const d = new Date(a.date).toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric', month: 'short' });
+          const dur = a.durationMin >= 60 ? `${Math.floor(a.durationMin / 60)}h ${a.durationMin % 60}min` : `${a.durationMin}min`;
+          lines.push(`  • ${d}: ${a.type} ${dur}${a.distanceKm ? ` | ${a.distanceKm} km` : ''}${a.kcal ? ` | ${a.kcal} kcal` : ''}`);
+        }
       }
     }
 
-    const totalThisWeek = thisSessions.length + thisRuns.length + thisActivities.length;
-    if (totalThisWeek === 0) {
-      lines.push('Brak aktywności w tym tygodniu.');
+    const totalThisPeriod = thisSessions.length + thisRuns.length + thisActivities.length;
+    if (totalThisPeriod === 0) {
+      lines.push(`Brak aktywności w tym ${unitLabelAcc}.`);
     }
 
     if (bodyWeights.length > 0) {
       lines.push('');
       lines.push(`Masa ciała: ${bodyWeights[0].weight} kg (ostatni pomiar: ${new Date(bodyWeights[0].date).toLocaleDateString('pl-PL')})`);
-      if (bodyWeights.length > 1) {
-        const diff = bodyWeights[0].weight - bodyWeights[1].weight;
-        lines.push(`Zmiana: ${diff > 0 ? '+' : ''}${diff.toFixed(1)} kg vs poprzedni pomiar`);
+      const oldest = bodyWeights[bodyWeights.length - 1];
+      if (bodyWeights.length > 1 && oldest.weight !== bodyWeights[0].weight) {
+        const diff = bodyWeights[0].weight - oldest.weight;
+        lines.push(`Zmiana od ${new Date(oldest.date).toLocaleDateString('pl-PL')}: ${diff > 0 ? '+' : ''}${diff.toFixed(1)} kg`);
       }
     }
 
     const dataText = lines.join('\n');
 
-    const systemPrompt = `Jesteś osobistym trenerem i analitykiem treningowym. Analizujesz dane treningowe użytkownika i dajesz konkretne, motywujące insighty po polsku.
+    const systemPrompt = period === 'month'
+      ? `Jesteś osobistym trenerem i analitykiem treningowym. Analizujesz dane treningowe użytkownika z ostatniego miesiąca i dajesz konkretne, motywujące insighty po polsku, skupione na DŁUGOTERMINOWYM trendzie (nie na pojedynczych dniach).
+
+Twój styl: bezpośredni, rzeczowy, motywujący — jak dobry trener, nie chatbot. Używaj danych liczbowych. Nie powtarzaj suchych danych, interpretuj trend.
+
+Struktura odpowiedzi (używaj emoji jako nagłówków, bez markdown headers):
+📊 Krótkie podsumowanie miesiąca i trend względem poprzedniego (2-3 zdania)
+💪 Co poszło dobrze w dłuższej perspektywie (1-2 punkty)
+⚠️ Co wymaga uwagi — np. spadająca regularność, zaniedbana partia, plateau (1 punkt)
+🎯 Konkretna rekomendacja na następny miesiąc (1 zdanie, bardzo konkretna)
+
+Odpowiedź: max 200 słów. Zwróć się do użytkownika po imieniu.`
+      : `Jesteś osobistym trenerem i analitykiem treningowym. Analizujesz dane treningowe użytkownika i dajesz konkretne, motywujące insighty po polsku.
 
 Twój styl: bezpośredni, rzeczowy, motywujący — jak dobry trener, nie chatbot. Używaj danych liczbowych. Nie powtarzaj suchych danych, interpretuj je.
 
@@ -159,7 +187,7 @@ Struktura odpowiedzi (używaj emoji jako nagłówków, bez markdown headers):
 
 Odpowiedź: max 200 słów. Zwróć się do użytkownika po imieniu.`;
 
-    const userMessage = `Oto moje dane treningowe:\n\n${dataText}\n\nZrób mi analizę tygodnia.`;
+    const userMessage = `Oto moje dane treningowe:\n\n${dataText}\n\nZrób mi analizę ${unitLabelAcc}.`;
 
     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -190,9 +218,10 @@ Odpowiedź: max 200 słów. Zwróć się do użytkownika po imieniu.`;
     return NextResponse.json({
       insight,
       generatedAt: now.toISOString(),
-      weekLabel: weekLabel(thisWeekStart),
+      period,
+      periodLabel: rangeLabel(thisStart, windowDays),
       stats: {
-        workouts: totalThisWeek,
+        workouts: totalThisPeriod,
         sessions: thisSessions.length,
         runs: thisRuns.length,
         activities: thisActivities.length,

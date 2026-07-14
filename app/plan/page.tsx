@@ -9,7 +9,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { SkeletonCard } from '@/components/ui/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import {
-  Calendar, Lock, Trash2, ArrowLeft, Play, RotateCcw, Repeat, Sparkles,
+  Calendar, Lock, Trash2, ArrowLeft, Play, RotateCcw, Repeat, Sparkles, Target,
 } from 'lucide-react';
 
 const SPLIT_HINTS: Record<number, string> = {
@@ -34,11 +34,17 @@ interface PlanRecord {
   createdAt: string;
 }
 
-interface TemplateOption { id: string; name: string; }
+interface TemplateOption {
+  id: string;
+  name: string;
+  entries: { exerciseId: string; sets: number; reps: number; weight: number }[];
+}
+interface ExerciseOption { id: string; name: string; }
 
 export default function PlanPage() {
   const [plans, setPlans] = useState<PlanRecord[]>([]);
   const [templates, setTemplates] = useState<TemplateOption[]>([]);
+  const [exercises, setExercises] = useState<ExerciseOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -59,12 +65,14 @@ export default function PlanPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [plansData, tplData] = await Promise.all([
+    const [plansData, tplData, exData] = await Promise.all([
       fetch('/api/plans').then(r => r.json()),
       fetch('/api/templates').then(r => r.json()),
+      fetch('/api/exercises').then(r => r.json()).catch(() => []),
     ]);
     setPlans(Array.isArray(plansData) ? plansData : []);
-    setTemplates(Array.isArray(tplData) ? tplData.map((t: TemplateOption) => ({ id: t.id, name: t.name })) : []);
+    setTemplates(Array.isArray(tplData) ? tplData.map((t: TemplateOption) => ({ id: t.id, name: t.name, entries: Array.isArray(t.entries) ? t.entries : [] })) : []);
+    setExercises(Array.isArray(exData) ? exData.map((e: ExerciseOption) => ({ id: e.id, name: e.name })) : []);
     setLoading(false);
   }, []);
 
@@ -73,6 +81,28 @@ export default function PlanPage() {
   const activePlan = useMemo(() => plans.find(p => p.active) || null, [plans]);
   const archivedPlans = useMemo(() => plans.filter(p => !p.active), [plans]);
   const today = useMemo(() => activePlan ? getPlanToday(activePlan) : null, [activePlan]);
+
+  // Ćwiczenia użyte w szablonach przypisanych do aktywnego planu — punkt wyjścia
+  // do szybkiego dodania celu 1RM powiązanego z tym planem.
+  const exerciseNameById = useMemo(() => new Map(exercises.map(e => [e.id, e.name])), [exercises]);
+  const planExercises = useMemo(() => {
+    if (!activePlan) return [];
+    const usedTemplateIds = new Set((activePlan.days as (string | null)[]).filter((d): d is string => !!d));
+    const ids = new Set<string>();
+    for (const tpl of templates) {
+      if (!usedTemplateIds.has(tpl.id)) continue;
+      for (const e of tpl.entries) ids.add(e.exerciseId);
+    }
+    return Array.from(ids).map(id => ({ id, name: exerciseNameById.get(id) || '?' }));
+  }, [activePlan, templates, exerciseNameById]);
+
+  // Koniec bieżącego bloku planu — sensowny domyślny termin dla celu (nawet jeśli plan się powtarza)
+  const planEndDate = useMemo(() => {
+    if (!activePlan) return '';
+    const d = new Date(activePlan.startDate);
+    d.setDate(d.getDate() + activePlan.numWeeks * 7);
+    return formatDateInput(d);
+  }, [activePlan]);
 
   useEffect(() => {
     if (!activePlan) setShowCreator(true);
@@ -273,6 +303,25 @@ export default function PlanPage() {
                 </div>
               ))}
             </div>
+
+            {planExercises.length > 0 && (
+              <div className="border-t border-gray-100 pt-3">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                  <Target className="w-3.5 h-3.5" strokeWidth={2} /> Cele dla tego planu
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {planExercises.map(ex => (
+                    <Link
+                      key={ex.id}
+                      href={`/cele?exerciseId=${ex.id}&exerciseName=${encodeURIComponent(ex.name)}&targetDate=${planEndDate}`}
+                      className="text-xs bg-blue-50 text-blue-700 rounded-lg px-2.5 py-1.5 font-medium transition-colors hover:bg-blue-100 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                    >
+                      + {ex.name}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="flex gap-2 pt-1">
               <button

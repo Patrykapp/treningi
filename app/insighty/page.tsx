@@ -4,10 +4,13 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Sparkles, Loader2, Dumbbell, PersonStanding, Bike, ChevronUp, ChevronDown, Bot } from 'lucide-react';
 
+type Period = 'week' | 'month';
+
 interface InsightRecord {
   insight: string;
   generatedAt: string;
-  weekLabel: string;
+  period: Period;
+  periodLabel: string;
   stats: {
     workouts: number;
     sessions: number;
@@ -16,19 +19,24 @@ interface InsightRecord {
   };
 }
 
-const CACHE_KEY = 'aiInsightsHistory_v2';
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+const CACHE_KEY = 'aiInsightsHistory_v3';
+const TTL_MS: Record<Period, number> = {
+  week: 24 * 60 * 60 * 1000, // 24h
+  month: 7 * 24 * 60 * 60 * 1000, // 7 dni
+};
 
 function readHistory(): InsightRecord[] {
   if (typeof window === 'undefined') return [];
   try {
-    return JSON.parse(localStorage.getItem(CACHE_KEY) || '[]');
+    const raw = JSON.parse(localStorage.getItem(CACHE_KEY) || '[]');
+    // Migracja ze starszego formatu bez pola period — traktuj jako 'week'.
+    return (Array.isArray(raw) ? raw : []).map((r: InsightRecord) => ({ period: 'week', ...r }));
   } catch { return []; }
 }
 
 function saveHistory(records: InsightRecord[]) {
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(records.slice(0, 10)));
+    localStorage.setItem(CACHE_KEY, JSON.stringify(records.slice(0, 20)));
   } catch {}
 }
 
@@ -41,37 +49,45 @@ function timeAgo(iso: string): string {
   return `${d} ${d === 1 ? 'dzień' : 'dni'} temu`;
 }
 
-function canRefresh(records: InsightRecord[]): boolean {
+function canRefresh(records: InsightRecord[], period: Period): boolean {
   if (records.length === 0) return true;
-  return Date.now() - new Date(records[0].generatedAt).getTime() > CACHE_TTL_MS;
+  return Date.now() - new Date(records[0].generatedAt).getTime() > TTL_MS[period];
 }
 
 export default function InsightyPage() {
   const { isLoggedIn } = useAuth();
-  const [history, setHistory] = useState<InsightRecord[]>([]);
+  const [allHistory, setAllHistory] = useState<InsightRecord[]>([]);
+  const [period, setPeriod] = useState<Period>('week');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState<string | null>(null);
 
   useEffect(() => {
     const h = readHistory();
-    setHistory(h);
-    if (h.length > 0) setExpanded(h[0].generatedAt);
+    setAllHistory(h);
+    const firstOfPeriod = h.find(r => r.period === period);
+    if (firstOfPeriod) setExpanded(firstOfPeriod.generatedAt);
   }, []);
+
+  const history = allHistory.filter(r => r.period === period);
 
   const generate = async () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/ai/insights', { method: 'POST' });
+      const res = await fetch('/api/ai/insights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ period }),
+      });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || 'Błąd generowania');
         return;
       }
       const record: InsightRecord = data;
-      const updated = [record, ...history];
-      setHistory(updated);
+      const updated = [record, ...allHistory];
+      setAllHistory(updated);
       saveHistory(updated);
       setExpanded(record.generatedAt);
     } catch {
@@ -82,9 +98,9 @@ export default function InsightyPage() {
   };
 
   const latest = history[0];
-  const refreshAllowed = canRefresh(history);
+  const refreshAllowed = canRefresh(history, period);
   const nextRefreshIn = latest
-    ? Math.max(0, Math.ceil((CACHE_TTL_MS - (Date.now() - new Date(latest.generatedAt).getTime())) / 3600000))
+    ? Math.max(0, Math.ceil((TTL_MS[period] - (Date.now() - new Date(latest.generatedAt).getTime())) / 3600000))
     : 0;
 
   if (isLoggedIn === false) {
@@ -103,10 +119,27 @@ export default function InsightyPage() {
       </div>
 
       <div className="px-4 py-4 space-y-4 md:max-w-3xl lg:max-w-4xl md:mx-auto">
+        {/* Przełącznik okresu */}
+        <div className="flex bg-gray-100 rounded-2xl p-1 gap-1">
+          {(['week', 'month'] as const).map(p => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
+                period === p ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {p === 'week' ? 'Tydzień' : 'Miesiąc'}
+            </button>
+          ))}
+        </div>
+
         {/* Przycisk generowania */}
         <div className="bg-white rounded-2xl p-4 shadow-sm">
           <p className="text-sm text-gray-600 mb-3">
-            AI analizuje Twoje treningi, biegi i aktywności z ostatnich 2 tygodni i daje konkretne wskazówki.
+            {period === 'week'
+              ? 'AI analizuje Twoje treningi, biegi i aktywności z ostatnich 2 tygodni i daje konkretne wskazówki.'
+              : 'AI analizuje trend z ostatnich 2 miesięcy (długoterminowa regularność, plateau, kierunek zmian) i daje rekomendację na kolejny miesiąc.'}
           </p>
 
           {error && (
@@ -126,18 +159,18 @@ export default function InsightyPage() {
               </span>
             ) : refreshAllowed ? (
               <span className="flex items-center justify-center gap-2">
-                <Sparkles className="w-4 h-4" strokeWidth={2} /> Generuj analizę tygodnia
+                <Sparkles className="w-4 h-4" strokeWidth={2} /> Generuj analizę {period === 'week' ? 'tygodnia' : 'miesiąca'}
               </span>
             ) : (
               <span className="flex items-center justify-center gap-2">
-                <Sparkles className="w-4 h-4" strokeWidth={2} /> Odśwież za {nextRefreshIn}h
+                <Sparkles className="w-4 h-4" strokeWidth={2} /> Odśwież za {nextRefreshIn >= 24 ? `${Math.ceil(nextRefreshIn / 24)} dni` : `${nextRefreshIn}h`}
               </span>
             )}
           </button>
 
           {!refreshAllowed && (
             <p className="text-xs text-gray-400 text-center mt-2">
-              Analiza generowana max raz na 24h — nie marnujemy API
+              Analiza {period === 'week' ? 'tygodnia' : 'miesiąca'} generowana max raz na {period === 'week' ? '24h' : '7 dni'} — nie marnujemy API
             </p>
           )}
         </div>
@@ -147,7 +180,7 @@ export default function InsightyPage() {
           <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4 shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <span className="text-sm font-bold text-violet-800">Tydzień {latest.weekLabel}</span>
+                <span className="text-sm font-bold text-violet-800">{period === 'week' ? 'Tydzień' : 'Miesiąc'} {latest.periodLabel}</span>
                 <span className="text-xs text-violet-500 ml-2">{timeAgo(latest.generatedAt)}</span>
               </div>
               <div className="flex gap-2 text-xs text-violet-600">
@@ -176,7 +209,7 @@ export default function InsightyPage() {
                     className="w-full flex items-center justify-between px-4 py-3 text-left transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                   >
                     <div>
-                      <span className="text-sm font-medium text-gray-800">Tydzień {record.weekLabel}</span>
+                      <span className="text-sm font-medium text-gray-800">{record.period === 'week' ? 'Tydzień' : 'Miesiąc'} {record.periodLabel}</span>
                       <span className="text-xs text-gray-400 ml-2">{timeAgo(record.generatedAt)}</span>
                     </div>
                     {expanded === record.generatedAt ? (

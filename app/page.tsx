@@ -167,10 +167,24 @@ function calcWeeklyVolume(sessions: WorkoutSession[]): { total: number; groups: 
   return { total, groups: Object.entries(groups).sort((a, b) => b[1] - a[1]) };
 }
 
+// Objętość łączna (bez ograniczenia do tygodnia) — do porównania "od zawsze"
+function calcTotalVolume(sessions: WorkoutSession[]): number {
+  let total = 0;
+  for (const s of sessions) {
+    for (const e of s.entries || []) {
+      const sd = Array.isArray(e.setsData) && e.setsData.length > 0 ? e.setsData : null;
+      const vol = sd ? sd.reduce((sum, x) => sum + x.reps * x.weight, 0) : e.sets * e.reps * e.weight;
+      if (vol > 0) total += vol;
+    }
+  }
+  return total;
+}
+
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [viewUserId, setViewUserId] = useState<string | null>(null); // null = zalogowany
+  const [comparisonPeriod, setComparisonPeriod] = useState<'week' | 'alltime'>('week');
   const { isLoggedIn, name, userId } = useAuth();
 
   const loadDashboard = useCallback(async () => {
@@ -277,6 +291,7 @@ export default function DashboardPage() {
     })).size;
     const weekCount = weekSessions.length + weekRuns.length + weekActsSolo.length;
     const score = weekCount * 100 + weekDays * 30 + Math.round(weekKcal / 10);
+    const actsSolo = acts.filter(a => !a.sessionId);
     return {
       id: u.id,
       name: u.id === userId ? 'Ty' : u.name,
@@ -285,11 +300,16 @@ export default function DashboardPage() {
       weekVolume: calcWeeklyVolume(us).total,
       weekKcal,
       score,
-      streak: calcStreak([...us, ...runs, ...acts.filter(a => !a.sessionId)]),
+      streak: calcStreak([...us, ...runs, ...actsSolo]),
+      allTimeCount: us.length + runs.length + actsSolo.length,
+      allTimeVolume: calcTotalVolume(us),
+      allTimeKm: runs.reduce((s, r) => s + r.distance, 0),
     };
   });
-  const maxScore = Math.max(0, ...comparison.map(c => c.score));
-  const leader = comparison.filter(c => c.score === maxScore && maxScore > 0);
+  // Metryka rankingu zależna od wybranego okresu porównania (tydzień = punktacja, od zawsze = liczba treningów)
+  const comparisonMetric = (c: typeof comparison[number]) => comparisonPeriod === 'week' ? c.score : c.allTimeCount;
+  const maxScore = Math.max(0, ...comparison.map(comparisonMetric));
+  const leader = comparison.filter(c => comparisonMetric(c) === maxScore && maxScore > 0);
 
   // Wspólny feed — treningi siłowe i biegi wszystkich, posortowane po dacie
   type FeedItem =
@@ -370,10 +390,30 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Porównanie tygodnia — widoczne od razu, motywacja dla obojga */}
+        {/* Porównanie — widoczne od razu, motywacja dla obojga */}
         {isLoggedIn && comparison.length > 1 && (
           <div className="bg-white rounded-2xl p-4 shadow-sm">
-            <h2 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-1.5"><Flag className="w-4 h-4" strokeWidth={2} /> Ten tydzień — kto prowadzi?</h2>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold text-gray-700 flex items-center gap-1.5">
+                <Flag className="w-4 h-4" strokeWidth={2} /> {comparisonPeriod === 'week' ? 'Ten tydzień — kto prowadzi?' : 'Od zawsze'}
+              </h2>
+              <div className="flex bg-gray-100 rounded-lg p-0.5 text-xs font-medium shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setComparisonPeriod('week')}
+                  className={`px-2.5 py-1 rounded-md transition-colors ${comparisonPeriod === 'week' ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}
+                >
+                  Tydzień
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setComparisonPeriod('alltime')}
+                  className={`px-2.5 py-1 rounded-md transition-colors ${comparisonPeriod === 'alltime' ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}
+                >
+                  Od zawsze
+                </button>
+              </div>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {comparison.map(c => {
                 const isLeader = leader.some(l => l.id === c.id) && leader.length === 1;
@@ -386,20 +426,39 @@ export default function DashboardPage() {
                       <div className="text-sm font-bold text-gray-800 mb-1 flex items-center justify-center gap-1">
                         {isLeader && <Crown className="w-4 h-4 text-yellow-500" strokeWidth={2} />}{c.name}
                       </div>
-                      <div className="text-2xl font-bold text-blue-600">{c.score}</div>
-                      <div className="text-xs text-gray-500">pkt</div>
-                      <div className="text-xs text-gray-600 font-medium mt-1">
-                        {c.weekCount} {c.weekCount === 1 ? 'trening' : c.weekCount < 5 ? 'treningi' : 'treningów'} w tym tyg.
-                      </div>
-                      {c.weekVolume > 0 && (
-                        <div className="text-xs text-gray-600 font-medium mt-1">
-                          {Math.round(c.weekVolume).toLocaleString('pl-PL')} kg
-                        </div>
-                      )}
-                      {c.weekKcal > 0 && (
-                        <div className="text-xs text-red-500 font-medium mt-0.5 flex items-center justify-center gap-1">
-                          <Flame className="w-3.5 h-3.5" strokeWidth={2} /> ~{c.weekKcal.toLocaleString('pl-PL')} kcal
-                        </div>
+                      {comparisonPeriod === 'week' ? (
+                        <>
+                          <div className="text-2xl font-bold text-blue-600">{c.score}</div>
+                          <div className="text-xs text-gray-500">pkt</div>
+                          <div className="text-xs text-gray-600 font-medium mt-1">
+                            {c.weekCount} {c.weekCount === 1 ? 'trening' : c.weekCount < 5 ? 'treningi' : 'treningów'} w tym tyg.
+                          </div>
+                          {c.weekVolume > 0 && (
+                            <div className="text-xs text-gray-600 font-medium mt-1">
+                              {Math.round(c.weekVolume).toLocaleString('pl-PL')} kg
+                            </div>
+                          )}
+                          {c.weekKcal > 0 && (
+                            <div className="text-xs text-red-500 font-medium mt-0.5 flex items-center justify-center gap-1">
+                              <Flame className="w-3.5 h-3.5" strokeWidth={2} /> ~{c.weekKcal.toLocaleString('pl-PL')} kcal
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <div className="text-2xl font-bold text-blue-600">{c.allTimeCount}</div>
+                          <div className="text-xs text-gray-500">treningów łącznie</div>
+                          {c.allTimeVolume > 0 && (
+                            <div className="text-xs text-gray-600 font-medium mt-1">
+                              {Math.round(c.allTimeVolume / 1000).toLocaleString('pl-PL')} t łącznie
+                            </div>
+                          )}
+                          {c.allTimeKm > 0 && (
+                            <div className="text-xs text-green-600 font-medium mt-0.5">
+                              {c.allTimeKm.toFixed(1)} km łącznie
+                            </div>
+                          )}
+                        </>
                       )}
                       {c.streak > 1 && (
                         <div className="text-xs text-orange-500 font-medium mt-0.5 flex items-center justify-center gap-1">
@@ -411,9 +470,15 @@ export default function DashboardPage() {
                 );
               })}
             </div>
-            <p className="text-xs text-gray-400 text-center mt-2">
-              Punkty: 100 za trening · +30 za każdy dzień treningowy · +1 za 10 kcal
-            </p>
+            {comparisonPeriod === 'week' ? (
+              <p className="text-xs text-gray-400 text-center mt-2">
+                Punkty: 100 za trening · +30 za każdy dzień treningowy · +1 za 10 kcal
+              </p>
+            ) : (
+              <p className="text-xs text-gray-400 text-center mt-2">
+                Łączna liczba treningów, wolumen i kilometry od początku korzystania z appki
+              </p>
+            )}
             <p className="text-xs text-gray-400 text-center mt-0.5">
               Kliknij osobę, aby zobaczyć jej statystyki poniżej
             </p>
