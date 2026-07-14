@@ -21,6 +21,7 @@ interface PlanRecord {
   active: boolean;
   days: (string | null)[];
   dayTemplateNames: (string | null)[];
+  dayTemplateValid: boolean[];
   createdAt: string;
 }
 
@@ -193,13 +194,18 @@ export default function PlanPage() {
                 <p className="text-lg font-bold text-gray-900 mt-0.5">
                   {today.templateId ? (activePlan.dayTemplateNames[today.dayOfWeek] || '(usunięty szablon)') : 'Dzień wolny 🌴'}
                 </p>
-                {today.templateId && (
+                {today.templateId && activePlan.dayTemplateValid[today.dayOfWeek] && (
                   <Link
                     href={`/trening?templateId=${today.templateId}`}
                     className="mt-2 inline-flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors hover:bg-blue-700 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                   >
                     <Play className="w-4 h-4" strokeWidth={2} /> Rozpocznij dzisiejszy trening
                   </Link>
+                )}
+                {today.templateId && !activePlan.dayTemplateValid[today.dayOfWeek] && (
+                  <p className="mt-2 text-xs text-orange-500 font-medium">
+                    Szablon przypisany do tego dnia został usunięty — zaktualizuj plan
+                  </p>
                 )}
               </div>
             )}

@@ -66,6 +66,7 @@ export default function CelePage() {
   const [formType, setFormType] = useState<GoalType | null>(null);
   const [formTarget, setFormTarget] = useState('');
   const [formMeasurementKey, setFormMeasurementKey] = useState('');
+  const [formMeasurementCustomLabel, setFormMeasurementCustomLabel] = useState('');
   const [formExerciseId, setFormExerciseId] = useState('');
   const [formExerciseName, setFormExerciseName] = useState('');
   const [formPaceMin, setFormPaceMin] = useState('');
@@ -95,6 +96,7 @@ export default function CelePage() {
     setFormType(null);
     setFormTarget('');
     setFormMeasurementKey('');
+    setFormMeasurementCustomLabel('');
     setFormExerciseId('');
     setFormExerciseName('');
     setFormPaceMin('');
@@ -117,7 +119,10 @@ export default function CelePage() {
       targetValue = parseFloat(formTarget);
       if (!Number.isFinite(targetValue) || targetValue <= 0) { showToast('Podaj wartość docelową', 'error'); return; }
     }
+    const isCustomMeasurement = formMeasurementKey === '__custom__';
+    const resolvedMeasurementKey = isCustomMeasurement ? formMeasurementCustomLabel.trim() : formMeasurementKey;
     if (formType === 'MEASUREMENT' && !formMeasurementKey) { showToast('Wybierz obwód', 'error'); return; }
+    if (formType === 'MEASUREMENT' && isCustomMeasurement && !resolvedMeasurementKey) { showToast('Podaj nazwę pomiaru', 'error'); return; }
     if (formType === 'EXERCISE_1RM' && !formExerciseId) { showToast('Wybierz ćwiczenie', 'error'); return; }
 
     setSaving(true);
@@ -128,7 +133,7 @@ export default function CelePage() {
         body: JSON.stringify({
           type: formType,
           targetValue,
-          measurementKey: formType === 'MEASUREMENT' ? formMeasurementKey : undefined,
+          measurementKey: formType === 'MEASUREMENT' ? resolvedMeasurementKey : undefined,
           exerciseId: formType === 'EXERCISE_1RM' ? formExerciseId : undefined,
           targetDate: formTargetDate || undefined,
           notes: formNotes || undefined,
@@ -153,11 +158,14 @@ export default function CelePage() {
     setConfirmDeleteId(null);
   };
 
-  const activeGoals = useMemo(() => goals.filter(g => !g.achieved), [goals]);
-  const achievedGoals = useMemo(() => goals.filter(g => g.achieved), [goals]);
+  // Sekcja "osiągnięte" liczy się po achievedAt (trwałe, jak PR) — NIE po żywym
+  // "achieved", bo ten spada z powrotem, gdy wynik się pogorszy (np. przytyjesz
+  // po osiągnięciu wagi docelowej). Raz osiągnięty cel ma zostać osiągnięty.
+  const activeGoals = useMemo(() => goals.filter(g => !g.achievedAt), [goals]);
+  const achievedGoals = useMemo(() => goals.filter(g => g.achievedAt), [goals]);
 
   const GoalCard = ({ goal }: { goal: GoalRecord }) => {
-    const overdue = !goal.achieved && goal.targetDate && new Date(goal.targetDate).getTime() < Date.now();
+    const overdue = !goal.achievedAt && goal.targetDate && new Date(goal.targetDate).getTime() < Date.now();
     return (
       <div className="bg-white rounded-2xl p-4 shadow-sm">
         <div className="flex items-start justify-between gap-2 mb-2">
@@ -174,7 +182,7 @@ export default function CelePage() {
           </button>
         </div>
 
-        {goal.achieved ? (
+        {goal.achievedAt ? (
           <div className="flex items-center gap-1.5 text-green-600 text-sm font-semibold">
             <PartyPopper className="w-4 h-4" strokeWidth={2} />
             Osiągnięto{goal.achievedAt ? ` · ${formatDate(goal.achievedAt)}` : ''}
@@ -302,7 +310,17 @@ export default function CelePage() {
                 >
                   <option value="">— wybierz —</option>
                   {MEASUREMENT_FIELDS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
+                  <option value="__custom__">Inny (własny pomiar)</option>
                 </select>
+                {formMeasurementKey === '__custom__' && (
+                  <input
+                    type="text"
+                    value={formMeasurementCustomLabel}
+                    onChange={e => setFormMeasurementCustomLabel(e.target.value)}
+                    placeholder="np. nadgarstek (tak samo jak w Pomiarach)"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                )}
               </div>
             )}
 

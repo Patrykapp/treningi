@@ -30,6 +30,9 @@ export async function GET() {
     const payload = plans.map(p => ({
       ...p,
       dayTemplateNames: (p.days as (string | null)[]).map(d => (d ? (nameById.get(d) ?? '(usunięty szablon)') : null)),
+      // true = dzień wolny LUB szablon nadal istnieje; false = szablon dnia został usunięty
+      // (odróżnia to od zwykłego dnia wolnego, żeby UI mógł ukryć przycisk "Start")
+      dayTemplateValid: (p.days as (string | null)[]).map(d => !d || nameById.has(d)),
     }));
 
     return NextResponse.json(payload);

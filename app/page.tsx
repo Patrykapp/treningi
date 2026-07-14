@@ -234,12 +234,12 @@ export default function DashboardPage() {
 
   // Aktywny plan treningowy zalogowanego — pokazuje "dziś wg planu" niezależnie
   // od tego, czyj profil jest oglądany (tak jak przypomnienie o treningu wyżej).
-  const [myPlan, setMyPlan] = useState<PlanLike & { name: string; dayTemplateNames: (string | null)[] } | null>(null);
+  const [myPlan, setMyPlan] = useState<PlanLike & { name: string; dayTemplateNames: (string | null)[]; dayTemplateValid: boolean[] } | null>(null);
   useEffect(() => {
     if (!isLoggedIn) { setMyPlan(null); return; }
     fetch('/api/plans')
       .then(r => (r.ok ? r.json() : []))
-      .then((data: (PlanLike & { active: boolean; name: string; dayTemplateNames: (string | null)[] })[]) => {
+      .then((data: (PlanLike & { active: boolean; name: string; dayTemplateNames: (string | null)[]; dayTemplateValid: boolean[] })[]) => {
         if (Array.isArray(data)) setMyPlan(data.find(p => p.active) || null);
       })
       .catch(() => {});
@@ -354,7 +354,7 @@ export default function DashboardPage() {
                   {planToday.templateId ? (myPlan.dayTemplateNames[planToday.dayOfWeek] || '(usunięty szablon)') : 'Dzień wolny 🌴'}
                 </p>
               </div>
-              {planToday.templateId ? (
+              {planToday.templateId && myPlan.dayTemplateValid[planToday.dayOfWeek] ? (
                 <Link
                   href={`/trening?templateId=${planToday.templateId}`}
                   className="shrink-0 inline-flex items-center gap-1.5 bg-blue-600 text-white px-3 py-2 rounded-xl text-sm font-semibold transition-colors hover:bg-blue-700 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
