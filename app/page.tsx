@@ -10,7 +10,7 @@ import { ActivityHeatmap } from '@/components/ui/ActivityHeatmap';
 import { SkeletonCard } from '@/components/ui/Skeleton';
 import {
   Plus, Flag, BarChart3, PersonStanding, Bike, Scale, Sparkles,
-  Crown, Flame, Zap, ChevronRight, Dumbbell, TrendingUp,
+  Crown, Flame, Zap, ChevronRight, Dumbbell, TrendingUp, Ruler,
 } from 'lucide-react';
 
 interface Run {
@@ -415,6 +415,7 @@ export default function DashboardPage() {
             { href: '/bieganie', icon: PersonStanding, label: 'Bieganie' },
             { href: '/aktywnosci', icon: Bike, label: 'Aktywności' },
             { href: '/waga', icon: Scale, label: 'Waga' },
+            { href: '/pomiary', icon: Ruler, label: 'Pomiary' },
             { href: '/insighty', icon: Sparkles, label: 'AI Insighty' },
           ].map(({ href, icon: Icon, label }) => (
             <Link key={href} href={href} className="bg-white rounded-2xl p-4 text-center shadow-sm block transition-all hover:shadow-md hover:border-gray-300 border border-transparent active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">

@@ -19,6 +19,7 @@ model User {
   passwordHash    String?
   sessions        WorkoutSession[]
   bodyWeights     BodyWeight[]
+  bodyMeasurements BodyMeasurement[]
   favorites       UserFavorite[]
   templates       WorkoutTemplate[]
   runs            RunSession[]
@@ -90,6 +91,25 @@ model BodyWeight {
   user      User     @relation(fields: [userId], references: [id])
   date      DateTime
   weight    Float
+  notes     String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, date])
+}
+
+model BodyMeasurement {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  date      DateTime
+  waist     Float?   // talia (cm)
+  chest     Float?   // klatka piersiowa (cm)
+  biceps    Float?   // biceps (cm)
+  thigh     Float?   // udo (cm)
+  hips      Float?   // biodra (cm)
+  calf      Float?   // łydka (cm)
+  forearm   Float?   // przedramię (cm)
+  custom    Json     @default("[]") // dodatkowe, niestandardowe pomiary: [{ label, value }]
   notes     String?
   createdAt DateTime @default(now())
 
