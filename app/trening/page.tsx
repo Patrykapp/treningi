@@ -176,7 +176,8 @@ function TreningPage() {
     // Prefill z planu treningowego (link "Rozpocznij dzisiejszy trening" z /plan)
     const templateIdParam = searchParams.get('templateId');
     if (templateIdParam) {
-      const tpl = (Array.isArray(tplRes) ? tplRes : []).find((t: Template) => t.id === templateIdParam);
+      const tplList: Template[] = Array.isArray(tplRes) ? tplRes : [];
+      const tpl = tplList.find(t => t.id === templateIdParam);
       if (tpl) {
         setEntries(tpl.entries.map((e, i) => ({
           key: String(Date.now() + i), exerciseId: e.exerciseId, sets: e.sets, reps: e.reps,

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { Exercise } from '@/types';
 import { formatDate, formatDateInput } from '@/lib/utils';
-import { formatPace, MEASUREMENT_FIELDS } from '@/lib/goals';
+import { formatPace, formatDuration, MEASUREMENT_FIELDS } from '@/lib/goals';
 import { Toast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Modal } from '@/components/ui/Modal';
@@ -16,7 +16,10 @@ import {
   PersonStanding, Zap, PartyPopper,
 } from 'lucide-react';
 
-type GoalType = 'WEIGHT' | 'MEASUREMENT' | 'EXERCISE_1RM' | 'RUN_DISTANCE' | 'RUN_PACE';
+type GoalType = 'WEIGHT' | 'MEASUREMENT' | 'EXERCISE_1RM' | 'RUN_DISTANCE' | 'RUN_TIME' | 'RUN_PACE';
+// 'RUN' to pseudo-typ tylko na potrzeby kreatora — po wyborze wariantu
+// (dystans / dystans+czas) zamienia się na realny GoalType wysyłany do API.
+type PickerType = GoalType | 'RUN';
 
 interface GoalRecord {
   id: string;
@@ -25,6 +28,7 @@ interface GoalRecord {
   label: string;
   startValue: number | null;
   targetValue: number;
+  targetSecondary?: number | null;
   targetDate?: string | null;
   exerciseId?: string | null;
   exerciseName?: string | null;
@@ -37,11 +41,11 @@ interface GoalRecord {
   achieved: boolean;
 }
 
-const TYPE_OPTIONS: { type: GoalType; label: string; icon: typeof Scale }[] = [
+const TYPE_OPTIONS: { type: PickerType; label: string; icon: typeof Scale }[] = [
   { type: 'WEIGHT', label: 'Waga ciała', icon: Scale },
   { type: 'MEASUREMENT', label: 'Obwód ciała', icon: Ruler },
   { type: 'EXERCISE_1RM', label: 'Siła (1RM)', icon: Dumbbell },
-  { type: 'RUN_DISTANCE', label: 'Dystans biegu', icon: PersonStanding },
+  { type: 'RUN', label: 'Bieganie', icon: PersonStanding },
   { type: 'RUN_PACE', label: 'Tempo biegu', icon: Zap },
 ];
 
@@ -50,6 +54,20 @@ function formatValue(goal: Pick<GoalRecord, 'type'>, v: number | null): string {
   if (goal.type === 'RUN_PACE') return formatPace(v);
   const unit = goal.type === 'RUN_DISTANCE' ? 'km' : goal.type === 'MEASUREMENT' ? 'cm' : 'kg';
   return `${v}${unit}`;
+}
+
+// RUN_TIME przechowuje "current"/"start" jako tempo (sek/km) — dla czytelności
+// pokazujemy je jako projekcję czasu na docelowym dystansie (np. "24:10 → 25:00"),
+// a nie surowe tempo, bo to o tym myśli użytkownik ustawiając taki cel.
+function formatGoalCurrentTarget(goal: GoalRecord): { current: string; target: string } {
+  if (goal.type === 'RUN_TIME' && goal.targetSecondary != null) {
+    const currentTime = goal.currentValue !== null ? goal.currentValue * goal.targetValue : null;
+    return {
+      current: currentTime !== null ? formatDuration(currentTime) : '—',
+      target: formatDuration(goal.targetSecondary),
+    };
+  }
+  return { current: formatValue(goal, goal.currentValue), target: formatValue(goal, goal.targetValue) };
 }
 
 export default function CelePage() {
@@ -63,7 +81,8 @@ export default function CelePage() {
   const [favorites, setFavorites] = useState<string[]>([]);
 
   const [showModal, setShowModal] = useState(false);
-  const [formType, setFormType] = useState<GoalType | null>(null);
+  const [formType, setFormType] = useState<PickerType | null>(null);
+  const [formRunVariant, setFormRunVariant] = useState<'RUN_DISTANCE' | 'RUN_TIME' | null>(null);
   const [formTarget, setFormTarget] = useState('');
   const [formMeasurementKey, setFormMeasurementKey] = useState('');
   const [formMeasurementCustomLabel, setFormMeasurementCustomLabel] = useState('');
@@ -71,9 +90,14 @@ export default function CelePage() {
   const [formExerciseName, setFormExerciseName] = useState('');
   const [formPaceMin, setFormPaceMin] = useState('');
   const [formPaceSec, setFormPaceSec] = useState('');
+  const [formTimeMin, setFormTimeMin] = useState('');
+  const [formTimeSec, setFormTimeSec] = useState('');
   const [formTargetDate, setFormTargetDate] = useState('');
   const [formNotes, setFormNotes] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Realny typ wysyłany do API — dla 'RUN' rozstrzygany dopiero po wyborze wariantu
+  const effectiveType: GoalType | null = formType === 'RUN' ? formRunVariant : formType;
 
   const loadGoals = useCallback(async () => {
     setLoading(true);
@@ -94,6 +118,7 @@ export default function CelePage() {
 
   const resetForm = () => {
     setFormType(null);
+    setFormRunVariant(null);
     setFormTarget('');
     setFormMeasurementKey('');
     setFormMeasurementCustomLabel('');
@@ -101,6 +126,8 @@ export default function CelePage() {
     setFormExerciseName('');
     setFormPaceMin('');
     setFormPaceSec('');
+    setFormTimeMin('');
+    setFormTimeSec('');
     setFormTargetDate('');
     setFormNotes('');
   };
@@ -108,22 +135,30 @@ export default function CelePage() {
   const closeModal = () => { setShowModal(false); resetForm(); };
 
   const handleCreate = async () => {
-    if (!formType) return;
+    if (!effectiveType) return;
     let targetValue: number;
-    if (formType === 'RUN_PACE') {
+    let targetSecondary: number | undefined;
+    if (effectiveType === 'RUN_PACE') {
       const min = parseInt(formPaceMin || '0', 10);
       const sec = parseInt(formPaceSec || '0', 10);
       targetValue = min * 60 + sec;
       if (!(targetValue > 0)) { showToast('Podaj tempo docelowe', 'error'); return; }
+    } else if (effectiveType === 'RUN_TIME') {
+      targetValue = parseFloat(formTarget);
+      if (!Number.isFinite(targetValue) || targetValue <= 0) { showToast('Podaj dystans', 'error'); return; }
+      const min = parseInt(formTimeMin || '0', 10);
+      const sec = parseInt(formTimeSec || '0', 10);
+      targetSecondary = min * 60 + sec;
+      if (!(targetSecondary > 0)) { showToast('Podaj docelowy czas', 'error'); return; }
     } else {
       targetValue = parseFloat(formTarget);
       if (!Number.isFinite(targetValue) || targetValue <= 0) { showToast('Podaj wartość docelową', 'error'); return; }
     }
     const isCustomMeasurement = formMeasurementKey === '__custom__';
     const resolvedMeasurementKey = isCustomMeasurement ? formMeasurementCustomLabel.trim() : formMeasurementKey;
-    if (formType === 'MEASUREMENT' && !formMeasurementKey) { showToast('Wybierz obwód', 'error'); return; }
-    if (formType === 'MEASUREMENT' && isCustomMeasurement && !resolvedMeasurementKey) { showToast('Podaj nazwę pomiaru', 'error'); return; }
-    if (formType === 'EXERCISE_1RM' && !formExerciseId) { showToast('Wybierz ćwiczenie', 'error'); return; }
+    if (effectiveType === 'MEASUREMENT' && !formMeasurementKey) { showToast('Wybierz obwód', 'error'); return; }
+    if (effectiveType === 'MEASUREMENT' && isCustomMeasurement && !resolvedMeasurementKey) { showToast('Podaj nazwę pomiaru', 'error'); return; }
+    if (effectiveType === 'EXERCISE_1RM' && !formExerciseId) { showToast('Wybierz ćwiczenie', 'error'); return; }
 
     setSaving(true);
     try {
@@ -131,10 +166,11 @@ export default function CelePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          type: formType,
+          type: effectiveType,
           targetValue,
-          measurementKey: formType === 'MEASUREMENT' ? resolvedMeasurementKey : undefined,
-          exerciseId: formType === 'EXERCISE_1RM' ? formExerciseId : undefined,
+          targetSecondary,
+          measurementKey: effectiveType === 'MEASUREMENT' ? resolvedMeasurementKey : undefined,
+          exerciseId: effectiveType === 'EXERCISE_1RM' ? formExerciseId : undefined,
           targetDate: formTargetDate || undefined,
           notes: formNotes || undefined,
         }),
@@ -166,6 +202,7 @@ export default function CelePage() {
 
   const GoalCard = ({ goal }: { goal: GoalRecord }) => {
     const overdue = !goal.achievedAt && goal.targetDate && new Date(goal.targetDate).getTime() < Date.now();
+    const { current: currentLabel, target: targetLabel } = formatGoalCurrentTarget(goal);
     return (
       <div className="bg-white rounded-2xl p-4 shadow-sm">
         <div className="flex items-start justify-between gap-2 mb-2">
@@ -193,7 +230,7 @@ export default function CelePage() {
               <div className="h-2.5 rounded-full bg-blue-500 transition-all" style={{ width: `${Math.max(4, goal.progressPct)}%` }} />
             </div>
             <div className="flex items-center justify-between mt-1.5 text-xs text-gray-600">
-              <span>{formatValue(goal, goal.currentValue)} → {formatValue(goal, goal.targetValue)}</span>
+              <span>{currentLabel} → {targetLabel}</span>
               <span className="font-semibold text-blue-600">{goal.progressPct}%</span>
             </div>
             {goal.targetDate && (
@@ -294,7 +331,7 @@ export default function CelePage() {
         ) : (
           <div className="space-y-3">
             <button
-              onClick={() => setFormType(null)}
+              onClick={() => { setFormType(null); setFormRunVariant(null); }}
               className="text-sm text-blue-600 font-medium inline-flex items-center gap-1 rounded-lg transition-colors hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
             >
               <ArrowLeft className="w-3.5 h-3.5" strokeWidth={2} /> Zmień typ celu
@@ -344,9 +381,40 @@ export default function CelePage() {
               )
             )}
 
-            {(formType !== 'EXERCISE_1RM' || formExerciseId) && (
+            {formType === 'RUN' && !formRunVariant && (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setFormRunVariant('RUN_DISTANCE')}
+                  className="w-full text-left bg-gray-50 rounded-xl px-4 py-3 transition hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                >
+                  <p className="font-medium text-gray-900 text-sm">Dystans</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Przebiegnij określony dystans jednorazowo</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormRunVariant('RUN_TIME')}
+                  className="w-full text-left bg-gray-50 rounded-xl px-4 py-3 transition hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                >
+                  <p className="font-medium text-gray-900 text-sm">Dystans + czas</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Pokonaj dystans w określonym czasie, np. 5km w 25 minut</p>
+                </button>
+              </div>
+            )}
+
+            {formType === 'RUN' && formRunVariant && (
+              <button
+                type="button"
+                onClick={() => setFormRunVariant(null)}
+                className="text-xs text-blue-600 font-medium rounded-lg transition-colors hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+              >
+                « Zmień wariant
+              </button>
+            )}
+
+            {effectiveType && (effectiveType !== 'EXERCISE_1RM' || formExerciseId) && (
               <>
-                {formType === 'RUN_PACE' ? (
+                {effectiveType === 'RUN_PACE' ? (
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Docelowe tempo (min/km)</label>
                     <div className="flex items-center gap-2">
@@ -358,10 +426,28 @@ export default function CelePage() {
                       <span className="text-sm text-gray-500">/ km</span>
                     </div>
                   </div>
+                ) : effectiveType === 'RUN_TIME' ? (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Dystans (km)</label>
+                      <input type="number" min="0" step="0.1" value={formTarget} onChange={e => setFormTarget(e.target.value)}
+                        className="w-full border border-gray-200 rounded-xl px-3 py-3 text-center text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Docelowy czas (min:sek)</label>
+                      <div className="flex items-center gap-2">
+                        <input type="number" min="0" value={formTimeMin} onChange={e => setFormTimeMin(e.target.value)}
+                          placeholder="min" className="w-20 border border-gray-200 rounded-xl px-3 py-3 text-center text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                        <span className="text-gray-400">:</span>
+                        <input type="number" min="0" max="59" value={formTimeSec} onChange={e => setFormTimeSec(e.target.value)}
+                          placeholder="sek" className="w-20 border border-gray-200 rounded-xl px-3 py-3 text-center text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                      </div>
+                    </div>
+                  </div>
                 ) : (
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Wartość docelowa ({formType === 'RUN_DISTANCE' ? 'km' : formType === 'MEASUREMENT' ? 'cm' : 'kg'})
+                      Wartość docelowa ({effectiveType === 'RUN_DISTANCE' ? 'km' : effectiveType === 'MEASUREMENT' ? 'cm' : 'kg'})
                     </label>
                     <input
                       type="number"

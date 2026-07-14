@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuthUserId } from '@/lib/auth';
-import { estimate1RM, inferDirection, goalProgress, formatPace, MEASUREMENT_FIELDS, GoalDirection } from '@/lib/goals';
+import { estimate1RM, inferDirection, goalProgress, formatPace, formatDuration, MEASUREMENT_FIELDS, GoalDirection } from '@/lib/goals';
 
 type SetData = { reps: number; weight: number };
 
@@ -70,7 +70,7 @@ export async function GET() {
       goals.some(g => g.type === 'MEASUREMENT')
         ? prisma.bodyMeasurement.findMany({ where: { userId }, orderBy: { date: 'desc' }, take: 100 })
         : Promise.resolve([]),
-      (goals.some(g => g.type === 'RUN_DISTANCE') || goals.some(g => g.type === 'RUN_PACE'))
+      (goals.some(g => g.type === 'RUN_DISTANCE') || goals.some(g => g.type === 'RUN_PACE') || goals.some(g => g.type === 'RUN_TIME'))
         ? prisma.runSession.findMany({ where: { userId } })
         : Promise.resolve([]),
     ]);
@@ -85,6 +85,9 @@ export async function GET() {
 
     const result = await Promise.all(goals.map(async (g) => {
       let current: number | null = null;
+      // Domyślnie porównujemy do targetValue — RUN_TIME nadpisuje to niżej,
+      // bo tam "current" to tempo (sek/km), a targetValue to sam dystans.
+      let progressTarget = g.targetValue;
       switch (g.type) {
         case 'WEIGHT':
           current = latestWeight?.weight ?? null;
@@ -106,8 +109,20 @@ export async function GET() {
         case 'RUN_PACE':
           current = minRunPace;
           break;
+        case 'RUN_TIME': {
+          // Cel "dystans w czasie" (np. 5km w 25 min) — sprawdzamy najlepsze tempo
+          // spośród biegów, które pokryły PRZYNAJMNIEJ tyle dystansu co cel (krótsze
+          // biegi się nie liczą, bo nie da się z nich wywnioskować, czy dystans
+          // docelowy zostałby pokonany w wymaganym czasie).
+          if (g.targetSecondary != null && g.targetValue > 0) {
+            const qualifying = runs.filter(r => r.distance >= g.targetValue);
+            current = qualifying.length > 0 ? Math.min(...qualifying.map(r => r.duration / r.distance)) : null;
+            progressTarget = g.targetSecondary / g.targetValue;
+          }
+          break;
+        }
       }
-      const progress = goalProgress(g.direction as GoalDirection, g.startValue, g.targetValue, current);
+      const progress = goalProgress(g.direction as GoalDirection, g.startValue, progressTarget, current);
       return { goal: g, current, progress };
     }));
 
@@ -143,7 +158,7 @@ export async function POST(req: Request) {
     const userId = await getAuthUserId();
     if (!userId) return NextResponse.json({ error: 'Nieautoryzowany' }, { status: 401 });
     const body = await req.json();
-    const { type, targetValue, exerciseId, measurementKey, targetDate, notes } = body;
+    const { type, targetValue, targetSecondary, exerciseId, measurementKey, targetDate, notes } = body;
 
     const target = typeof targetValue === 'number' ? targetValue : parseFloat(targetValue);
     if (!Number.isFinite(target) || target <= 0) {
@@ -155,6 +170,7 @@ export async function POST(req: Request) {
     let label: string;
     let finalExerciseId: string | null = null;
     let finalMeasurementKey: string | null = null;
+    let finalTargetSecondary: number | null = null;
 
     if (type === 'WEIGHT') {
       const latest = await prisma.bodyWeight.findFirst({ where: { userId }, orderBy: { date: 'desc' } });
@@ -193,6 +209,16 @@ export async function POST(req: Request) {
       start = runs.length > 0 ? Math.min(...runs.map(r => r.duration / r.distance)) : null;
       direction = 'decrease';
       label = `Bieganie: tempo poniżej ${formatPace(target)}/km`;
+    } else if (type === 'RUN_TIME') {
+      const secondary = typeof targetSecondary === 'number' ? targetSecondary : parseFloat(targetSecondary);
+      if (!Number.isFinite(secondary) || secondary <= 0) {
+        return NextResponse.json({ error: 'Podaj docelowy czas' }, { status: 400 });
+      }
+      finalTargetSecondary = secondary;
+      const runs = await prisma.runSession.findMany({ where: { userId, distance: { gte: target } }, select: { distance: true, duration: true } });
+      start = runs.length > 0 ? Math.min(...runs.map(r => r.duration / r.distance)) : null;
+      direction = 'decrease';
+      label = `Bieganie: ${target}km w czasie poniżej ${formatDuration(secondary)}`;
     } else {
       return NextResponse.json({ error: 'Nieznany typ celu' }, { status: 400 });
     }
@@ -205,6 +231,7 @@ export async function POST(req: Request) {
         label,
         startValue: start,
         targetValue: target,
+        targetSecondary: finalTargetSecondary,
         targetDate: targetDate ? new Date(targetDate) : null,
         exerciseId: finalExerciseId,
         measurementKey: finalMeasurementKey,
