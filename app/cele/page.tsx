@@ -362,23 +362,28 @@ export default function CelePage() {
             )}
 
             {formType === 'EXERCISE_1RM' && (
-              formExerciseId ? (
-                <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
-                  <span className="text-sm font-medium text-gray-900">{formExerciseName}</span>
-                  <button
-                    onClick={() => { setFormExerciseId(''); setFormExerciseName(''); }}
-                    className="text-xs text-blue-600 font-medium rounded-lg px-2 py-1 transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                  >
-                    Zmień
-                  </button>
-                </div>
-              ) : (
-                <ExercisePicker
-                  exercises={exercises}
-                  favorites={favorites}
-                  onSelect={ex => { setFormExerciseId(ex.id); setFormExerciseName(ex.name); }}
-                />
-              )
+              <>
+                {formExerciseId ? (
+                  <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
+                    <span className="text-sm font-medium text-gray-900">{formExerciseName}</span>
+                    <button
+                      onClick={() => { setFormExerciseId(''); setFormExerciseName(''); }}
+                      className="text-xs text-blue-600 font-medium rounded-lg px-2 py-1 transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                    >
+                      Zmień
+                    </button>
+                  </div>
+                ) : (
+                  <ExercisePicker
+                    exercises={exercises}
+                    favorites={favorites}
+                    onSelect={ex => { setFormExerciseId(ex.id); setFormExerciseName(ex.name); }}
+                  />
+                )}
+                <p className="text-xs text-gray-500">
+                  To <span className="font-medium">szacowane</span> 1RM (wzór Epleya) liczone z Twoich serii — nie musisz robić realnego pojedynczego powtórzenia. Liczą się serie do 12 powtórzeń.
+                </p>
+              </>
             )}
 
             {formType === 'RUN' && !formRunVariant && (

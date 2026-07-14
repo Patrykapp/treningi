@@ -198,7 +198,7 @@ export async function POST(req: Request) {
       finalExerciseId = exerciseId;
       start = await bestE1RMEver(userId, exerciseId);
       direction = 'increase';
-      label = `${exercise.name}: 1RM ${target}kg`;
+      label = `${exercise.name}: szacowane 1RM ${target}kg`;
     } else if (type === 'RUN_DISTANCE') {
       const runs = await prisma.runSession.findMany({ where: { userId }, select: { distance: true } });
       start = runs.length > 0 ? Math.max(...runs.map(r => r.distance)) : null;

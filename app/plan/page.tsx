@@ -9,8 +9,17 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { SkeletonCard } from '@/components/ui/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import {
-  Calendar, Lock, Trash2, ArrowLeft, Play, RotateCcw, Repeat,
+  Calendar, Lock, Trash2, ArrowLeft, Play, RotateCcw, Repeat, Sparkles,
 } from 'lucide-react';
+
+const SPLIT_HINTS: Record<number, string> = {
+  1: 'Full Body',
+  2: 'Full Body A/B',
+  3: 'Push / Pull / Legs',
+  4: 'Upper / Lower',
+  5: 'Push/Pull/Legs + Upper/Lower',
+  6: 'Push/Pull/Legs x2',
+};
 
 interface PlanRecord {
   id: string;
@@ -42,6 +51,9 @@ export default function PlanPage() {
   const [formRepeat, setFormRepeat] = useState(true);
   const [formDays, setFormDays] = useState<(string | null)[]>(Array(7).fill(null));
   const [saving, setSaving] = useState(false);
+  const [creatorMode, setCreatorMode] = useState<'manual' | 'ai'>('manual');
+  const [formDaysPerWeek, setFormDaysPerWeek] = useState('3');
+  const [generating, setGenerating] = useState(false);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => setToast({ message, type });
 
@@ -72,6 +84,8 @@ export default function PlanPage() {
     setFormNumWeeks('4');
     setFormRepeat(true);
     setFormDays(Array(7).fill(null));
+    setFormDaysPerWeek('3');
+    setCreatorMode('manual');
   };
 
   const handleCreate = async () => {
@@ -104,6 +118,42 @@ export default function PlanPage() {
       }
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleGenerateAI = async () => {
+    const days = parseInt(formDaysPerWeek, 10);
+    if (!Number.isFinite(days) || days < 1 || days > 6) { showToast('Liczba dni treningowych: 1-6', 'error'); return; }
+    const weeks = parseInt(formNumWeeks, 10);
+    if (!Number.isFinite(weeks) || weeks < 1 || weeks > 52) { showToast('Liczba tygodni: 1-52', 'error'); return; }
+
+    setGenerating(true);
+    try {
+      const res = await fetch('/api/ai/generate-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formName.trim() || undefined,
+          startDate: formStartDate,
+          numWeeks: weeks,
+          repeat: formRepeat,
+          daysPerWeek: days,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        const skippedMsg = data.skipped?.length ? ` (pominięto: ${data.skipped.join(', ')} — brak ćwiczeń w bazie)` : '';
+        showToast(`Plan wygenerowany: ${data.created.join(', ')}${skippedMsg}`);
+        resetForm();
+        setShowCreator(false);
+        load();
+      } else {
+        showToast(data.error || 'Błąd generowania', 'error');
+      }
+    } catch {
+      showToast('Błąd generowania', 'error');
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -251,8 +301,101 @@ export default function PlanPage() {
 
         {isLoggedIn && showCreator && (
           <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
-            <h3 className="font-bold text-gray-900">Nowy plan</h3>
-            {templates.length === 0 ? (
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-gray-900">Nowy plan</h3>
+              <div className="flex bg-gray-100 rounded-lg p-0.5 text-xs font-medium">
+                <button
+                  type="button"
+                  onClick={() => setCreatorMode('manual')}
+                  className={`px-3 py-1.5 rounded-md transition-colors ${creatorMode === 'manual' ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}
+                >
+                  Ręcznie
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCreatorMode('ai')}
+                  className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1 ${creatorMode === 'ai' ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" strokeWidth={2} /> AI
+                </button>
+              </div>
+            </div>
+
+            {creatorMode === 'ai' && (
+              <div className="space-y-3">
+                <p className="text-xs text-gray-500">
+                  AI ułoży cały tygodniowy plan (szablony treningowe + rozkład na dni) na podstawie Twojej historii — nie potrzebujesz zapisanych szablonów.
+                </p>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Nazwa planu (opcjonalnie)</label>
+                  <input
+                    type="text"
+                    value={formName}
+                    onChange={e => setFormName(e.target.value)}
+                    placeholder="np. Plan AI"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Start</label>
+                    <input
+                      type="date"
+                      value={formStartDate}
+                      onChange={e => setFormStartDate(e.target.value)}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Ile tygodni</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={52}
+                      value={formNumWeeks}
+                      onChange={e => setFormNumWeeks(e.target.value)}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-3 text-center text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Dni treningowe w tygodniu</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={6}
+                    value={formDaysPerWeek}
+                    onChange={e => setFormDaysPerWeek(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-3 text-center text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  {SPLIT_HINTS[parseInt(formDaysPerWeek, 10)] && (
+                    <p className="text-xs text-gray-400 mt-1">Podział: {SPLIT_HINTS[parseInt(formDaysPerWeek, 10)]}</p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFormRepeat(r => !r)}
+                  className="w-full flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3 transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                >
+                  <span className="text-sm text-gray-700 flex items-center gap-2">
+                    <Repeat className="w-4 h-4" strokeWidth={2} /> Powtarzaj ten sam tydzień w kółko
+                  </span>
+                  <span className={`relative inline-flex h-6 w-12 items-center rounded-full transition-colors ${formRepeat ? 'bg-blue-600' : 'bg-gray-200'}`}>
+                    <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${formRepeat ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </span>
+                </button>
+                <button
+                  onClick={handleGenerateAI}
+                  disabled={generating}
+                  className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold transition-colors hover:bg-blue-700 active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 flex items-center justify-center gap-2"
+                >
+                  <Sparkles className="w-4 h-4" strokeWidth={2} />
+                  {generating ? 'Generuję plan (kilkanaście sekund)...' : 'Generuj plan z AI'}
+                </button>
+              </div>
+            )}
+
+            {creatorMode === 'manual' && (templates.length === 0 ? (
               <p className="text-sm text-gray-500">
                 Nie masz jeszcze żadnych szablonów treningowych — zapisz je na stronie{' '}
                 <Link href="/trening" className="text-blue-600 underline">Trening</Link> (przycisk „Szablony" → „Zapisz obecny jako szablon"), a potem wróć tutaj.
@@ -331,7 +474,7 @@ export default function PlanPage() {
                   {saving ? 'Zapisuję...' : 'Zapisz plan'}
                 </button>
               </>
-            )}
+            ))}
             {activePlan && (
               <button
                 onClick={() => setShowCreator(false)}
