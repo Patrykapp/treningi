@@ -30,7 +30,8 @@ function readHistory(): InsightRecord[] {
   try {
     const raw = JSON.parse(localStorage.getItem(CACHE_KEY) || '[]');
     // Migracja ze starszego formatu bez pola period — traktuj jako 'week'.
-    return (Array.isArray(raw) ? raw : []).map((r: InsightRecord) => ({ period: 'week', ...r }));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (Array.isArray(raw) ? raw : []).map((r: any) => ({ period: 'week', ...r } as InsightRecord));
   } catch { return []; }
 }
 
