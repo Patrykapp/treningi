@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getAuthUserId } from '@/lib/auth';
 
@@ -229,7 +230,7 @@ export async function POST(req: Request) {
       const result = results[i];
       if (!result) { skipped.push(split.days[i].name); continue; }
       const tpl = await prisma.workoutTemplate.create({
-        data: { name: result.templateName, entries: result.entries, userId },
+        data: { name: result.templateName, entries: result.entries as unknown as Prisma.InputJsonValue, userId },
       });
       created.push({ weekday: weekdays[i], name: result.templateName, id: tpl.id });
     }
