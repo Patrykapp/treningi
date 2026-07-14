@@ -11,6 +11,12 @@ function asSetsData(v: unknown): SetData[] {
 
 const SHRINK_MEASUREMENT_KEYS = new Set(['waist', 'hips']);
 
+// Powyżej ~12 powtórzeń wzór Epleya ekstrapoluje bardzo niemiarodajnie (np. seria
+// 20 powtórzeń przy umiarkowanym ciężarze potrafi "oszacować" 1RM dużo wyższe niż
+// realnie osiągalne) — takie serie pomijamy przy liczeniu celu siłowego, żeby
+// cel nie odhaczał się sam z rozgrzewki/serii wytrzymałościowej.
+const MAX_REPS_FOR_1RM_ESTIMATE = 12;
+
 async function bestE1RMEver(userId: string, exerciseId: string): Promise<number | null> {
   const entries = await prisma.workoutEntry.findMany({
     where: { exerciseId, session: { userId } },
@@ -21,6 +27,7 @@ async function bestE1RMEver(userId: string, exerciseId: string): Promise<number 
     const sd = asSetsData(e.setsData);
     const list = sd.length > 0 ? sd : [{ reps: e.reps, weight: e.weight }];
     for (const s of list) {
+      if (s.reps > MAX_REPS_FOR_1RM_ESTIMATE) continue;
       const orm = estimate1RM(s.weight, s.reps);
       if (orm > 0 && (best === null || orm > best)) best = orm;
     }
