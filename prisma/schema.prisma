@@ -20,6 +20,7 @@ model User {
   sessions        WorkoutSession[]
   bodyWeights     BodyWeight[]
   bodyMeasurements BodyMeasurement[]
+  goals           Goal[]
   favorites       UserFavorite[]
   templates       WorkoutTemplate[]
   runs            RunSession[]
@@ -41,6 +42,7 @@ model Exercise {
   v2Checked    Boolean        @default(false) // już próbowano dopasować (także gdy brak trafienia)
   entries      WorkoutEntry[]
   favorites    UserFavorite[]
+  goals        Goal[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 }
@@ -114,6 +116,27 @@ model BodyMeasurement {
   createdAt DateTime @default(now())
 
   @@index([userId, date])
+}
+
+model Goal {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type           String    // WEIGHT | MEASUREMENT | EXERCISE_1RM | RUN_DISTANCE | RUN_PACE
+  direction      String    // increase | decrease — czy sukces to wzrost czy spadek wartości
+  label          String    // opis widoczny w UI, generowany przy tworzeniu
+  startValue     Float?    // wartość w momencie utworzenia celu (null = brak danych na starcie)
+  targetValue    Float
+  targetDate     DateTime?
+  exerciseId     String?   // dla EXERCISE_1RM
+  exercise       Exercise? @relation(fields: [exerciseId], references: [id])
+  measurementKey String?   // dla MEASUREMENT: klucz stały (waist/chest/...) lub nazwa niestandardowa
+  notes          String?
+  achievedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([userId])
 }
 
 model UserFavorite {
