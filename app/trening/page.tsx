@@ -173,6 +173,19 @@ function TreningPage() {
       return;
     }
 
+    // Prefill z planu treningowego (link "Rozpocznij dzisiejszy trening" z /plan)
+    const templateIdParam = searchParams.get('templateId');
+    if (templateIdParam) {
+      const tpl = (Array.isArray(tplRes) ? tplRes : []).find((t: Template) => t.id === templateIdParam);
+      if (tpl) {
+        setEntries(tpl.entries.map((e, i) => ({
+          key: String(Date.now() + i), exerciseId: e.exerciseId, sets: e.sets, reps: e.reps,
+          weight: e.weight, customSets: false, setsData: [], bodyweight: false,
+        })));
+        return;
+      }
+    }
+
     // Restore draft from localStorage (only for new sessions)
     try {
       const saved = localStorage.getItem(DRAFT_KEY);

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { WorkoutSession } from '@/types';
 import { formatDate, formatDateInput } from '@/lib/utils';
+import { DAY_LABELS, getPlanToday, PlanLike } from '@/lib/plans';
 import { useAuth } from '@/hooks/useAuth';
 import { runCalories, sessionCalories } from '@/lib/calories';
 import { ActivityHeatmap } from '@/components/ui/ActivityHeatmap';
@@ -11,7 +12,7 @@ import { SkeletonCard } from '@/components/ui/Skeleton';
 import {
   Plus, Flag, BarChart3, PersonStanding, Bike, Scale, Sparkles,
   Crown, Flame, Zap, ChevronRight, Dumbbell, TrendingUp, Ruler, Target,
-  BellRing, X,
+  BellRing, X, Calendar, Play,
 } from 'lucide-react';
 
 interface Run {
@@ -231,6 +232,20 @@ export default function DashboardPage() {
   ] : [];
   const reminder = useReminderBanner(myActivities);
 
+  // Aktywny plan treningowy zalogowanego — pokazuje "dziś wg planu" niezależnie
+  // od tego, czyj profil jest oglądany (tak jak przypomnienie o treningu wyżej).
+  const [myPlan, setMyPlan] = useState<PlanLike & { name: string; dayTemplateNames: (string | null)[] } | null>(null);
+  useEffect(() => {
+    if (!isLoggedIn) { setMyPlan(null); return; }
+    fetch('/api/plans')
+      .then(r => (r.ok ? r.json() : []))
+      .then((data: (PlanLike & { active: boolean; name: string; dayTemplateNames: (string | null)[] })[]) => {
+        if (Array.isArray(data)) setMyPlan(data.find(p => p.active) || null);
+      })
+      .catch(() => {});
+  }, [isLoggedIn]);
+  const planToday = myPlan ? getPlanToday(myPlan) : null;
+
   const streak = calcStreak(activeActivities);
   const weeklyCount = calcWeeklyCount(activeActivities);
   const totalCount = activeSessions.length + activeRuns.length + activeSoloActivities.length;
@@ -325,6 +340,33 @@ export default function DashboardPage() {
             >
               <X className="w-4 h-4" strokeWidth={2} />
             </button>
+          </div>
+        )}
+
+        {isLoggedIn && myPlan && planToday?.status === 'active' && (
+          <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5" strokeWidth={2} /> {DAY_LABELS[planToday.dayOfWeek]} · {myPlan.name}
+                </p>
+                <p className="font-bold text-gray-900 mt-0.5 truncate">
+                  {planToday.templateId ? (myPlan.dayTemplateNames[planToday.dayOfWeek] || '(usunięty szablon)') : 'Dzień wolny 🌴'}
+                </p>
+              </div>
+              {planToday.templateId ? (
+                <Link
+                  href={`/trening?templateId=${planToday.templateId}`}
+                  className="shrink-0 inline-flex items-center gap-1.5 bg-blue-600 text-white px-3 py-2 rounded-xl text-sm font-semibold transition-colors hover:bg-blue-700 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                >
+                  <Play className="w-4 h-4" strokeWidth={2} /> Start
+                </Link>
+              ) : (
+                <Link href="/plan" className="shrink-0 text-xs text-blue-600 font-medium rounded-lg px-2 py-1 transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                  Zobacz plan
+                </Link>
+              )}
+            </div>
           </div>
         )}
 
@@ -484,6 +526,7 @@ export default function DashboardPage() {
             { href: '/waga', icon: Scale, label: 'Waga' },
             { href: '/pomiary', icon: Ruler, label: 'Pomiary' },
             { href: '/cele', icon: Target, label: 'Cele' },
+            { href: '/plan', icon: Calendar, label: 'Plan' },
             { href: '/insighty', icon: Sparkles, label: 'AI Insighty' },
           ].map(({ href, icon: Icon, label }) => (
             <Link key={href} href={href} className="bg-white rounded-2xl p-4 text-center shadow-sm block transition-all hover:shadow-md hover:border-gray-300 border border-transparent active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">

@@ -21,6 +21,7 @@ model User {
   bodyWeights     BodyWeight[]
   bodyMeasurements BodyMeasurement[]
   goals           Goal[]
+  trainingPlans   TrainingPlan[]
   favorites       UserFavorite[]
   templates       WorkoutTemplate[]
   runs            RunSession[]
@@ -135,6 +136,22 @@ model Goal {
   achievedAt     DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model TrainingPlan {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  startDate DateTime // od kiedy plan obowiązuje (dzień tygodnia bez znaczenia — wzorzec jest tygodniowy)
+  numWeeks  Int      @default(1) // ile tygodni trwa plan (ignorowane, gdy repeat=true)
+  repeat    Boolean  @default(true) // czy powtarzać ten sam tydzień w nieskończoność
+  active    Boolean  @default(true) // tylko jeden aktywny plan naraz — starsze są archiwizowane, nie kasowane
+  days      Json     // 7 elementów pon-niedz: id szablonu (WorkoutTemplate) lub null = dzień wolny
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
 }
