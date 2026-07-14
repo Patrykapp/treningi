@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { WorkoutSession } from '@/types';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatDateInput } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { runCalories, sessionCalories } from '@/lib/calories';
 import { ActivityHeatmap } from '@/components/ui/ActivityHeatmap';
@@ -11,6 +11,7 @@ import { SkeletonCard } from '@/components/ui/Skeleton';
 import {
   Plus, Flag, BarChart3, PersonStanding, Bike, Scale, Sparkles,
   Crown, Flame, Zap, ChevronRight, Dumbbell, TrendingUp, Ruler, Target,
+  BellRing, X,
 } from 'lucide-react';
 
 interface Run {
@@ -48,6 +49,44 @@ interface DashboardData {
 interface Dated { date: string }
 
 const CACHE_KEY = 'dashboardCacheV1';
+const REMINDER_SETTINGS_KEY = 'reminderSettings';
+const REMINDER_DISMISSED_KEY = 'reminderDismissedOn';
+
+// Przypomnienie o treningu (v1, bez powiadomień push) — licznik dni od ostatniej
+// AKTYWNOŚCI WŁASNEJ zalogowanego użytkownika (niezależnie od tego, czyj profil
+// jest akurat oglądany na dashboardzie). Ustawienia (włącz/wyłącz, próg dni)
+// trzymane w localStorage — patrz app/ustawienia/page.tsx.
+function useReminderBanner(myActivities: Dated[]) {
+  const [visible, setVisible] = useState(false);
+  const [daysSince, setDaysSince] = useState(0);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || myActivities.length === 0) { setVisible(false); return; }
+    let settings = { enabled: true, thresholdDays: 3 };
+    try {
+      const raw = localStorage.getItem(REMINDER_SETTINGS_KEY);
+      if (raw) settings = { ...settings, ...JSON.parse(raw) };
+    } catch { /* uszkodzone ustawienia — użyj domyślnych */ }
+    if (!settings.enabled) { setVisible(false); return; }
+
+    const mostRecentMs = Math.max(...myActivities.map(a => new Date(a.date).getTime()));
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const recentDay = new Date(mostRecentMs); recentDay.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((today.getTime() - recentDay.getTime()) / 86400000);
+    setDaysSince(diffDays);
+
+    if (diffDays < settings.thresholdDays) { setVisible(false); return; }
+    const dismissedOn = localStorage.getItem(REMINDER_DISMISSED_KEY);
+    setVisible(dismissedOn !== formatDateInput(today));
+  }, [myActivities]);
+
+  const dismiss = () => {
+    try { localStorage.setItem(REMINDER_DISMISSED_KEY, formatDateInput(new Date())); } catch { /* pełny storage */ }
+    setVisible(false);
+  };
+
+  return { visible, daysSince, dismiss };
+}
 
 function calcStreak(sessions: Dated[]): number {
   if (!sessions.length) return 0;
@@ -183,6 +222,15 @@ export default function DashboardPage() {
   // Trening siłowy + bieg + samodzielna aktywność — liczy się do passy/statystyk
   const activeActivities: Dated[] = [...activeSessions, ...activeRuns, ...activeSoloActivities];
 
+  // Do przypomnienia liczy się WŁASNA aktywność zalogowanego — niezależnie od tego,
+  // czyj profil jest akurat oglądany (viewUserId może wskazywać na drugą osobę).
+  const myActivities: Dated[] = userId ? [
+    ...(sessionsByUser[userId] || []),
+    ...(runsByUser[userId] || []),
+    ...(activitiesByUser[userId] || []).filter(a => !a.sessionId),
+  ] : [];
+  const reminder = useReminderBanner(myActivities);
+
   const streak = calcStreak(activeActivities);
   const weeklyCount = calcWeeklyCount(activeActivities);
   const totalCount = activeSessions.length + activeRuns.length + activeSoloActivities.length;
@@ -259,6 +307,25 @@ export default function DashboardPage() {
           <Link href="/login" className="block w-full bg-gray-100 text-gray-700 text-center py-4 rounded-2xl font-medium text-base transition-colors hover:bg-gray-200 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
             Zaloguj się aby dodawać treningi
           </Link>
+        )}
+
+        {isLoggedIn && reminder.visible && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex items-center gap-3">
+            <BellRing className="w-6 h-6 text-amber-500 shrink-0" strokeWidth={2} />
+            <div className="flex-1">
+              <p className="text-sm font-bold text-amber-700">
+                {reminder.daysSince} {reminder.daysSince === 1 ? 'dzień' : 'dni'} bez treningu
+              </p>
+              <p className="text-xs text-amber-600">Wróć do formy — nawet krótki trening się liczy 💪</p>
+            </div>
+            <button
+              onClick={reminder.dismiss}
+              className="p-1.5 rounded-lg text-amber-400 transition-colors hover:text-amber-700 hover:bg-amber-100 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+              aria-label="Ukryj przypomnienie na dziś"
+            >
+              <X className="w-4 h-4" strokeWidth={2} />
+            </button>
+          </div>
         )}
 
         {/* Porównanie tygodnia — widoczne od razu, motywacja dla obojga */}

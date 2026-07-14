@@ -9,7 +9,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { activeSession } from '@/hooks/useActiveSession';
 import Papa from 'papaparse';
-import { X, Pencil, Trash2, Link2, Download, Upload, LogOut, ChevronRight } from 'lucide-react';
+import { X, Pencil, Trash2, Link2, Download, Upload, LogOut, ChevronRight, Bell } from 'lucide-react';
 
 function useDarkMode() {
   const [dark, setDark] = useState(false);
@@ -24,11 +24,40 @@ function useDarkMode() {
   return { dark, toggle };
 }
 
+const REMINDER_SETTINGS_KEY = 'reminderSettings';
+
+// Przypomnienie o treningu (banner na dashboardzie) — ustawienia trzymane
+// lokalnie w localStorage, bez żadnej infrastruktury serwerowej (v1).
+function useReminderSettings() {
+  const [enabled, setEnabled] = useState(true);
+  const [thresholdDays, setThresholdDays] = useState(3);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(REMINDER_SETTINGS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed.enabled === 'boolean') setEnabled(parsed.enabled);
+        if (typeof parsed.thresholdDays === 'number' && parsed.thresholdDays > 0) setThresholdDays(parsed.thresholdDays);
+      }
+    } catch { /* uszkodzone ustawienia — zostają domyślne */ }
+  }, []);
+
+  const save = (next: { enabled: boolean; thresholdDays: number }) => {
+    setEnabled(next.enabled);
+    setThresholdDays(next.thresholdDays);
+    try { localStorage.setItem(REMINDER_SETTINGS_KEY, JSON.stringify(next)); } catch { /* pełny storage */ }
+  };
+
+  return { enabled, thresholdDays, save };
+}
+
 interface UserOption { id: string; name: string; }
 
 export default function UstawieniaPage() {
   const router = useRouter();
   const { dark, toggle: toggleDark } = useDarkMode();
+  const reminder = useReminderSettings();
   const { name: authName, email: authEmail, userId: authUserId } = useAuth();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [otherUsers, setOtherUsers] = useState<UserOption[]>([]);
@@ -211,6 +240,37 @@ export default function UstawieniaPage() {
             </button>
           </div>
           <p className="text-sm text-gray-500 mt-1">{dark ? 'Ciemny motyw' : 'Jasny motyw'}</p>
+        </section>
+
+        <section className="bg-white rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <h2 className="font-bold text-gray-800 flex items-center gap-1.5">
+              <Bell className="w-4 h-4" strokeWidth={2} /> Przypomnienia
+            </h2>
+            <button
+              onClick={() => reminder.save({ enabled: !reminder.enabled, thresholdDays: reminder.thresholdDays })}
+              className={`relative inline-flex h-6 w-12 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${reminder.enabled ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-200 hover:bg-gray-300'}`}>
+              <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${reminder.enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </div>
+          <p className="text-sm text-gray-500 mt-1">Baner na dashboardzie, gdy dawno nie było treningu</p>
+          {reminder.enabled && (
+            <div className="flex items-center gap-2 mt-3">
+              <span className="text-sm text-gray-700">Przypomnij po</span>
+              <input
+                type="number"
+                min={1}
+                max={14}
+                value={reminder.thresholdDays}
+                onChange={e => {
+                  const v = parseInt(e.target.value, 10);
+                  reminder.save({ enabled: reminder.enabled, thresholdDays: Number.isFinite(v) && v > 0 ? v : 1 });
+                }}
+                className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <span className="text-sm text-gray-700">dniach bez treningu</span>
+            </div>
+          )}
         </section>
 
         <section className="bg-white rounded-2xl p-4 shadow-sm">
