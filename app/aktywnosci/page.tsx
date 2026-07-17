@@ -442,7 +442,7 @@ export default function AktywnosPage() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <Link
                           href={`/aktywnosc/${a.id}`}
-                          className="font-bold text-gray-900 rounded transition-colors hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                          className="font-bold text-gray-900 rounded underline decoration-dotted decoration-gray-300 underline-offset-4 transition-colors hover:text-blue-600 hover:decoration-blue-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                         >
                           {a.type}
                         </Link>
