@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuthUserId } from '@/lib/auth';
+import type { Prisma } from '@prisma/client';
 
 // GET /api/activities/[id] — pojedyncza aktywność (podsumowanie + wykres tętna)
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -39,7 +40,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         kcal: kcal != null ? (kcal ? Number(kcal) : null) : existing.kcal,
         avgHr: avgHr != null ? (avgHr ? Number(avgHr) : null) : existing.avgHr,
         maxHr: maxHr != null ? (maxHr ? Number(maxHr) : null) : existing.maxHr,
-        hrSeries: Array.isArray(hrSeries) ? hrSeries : existing.hrSeries,
+        hrSeries: (Array.isArray(hrSeries) ? hrSeries : (existing.hrSeries ?? [])) as unknown as Prisma.InputJsonValue,
         notes: notes != null ? (notes?.trim() || null) : existing.notes,
       },
     });
