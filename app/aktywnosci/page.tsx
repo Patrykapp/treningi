@@ -73,6 +73,9 @@ export default function AktywnosPage() {
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const tcxInputRef = useRef<HTMLInputElement>(null);
+  // Doczytanie pliku z zegarka do JUŻ zapisanej aktywności (aktualizacja w miejscu)
+  const [editingTcxFor, setEditingTcxFor] = useState<string | null>(null);
+  const editTcxInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -144,6 +147,39 @@ export default function AktywnosPage() {
     e.target.value = '';
   };
 
+  // Doczytanie pliku z zegarka do już zapisanej aktywności — aktualizuje czas/dystans/kcal w miejscu
+  const handleEditTcxFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const activityId = editingTcxFor;
+    e.target.value = '';
+    setEditingTcxFor(null);
+    if (!file || !activityId) return;
+    const text = await file.text();
+    const parsed = parseTcx(text);
+    if (!parsed) { setToast({ message: 'Nie udało się odczytać pliku TCX', type: 'error' }); return; }
+    const durationMin = Math.round(parsed.durationSec / 60);
+    try {
+      const res = await fetch(`/api/activities/${activityId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          durationMin,
+          distanceKm: parsed.distanceKm > 0 ? parsed.distanceKm : undefined,
+          kcal: parsed.kcal > 0 ? parsed.kcal : undefined,
+        }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setActivities(prev => prev.map(a => a.id === activityId ? { ...a, ...updated } : a));
+        setToast({ message: `Zaktualizowano: ${parsed.kcal} kcal, ${formatDuration(durationMin)}`, type: 'success' });
+      } else {
+        setToast({ message: 'Błąd zapisu', type: 'error' });
+      }
+    } catch {
+      setToast({ message: 'Błąd połączenia', type: 'error' });
+    }
+  };
+
   // Otwórz wybór treningu z tego dnia dla danej aktywności
   const openLink = async (a: OtherActivity) => {
     if (linkingId === a.id) { setLinkingId(null); return; }
@@ -207,6 +243,14 @@ export default function AktywnosPage() {
           onCancel={() => setConfirmDelete(null)}
         />
       )}
+      {/* Współdzielony input do doczytania pliku zegarka do już zapisanej aktywności */}
+      <input
+        ref={editTcxInputRef}
+        type="file"
+        accept=".tcx"
+        onChange={handleEditTcxFile}
+        className="hidden"
+      />
 
       <div className="bg-white border-b px-4 py-4 sticky top-0 z-10">
         <h1 className="text-xl font-bold text-gray-900">Inne aktywności</h1>
@@ -400,11 +444,18 @@ export default function AktywnosPage() {
                       {a.notes && <p className="text-sm text-gray-500 italic mt-1">{a.notes}</p>}
                     </div>
                     {mine && (
-                      <button
-                        onClick={() => setConfirmDelete(a.id)}
-                        className="text-gray-400 hover:text-red-500 transition-colors p-1 shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                        title="Usuń"
-                      ><Trash2 className="w-4 h-4" strokeWidth={2} /></button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => { setEditingTcxFor(a.id); editTcxInputRef.current?.click(); }}
+                          className="text-gray-400 hover:text-blue-500 transition-colors p-1 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                          title="Wgraj/zaktualizuj z pliku zegarka (TCX)"
+                        ><Watch className="w-4 h-4" strokeWidth={2} /></button>
+                        <button
+                          onClick={() => setConfirmDelete(a.id)}
+                          className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                          title="Usuń"
+                        ><Trash2 className="w-4 h-4" strokeWidth={2} /></button>
+                      </div>
                     )}
                   </div>
 

@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { WorkoutSession } from '@/types';
 import { formatDate } from '@/lib/utils';
+import { parseTcx } from '@/lib/tcx';
 import { Toast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { SkeletonCard } from '@/components/ui/Skeleton';
@@ -24,6 +25,7 @@ import {
   Trash2,
   Footprints,
   BookmarkPlus,
+  Watch,
 } from 'lucide-react';
 
 interface Run {
@@ -163,6 +165,9 @@ function HistoriaPage() {
   const [savingTemplateFor, setSavingTemplateFor] = useState<string | null>(null);
   const [templateNameDraft, setTemplateNameDraft] = useState('');
   const [savingTemplate, setSavingTemplate] = useState(false);
+  // Doczytanie pliku z zegarka do już zapisanej aktywności (aktualizacja w miejscu)
+  const [editingTcxFor, setEditingTcxFor] = useState<string | null>(null);
+  const editTcxInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch('/api/exercises').then(r => r.json()).then(setExercises);
@@ -305,6 +310,39 @@ function HistoriaPage() {
     }
   };
 
+  // Doczytanie pliku z zegarka do już zapisanej aktywności — aktualizuje czas/dystans/kcal w miejscu
+  const handleEditTcxFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const activityId = editingTcxFor;
+    e.target.value = '';
+    setEditingTcxFor(null);
+    if (!file || !activityId) return;
+    const text = await file.text();
+    const parsed = parseTcx(text);
+    if (!parsed) { setToast({ message: 'Nie udało się odczytać pliku TCX', type: 'error' }); return; }
+    const durationMin = Math.round(parsed.durationSec / 60);
+    try {
+      const res = await fetch(`/api/activities/${activityId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          durationMin,
+          distanceKm: parsed.distanceKm > 0 ? parsed.distanceKm : undefined,
+          kcal: parsed.kcal > 0 ? parsed.kcal : undefined,
+        }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setActivities(prev => prev.map(a => a.id === activityId ? { ...a, ...updated } : a));
+        setToast({ message: `Zaktualizowano: ${parsed.kcal} kcal, ${formatActDuration(durationMin)}`, type: 'success' });
+      } else {
+        setToast({ message: 'Błąd zapisu', type: 'error' });
+      }
+    } catch {
+      setToast({ message: 'Błąd połączenia', type: 'error' });
+    }
+  };
+
   // Podłącz/odepnij aktywność do treningu (przeładuj, by przeniosła się pod trening)
   const linkActivity = async (activityId: string, sessionId: string | null) => {
     const res = await fetch(`/api/activities/${activityId}`, {
@@ -356,6 +394,14 @@ function HistoriaPage() {
           onCancel={() => setConfirmDelete(null)}
         />
       )}
+      {/* Współdzielony input do doczytania pliku zegarka do już zapisanej aktywności */}
+      <input
+        ref={editTcxInputRef}
+        type="file"
+        accept=".tcx"
+        onChange={handleEditTcxFile}
+        className="hidden"
+      />
 
       <div className="bg-white border-b px-4 py-4 sticky top-0 z-10">
         <h1 className="text-xl font-bold text-gray-900">Historia treningów</h1>
@@ -480,12 +526,21 @@ function HistoriaPage() {
                   itemWeekHeader,
                   <div key={`act-${a.id}`} className="bg-white rounded-2xl p-4 shadow-sm border-l-4 border-cyan-300">
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-gray-900">{a.type}</span>
-                        <span className="text-sm text-gray-500">{formatDate(a.date)}</span>
-                        <span className="text-[10px] font-semibold rounded-md px-1.5 py-0.5 bg-cyan-100 text-cyan-700">Aktywność</span>
-                        {!mine && a.user && (
-                          <span className="text-xs bg-purple-100 text-purple-700 rounded-lg px-2 py-0.5 font-semibold">{a.user.name}</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-wrap min-w-0">
+                          <span className="font-bold text-gray-900">{a.type}</span>
+                          <span className="text-sm text-gray-500">{formatDate(a.date)}</span>
+                          <span className="text-[10px] font-semibold rounded-md px-1.5 py-0.5 bg-cyan-100 text-cyan-700">Aktywność</span>
+                          {!mine && a.user && (
+                            <span className="text-xs bg-purple-100 text-purple-700 rounded-lg px-2 py-0.5 font-semibold">{a.user.name}</span>
+                          )}
+                        </div>
+                        {mine && (
+                          <button
+                            onClick={() => { setEditingTcxFor(a.id); editTcxInputRef.current?.click(); }}
+                            className="text-gray-400 hover:text-blue-500 transition-colors p-1 shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                            title="Wgraj/zaktualizuj z pliku zegarka (TCX)"
+                          ><Watch className="w-4 h-4" strokeWidth={2} /></button>
                         )}
                       </div>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-sm text-gray-600">
