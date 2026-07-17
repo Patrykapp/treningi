@@ -1,12 +1,22 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { formatDate, formatDateInput } from '@/lib/utils';
+import { parseTcx } from '@/lib/tcx';
 import { Toast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { SkeletonCard } from '@/components/ui/Skeleton';
-import { Bike, X, Pencil, Timer, MapPin, Flame, Link2, Dumbbell, Trash2 } from 'lucide-react';
+import { Bike, X, Pencil, Timer, MapPin, Flame, Link2, Dumbbell, Trash2, Watch } from 'lucide-react';
+
+// Dopasowanie sportu z pliku TCX do gotowego typu aktywności (jeśli się da rozpoznać)
+function matchPresetType(sport: string): string | null {
+  const s = sport.toLowerCase();
+  if (s.includes('bik') || s.includes('cycl')) return '🚴 Rower';
+  if (s.includes('swim')) return '🏊 Pływanie';
+  if (s.includes('ski') || s.includes('snow')) return '⛷️ Narty';
+  return null;
+}
 
 interface OtherActivity {
   id: string;
@@ -62,6 +72,7 @@ export default function AktywnosPage() {
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const tcxInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -112,6 +123,25 @@ export default function AktywnosPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleTcxFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    const parsed = parseTcx(text);
+    if (parsed) {
+      setDurationH(Math.floor(parsed.durationSec / 3600) || '');
+      setDurationM(Math.round((parsed.durationSec % 3600) / 60));
+      if (parsed.distanceKm > 0) setDistanceKm(parsed.distanceKm);
+      if (parsed.kcal > 0) setKcal(parsed.kcal);
+      const matched = matchPresetType(parsed.sport);
+      if (matched) { setType(matched); setCustomType(''); }
+      setToast({ message: `Zegarek: ${parsed.kcal} kcal, ${formatDuration(Math.round(parsed.durationSec / 60))}`, type: 'success' });
+    } else {
+      setToast({ message: 'Nie udało się odczytać pliku TCX', type: 'error' });
+    }
+    e.target.value = '';
   };
 
   // Otwórz wybór treningu z tego dnia dla danej aktywności
@@ -219,6 +249,22 @@ export default function AktywnosPage() {
               </button>
             </div>
 
+            {/* Import z zegarka (TCX) — wypełnia czas/dystans/kcal automatycznie */}
+            <input
+              ref={tcxInputRef}
+              type="file"
+              accept=".tcx"
+              onChange={handleTcxFile}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => tcxInputRef.current?.click()}
+              className="w-full flex items-center justify-center gap-2 border border-dashed border-gray-300 rounded-xl py-2.5 text-sm text-gray-600 transition-colors hover:bg-gray-50 hover:border-gray-400 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            >
+              <Watch className="w-4 h-4" strokeWidth={2} /> Importuj z zegarka (TCX)
+            </button>
+
             {/* Typ aktywności */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Typ aktywności</label>
@@ -294,7 +340,7 @@ export default function AktywnosPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Kcal <span className="text-gray-400">(opcjonalnie)</span></label>
-                <input type="number" min="0" step="10" inputMode="numeric"
+                <input type="number" min="0" step="1" inputMode="numeric"
                   value={kcal} onChange={e => setKcal(e.target.value === '' ? '' : Number(e.target.value))}
                   placeholder="np. 600"
                   className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-base text-center" />

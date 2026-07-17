@@ -23,6 +23,7 @@ import {
   Pencil,
   Trash2,
   Footprints,
+  BookmarkPlus,
 } from 'lucide-react';
 
 interface Run {
@@ -159,6 +160,9 @@ function HistoriaPage() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [merging, setMerging] = useState<string | null>(null);
+  const [savingTemplateFor, setSavingTemplateFor] = useState<string | null>(null);
+  const [templateNameDraft, setTemplateNameDraft] = useState('');
+  const [savingTemplate, setSavingTemplate] = useState(false);
 
   useEffect(() => {
     fetch('/api/exercises').then(r => r.json()).then(setExercises);
@@ -271,6 +275,34 @@ function HistoriaPage() {
       setToast({ message: 'Błąd łączenia', type: 'error' });
     }
     setMerging(null);
+  };
+
+  // Zapisz ćwiczenia z tego treningu jako nowy szablon (do użycia w Trening/Plan)
+  const saveAsTemplate = async (session: SessionWithActivities) => {
+    if (!templateNameDraft.trim()) return;
+    setSavingTemplate(true);
+    try {
+      const entries = session.entries
+        .filter(e => e.exerciseId)
+        .map(e => ({ exerciseId: e.exerciseId, sets: e.sets, reps: e.reps, weight: e.weight }));
+      const res = await fetch('/api/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: templateNameDraft.trim(), entries }),
+      });
+      if (res.ok) {
+        const tpl = await res.json();
+        setToast({ message: `Szablon "${tpl.name}" zapisany!`, type: 'success' });
+        setSavingTemplateFor(null);
+        setTemplateNameDraft('');
+      } else {
+        setToast({ message: 'Błąd zapisu szablonu', type: 'error' });
+      }
+    } catch {
+      setToast({ message: 'Błąd połączenia', type: 'error' });
+    } finally {
+      setSavingTemplate(false);
+    }
   };
 
   // Podłącz/odepnij aktywność do treningu (przeładuj, by przeniosła się pod trening)
@@ -656,6 +688,11 @@ function HistoriaPage() {
                             </button>
                           )}
                           <button
+                            onClick={() => { setSavingTemplateFor(savingTemplateFor === session.id ? null : session.id); setTemplateNameDraft(''); }}
+                            className="p-2 rounded-xl text-emerald-600 bg-emerald-50 hover:text-emerald-800 hover:bg-emerald-100 transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                            title="Zapisz jako szablon"
+                          ><BookmarkPlus className="w-4 h-4" strokeWidth={2} /></button>
+                          <button
                             onClick={() => router.push(`/trening?sessionId=${session.id}`)}
                             className="p-2 rounded-xl text-blue-500 bg-blue-50 hover:text-blue-700 hover:bg-blue-100 transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                             title="Edytuj trening"
@@ -669,6 +706,27 @@ function HistoriaPage() {
                       )}
                     </div>
                   </div>
+
+                  {/* Mini-formularz zapisu jako szablon */}
+                  {savingTemplateFor === session.id && (
+                    <div className="flex gap-2 mb-3 -mt-1">
+                      <input
+                        autoFocus
+                        value={templateNameDraft}
+                        onChange={e => setTemplateNameDraft(e.target.value)}
+                        placeholder="Nazwa szablonu"
+                        className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => saveAsTemplate(session)}
+                        disabled={savingTemplate || !templateNameDraft.trim()}
+                        className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-medium disabled:opacity-50 transition-colors hover:bg-emerald-700 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                      >
+                        {savingTemplate ? '...' : 'Zapisz'}
+                      </button>
+                    </div>
+                  )}
 
                   {/* Rozwinięta ocena ze wskazówkami */}
                   {isExpanded && rating && (
