@@ -210,6 +210,10 @@ model OtherActivity {
   durationMin Int      // czas w minutach
   distanceKm  Float?   // opcjonalnie
   kcal        Int?     // opcjonalnie
+  // Dane z zegarka (import TCX) — opcjonalne, jak w WorkoutSession
+  avgHr       Int?
+  maxHr       Int?
+  hrSeries    Json     @default("[]") // śr. tętno per 30 s
   notes       String?
   // Opcjonalne przypięcie do treningu z tego samego dnia
   sessionId   String?

@@ -2,6 +2,23 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuthUserId } from '@/lib/auth';
 
+// GET /api/activities/[id] — pojedyncza aktywność (podsumowanie + wykres tętna)
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const userId = await getAuthUserId();
+    if (!userId) return NextResponse.json({ error: 'Nieautoryzowany' }, { status: 401 });
+    const { id } = await params;
+    const activity = await prisma.otherActivity.findUnique({
+      where: { id },
+      include: { user: { select: { id: true, name: true } } },
+    });
+    if (!activity) return NextResponse.json({ error: 'Nie znaleziono' }, { status: 404 });
+    return NextResponse.json(activity);
+  } catch {
+    return NextResponse.json({ error: 'Błąd serwera' }, { status: 500 });
+  }
+}
+
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const userId = await getAuthUserId();
@@ -11,7 +28,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (!existing || existing.userId !== userId) {
       return NextResponse.json({ error: 'Nie znaleziono' }, { status: 404 });
     }
-    const { date, type, durationMin, distanceKm, kcal, notes } = await request.json();
+    const { date, type, durationMin, distanceKm, kcal, notes, avgHr, maxHr, hrSeries } = await request.json();
     const updated = await prisma.otherActivity.update({
       where: { id },
       data: {
@@ -20,6 +37,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         durationMin: durationMin != null ? Number(durationMin) : existing.durationMin,
         distanceKm: distanceKm != null ? (distanceKm ? Number(distanceKm) : null) : existing.distanceKm,
         kcal: kcal != null ? (kcal ? Number(kcal) : null) : existing.kcal,
+        avgHr: avgHr != null ? (avgHr ? Number(avgHr) : null) : existing.avgHr,
+        maxHr: maxHr != null ? (maxHr ? Number(maxHr) : null) : existing.maxHr,
+        hrSeries: Array.isArray(hrSeries) ? hrSeries : existing.hrSeries,
         notes: notes != null ? (notes?.trim() || null) : existing.notes,
       },
     });

@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import Link from 'next/link';
 import { formatDate, formatDateInput } from '@/lib/utils';
-import { parseTcx } from '@/lib/tcx';
+import { parseTcx, TcxSummary } from '@/lib/tcx';
 import { Toast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { SkeletonCard } from '@/components/ui/Skeleton';
-import { Bike, X, Pencil, Timer, MapPin, Flame, Link2, Dumbbell, Trash2, Watch } from 'lucide-react';
+import { Bike, X, Pencil, Timer, MapPin, Flame, Link2, Dumbbell, Trash2, Watch, Heart } from 'lucide-react';
 
 // Dopasowanie sportu z pliku TCX do gotowego typu aktywności (jeśli się da rozpoznać)
 function matchPresetType(sport: string): string | null {
@@ -25,6 +26,7 @@ interface OtherActivity {
   durationMin: number;
   distanceKm: number | null;
   kcal: number | null;
+  avgHr?: number | null;
   notes: string | null;
   sessionId: string | null;
   user: { id: string; name: string };
@@ -73,6 +75,8 @@ export default function AktywnosPage() {
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const tcxInputRef = useRef<HTMLInputElement>(null);
+  // Dane z zegarka wczytane przed zapisem nowej aktywności (tętno itp.) — dołączane przy submit
+  const [pendingWatch, setPendingWatch] = useState<TcxSummary | null>(null);
   // Doczytanie pliku z zegarka do JUŻ zapisanej aktywności (aktualizacja w miejscu)
   const [editingTcxFor, setEditingTcxFor] = useState<string | null>(null);
   const editTcxInputRef = useRef<HTMLInputElement>(null);
@@ -105,6 +109,9 @@ export default function AktywnosPage() {
           distanceKm: distanceKm || null,
           kcal: kcal || null,
           notes: notes.trim() || null,
+          avgHr: pendingWatch?.avgHr || undefined,
+          maxHr: pendingWatch?.maxHr || undefined,
+          hrSeries: pendingWatch?.hrSeries || undefined,
         }),
       });
       if (res.ok) {
@@ -116,6 +123,7 @@ export default function AktywnosPage() {
         setType(''); setCustomType('');
         setDurationH(''); setDurationM(30);
         setDistanceKm(''); setKcal(''); setNotes('');
+        setPendingWatch(null);
         setShowForm(false);
       } else {
         const err = await res.json().catch(() => ({}));
@@ -140,6 +148,7 @@ export default function AktywnosPage() {
       if (parsed.kcal > 0) setKcal(parsed.kcal);
       const matched = matchPresetType(parsed.sport);
       if (matched) { setType(matched); setCustomType(''); }
+      setPendingWatch(parsed);
       setToast({ message: `Zegarek: ${parsed.kcal} kcal, ${formatDuration(Math.round(parsed.durationSec / 60))}`, type: 'success' });
     } else {
       setToast({ message: 'Nie udało się odczytać pliku TCX', type: 'error' });
@@ -166,6 +175,9 @@ export default function AktywnosPage() {
           durationMin,
           distanceKm: parsed.distanceKm > 0 ? parsed.distanceKm : undefined,
           kcal: parsed.kcal > 0 ? parsed.kcal : undefined,
+          avgHr: parsed.avgHr || undefined,
+          maxHr: parsed.maxHr || undefined,
+          hrSeries: parsed.hrSeries,
         }),
       });
       if (res.ok) {
@@ -428,7 +440,12 @@ export default function AktywnosPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-gray-900">{a.type}</span>
+                        <Link
+                          href={`/aktywnosc/${a.id}`}
+                          className="font-bold text-gray-900 rounded transition-colors hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                        >
+                          {a.type}
+                        </Link>
                         <span className="text-sm text-gray-500">{formatDate(a.date)}</span>
                         {!mine && (
                           <span className="text-xs bg-purple-100 text-purple-700 rounded-lg px-2 py-0.5 font-semibold">
@@ -440,6 +457,7 @@ export default function AktywnosPage() {
                         <span className="flex items-center gap-1"><Timer className="w-4 h-4" strokeWidth={2} /> {formatDuration(a.durationMin)}</span>
                         {a.distanceKm && <span className="flex items-center gap-1"><MapPin className="w-4 h-4" strokeWidth={2} /> {a.distanceKm} km</span>}
                         {a.kcal && <span className="flex items-center gap-1 text-red-500"><Flame className="w-4 h-4" strokeWidth={2} /> {a.kcal} kcal</span>}
+                        {a.avgHr && <span className="flex items-center gap-1 text-pink-500"><Heart className="w-4 h-4" strokeWidth={2} /> {a.avgHr} bpm</span>}
                       </div>
                       {a.notes && <p className="text-sm text-gray-500 italic mt-1">{a.notes}</p>}
                     </div>

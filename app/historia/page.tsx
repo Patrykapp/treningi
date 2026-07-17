@@ -26,6 +26,7 @@ import {
   Footprints,
   BookmarkPlus,
   Watch,
+  Heart,
 } from 'lucide-react';
 
 interface Run {
@@ -46,6 +47,7 @@ interface OtherActivity {
   durationMin: number;
   distanceKm: number | null;
   kcal: number | null;
+  avgHr?: number | null;
   notes: string | null;
   sessionId: string | null;
   user?: { id: string; name: string };
@@ -329,6 +331,9 @@ function HistoriaPage() {
           durationMin,
           distanceKm: parsed.distanceKm > 0 ? parsed.distanceKm : undefined,
           kcal: parsed.kcal > 0 ? parsed.kcal : undefined,
+          avgHr: parsed.avgHr || undefined,
+          maxHr: parsed.maxHr || undefined,
+          hrSeries: parsed.hrSeries,
         }),
       });
       if (res.ok) {
@@ -528,7 +533,12 @@ function HistoriaPage() {
                     <div className="min-w-0">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 flex-wrap min-w-0">
-                          <span className="font-bold text-gray-900">{a.type}</span>
+                          <Link
+                            href={`/aktywnosc/${a.id}`}
+                            className="font-bold text-gray-900 rounded transition-colors hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                          >
+                            {a.type}
+                          </Link>
                           <span className="text-sm text-gray-500">{formatDate(a.date)}</span>
                           <span className="text-[10px] font-semibold rounded-md px-1.5 py-0.5 bg-cyan-100 text-cyan-700">Aktywność</span>
                           {!mine && a.user && (
@@ -547,6 +557,7 @@ function HistoriaPage() {
                         <span className="inline-flex items-center gap-1"><Timer className="w-4 h-4" strokeWidth={2} /> {dur}</span>
                         {a.distanceKm && <span className="inline-flex items-center gap-1"><MapPin className="w-4 h-4" strokeWidth={2} /> {a.distanceKm} km</span>}
                         {a.kcal && <span className="inline-flex items-center gap-1 text-red-500"><Flame className="w-4 h-4" strokeWidth={2} /> {a.kcal} kcal</span>}
+                        {a.avgHr && <span className="inline-flex items-center gap-1 text-pink-500"><Heart className="w-4 h-4" strokeWidth={2} /> {a.avgHr} bpm</span>}
                       </div>
                       {a.notes && <p className="text-sm text-gray-500 italic mt-1">{a.notes}</p>}
                       {mine && daySess.length > 0 && (

@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   try {
     const userId = await getAuthUserId();
     if (!userId) return NextResponse.json({ error: 'Nieautoryzowany' }, { status: 401 });
-    const { date, type, durationMin, distanceKm, kcal, notes } = await request.json();
+    const { date, type, durationMin, distanceKm, kcal, notes, avgHr, maxHr, hrSeries } = await request.json();
     if (!date || !type || !durationMin) {
       return NextResponse.json({ error: 'Data, typ i czas są wymagane' }, { status: 400 });
     }
@@ -42,6 +42,9 @@ export async function POST(request: Request) {
         durationMin: Number(durationMin),
         distanceKm: distanceKm ? Number(distanceKm) : null,
         kcal: kcal ? Number(kcal) : null,
+        avgHr: avgHr ? Number(avgHr) : null,
+        maxHr: maxHr ? Number(maxHr) : null,
+        hrSeries: Array.isArray(hrSeries) ? hrSeries : [],
         notes: notes?.trim() || null,
       },
       include: { user: { select: { id: true, name: true } } },
