@@ -14,10 +14,10 @@ import { SkeletonCard, Skeleton } from '@/components/ui/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import {
   Target, Lock, Trash2, ArrowLeft, Plus, Scale, Ruler, Dumbbell,
-  PersonStanding, Zap, PartyPopper,
+  PersonStanding, Zap, PartyPopper, Repeat,
 } from 'lucide-react';
 
-type GoalType = 'WEIGHT' | 'MEASUREMENT' | 'EXERCISE_1RM' | 'RUN_DISTANCE' | 'RUN_TIME' | 'RUN_PACE';
+type GoalType = 'WEIGHT' | 'MEASUREMENT' | 'EXERCISE_1RM' | 'EXERCISE_REPS' | 'RUN_DISTANCE' | 'RUN_TIME' | 'RUN_PACE';
 // 'RUN' to pseudo-typ tylko na potrzeby kreatora — po wyborze wariantu
 // (dystans / dystans+czas) zamienia się na realny GoalType wysyłany do API.
 type PickerType = GoalType | 'RUN';
@@ -38,6 +38,7 @@ interface GoalRecord {
   achievedAt?: string | null;
   createdAt: string;
   currentValue: number | null;
+  startDate?: string | null;
   progressPct: number;
   achieved: boolean;
 }
@@ -46,6 +47,7 @@ const TYPE_OPTIONS: { type: PickerType; label: string; icon: typeof Scale }[] = 
   { type: 'WEIGHT', label: 'Waga ciała', icon: Scale },
   { type: 'MEASUREMENT', label: 'Obwód ciała', icon: Ruler },
   { type: 'EXERCISE_1RM', label: 'Siła (1RM)', icon: Dumbbell },
+  { type: 'EXERCISE_REPS', label: 'Powtórzenia (masa własna)', icon: Repeat },
   { type: 'RUN', label: 'Bieganie', icon: PersonStanding },
   { type: 'RUN_PACE', label: 'Tempo biegu', icon: Zap },
 ];
@@ -53,8 +55,19 @@ const TYPE_OPTIONS: { type: PickerType; label: string; icon: typeof Scale }[] = 
 function formatValue(goal: Pick<GoalRecord, 'type'>, v: number | null): string {
   if (v === null) return '—';
   if (goal.type === 'RUN_PACE') return formatPace(v);
+  if (goal.type === 'EXERCISE_REPS') return `${v} powt.`;
   const unit = goal.type === 'RUN_DISTANCE' ? 'km' : goal.type === 'MEASUREMENT' ? 'cm' : 'kg';
   return `${v}${unit}`;
+}
+
+// Etykieta "startu" paska postępu (najsłabszy historyczny wynik) — dla RUN_TIME
+// pokazujemy ją tak samo jak "teraz"/"cel": jako projekcję czasu, nie surowe tempo.
+function formatGoalStartLabel(goal: GoalRecord): string | null {
+  if (goal.startValue == null) return null;
+  if (goal.type === 'RUN_TIME' && goal.targetSecondary != null) {
+    return formatDuration(goal.startValue * goal.targetValue);
+  }
+  return formatValue(goal, goal.startValue);
 }
 
 // RUN_TIME przechowuje "current"/"start" jako tempo (sek/km) — dla czytelności
@@ -177,7 +190,8 @@ function CelePage() {
     const resolvedMeasurementKey = isCustomMeasurement ? formMeasurementCustomLabel.trim() : formMeasurementKey;
     if (effectiveType === 'MEASUREMENT' && !formMeasurementKey) { showToast('Wybierz obwód', 'error'); return; }
     if (effectiveType === 'MEASUREMENT' && isCustomMeasurement && !resolvedMeasurementKey) { showToast('Podaj nazwę pomiaru', 'error'); return; }
-    if (effectiveType === 'EXERCISE_1RM' && !formExerciseId) { showToast('Wybierz ćwiczenie', 'error'); return; }
+    if ((effectiveType === 'EXERCISE_1RM' || effectiveType === 'EXERCISE_REPS') && !formExerciseId) { showToast('Wybierz ćwiczenie', 'error'); return; }
+    if (effectiveType === 'EXERCISE_REPS' && !Number.isInteger(targetValue)) { showToast('Podaj liczbę całkowitą powtórzeń', 'error'); return; }
 
     setSaving(true);
     try {
@@ -189,7 +203,7 @@ function CelePage() {
           targetValue,
           targetSecondary,
           measurementKey: effectiveType === 'MEASUREMENT' ? resolvedMeasurementKey : undefined,
-          exerciseId: effectiveType === 'EXERCISE_1RM' ? formExerciseId : undefined,
+          exerciseId: (effectiveType === 'EXERCISE_1RM' || effectiveType === 'EXERCISE_REPS') ? formExerciseId : undefined,
           targetDate: formTargetDate || undefined,
           notes: formNotes || undefined,
         }),
@@ -252,6 +266,11 @@ function CelePage() {
               <span>{currentLabel} → {targetLabel}</span>
               <span className="font-semibold text-blue-600">{goal.progressPct}%</span>
             </div>
+            {goal.startDate && formatGoalStartLabel(goal) && (
+              <p className="text-[11px] text-gray-400 mt-0.5">
+                Start: {formatGoalStartLabel(goal)} · {formatDate(goal.startDate)}
+              </p>
+            )}
             {goal.targetDate && (
               <p className={`text-xs mt-1 ${overdue ? 'text-orange-500 font-medium' : 'text-gray-400'}`}>
                 {overdue ? 'Termin minął' : 'Do'} {formatDate(goal.targetDate)}
@@ -380,7 +399,7 @@ function CelePage() {
               </div>
             )}
 
-            {formType === 'EXERCISE_1RM' && (
+            {(formType === 'EXERCISE_1RM' || formType === 'EXERCISE_REPS') && (
               <>
                 {formExerciseId ? (
                   <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
@@ -399,9 +418,15 @@ function CelePage() {
                     onSelect={ex => { setFormExerciseId(ex.id); setFormExerciseName(ex.name); }}
                   />
                 )}
-                <p className="text-xs text-gray-500">
-                  To <span className="font-medium">szacowane</span> 1RM (wzór Epleya) liczone z Twoich serii — nie musisz robić realnego pojedynczego powtórzenia. Liczą się serie do 12 powtórzeń.
-                </p>
+                {formType === 'EXERCISE_1RM' ? (
+                  <p className="text-xs text-gray-500">
+                    To <span className="font-medium">szacowane</span> 1RM (wzór Epleya) liczone z Twoich serii — nie musisz robić realnego pojedynczego powtórzenia. Liczą się serie do 12 powtórzeń.
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-500">
+                    Liczy się najwięcej powtórzeń w jednej serii bez dodatkowego obciążenia (waga = 0, np. podciąganie na własnej masie).
+                  </p>
+                )}
               </>
             )}
 
@@ -436,7 +461,7 @@ function CelePage() {
               </button>
             )}
 
-            {effectiveType && (effectiveType !== 'EXERCISE_1RM' || formExerciseId) && (
+            {effectiveType && ((effectiveType !== 'EXERCISE_1RM' && effectiveType !== 'EXERCISE_REPS') || formExerciseId) && (
               <>
                 {effectiveType === 'RUN_PACE' ? (
                   <div>
@@ -471,12 +496,12 @@ function CelePage() {
                 ) : (
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Wartość docelowa ({effectiveType === 'RUN_DISTANCE' ? 'km' : effectiveType === 'MEASUREMENT' ? 'cm' : 'kg'})
+                      Wartość docelowa ({effectiveType === 'RUN_DISTANCE' ? 'km' : effectiveType === 'MEASUREMENT' ? 'cm' : effectiveType === 'EXERCISE_REPS' ? 'powt.' : 'kg'})
                     </label>
                     <input
                       type="number"
                       min="0"
-                      step="0.1"
+                      step={effectiveType === 'EXERCISE_REPS' ? '1' : '0.1'}
                       value={formTarget}
                       onChange={e => setFormTarget(e.target.value)}
                       className="w-full border border-gray-200 rounded-xl px-3 py-3 text-center text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"

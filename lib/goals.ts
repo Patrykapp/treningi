@@ -27,6 +27,35 @@ export function inferDirection(target: number, start: number): GoalDirection {
   return target < start ? 'decrease' : 'increase';
 }
 
+// Pojedynczy punkt historii (wartość + data) — używany do wyznaczenia "startu"
+// paska postępu (najgorszy dotychczasowy wynik) oraz wartości "teraz" (najświeższy wpis).
+export interface HistPoint {
+  value: number;
+  date: Date;
+}
+
+// Punkt z najniższą wartością (przy remisie: najwcześniejsza data). Używany jako
+// start paska postępu dla celów typu "increase" (siła, powtórzenia, dystans...) —
+// dzięki temu cel dolicza też postęp zrobiony PRZED jego założeniem.
+export function minPoint(points: HistPoint[]): HistPoint | null {
+  if (points.length === 0) return null;
+  return points.reduce((a, b) => (b.value < a.value || (b.value === a.value && b.date < a.date) ? b : a));
+}
+
+// Punkt z najwyższą wartością (przy remisie: najwcześniejsza data). Start paska
+// postępu dla celów typu "decrease" (waga, obwody, tempo...).
+export function maxPoint(points: HistPoint[]): HistPoint | null {
+  if (points.length === 0) return null;
+  return points.reduce((a, b) => (b.value > a.value || (b.value === a.value && b.date < a.date) ? b : a));
+}
+
+// Najświeższy wpis wg daty — do wartości "teraz" tam, gdzie liczy się ostatni
+// pomiar (waga, obwody), a nie rekord życiowy.
+export function latestByDate(points: HistPoint[]): HistPoint | null {
+  if (points.length === 0) return null;
+  return points.reduce((a, b) => (b.date > a.date ? b : a));
+}
+
 export interface GoalProgress {
   pct: number; // 0-100
   achieved: boolean;
