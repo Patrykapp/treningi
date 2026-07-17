@@ -713,64 +713,62 @@ function HistoriaPage() {
                       )}
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {/* Gwiazdki oceny + PR badge */}
-                      {rating?.prCount > 0 && (
-                        <span className="inline-flex items-center gap-1 text-sm font-bold bg-yellow-400 text-yellow-900 rounded-xl px-2.5 py-1 leading-none">
-                          <Trophy className="w-4 h-4" strokeWidth={2} /> ×{rating.prCount}
-                        </span>
-                      )}
-                      {rating ? (
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    {/* Gwiazdki oceny + PR badge */}
+                    {rating?.prCount > 0 && (
+                      <span className="inline-flex items-center gap-1 text-sm font-bold bg-yellow-400 text-yellow-900 rounded-xl px-2.5 py-1 leading-none">
+                        <Trophy className="w-4 h-4" strokeWidth={2} /> ×{rating.prCount}
+                      </span>
+                    )}
+                    {rating ? (
+                      <button
+                        onClick={() => setExpandedRating(isExpanded ? null : session.id)}
+                        className="flex items-center gap-1.5 bg-gray-50 rounded-xl px-2.5 py-1.5 transition-colors hover:bg-gray-100 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                        title="Kliknij aby zobaczyć ocenę i wskazówki"
+                      >
+                        <Stars count={rating.stars} />
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-1 px-2 py-1">
+                        <Stars count={0} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2 items-center justify-end mb-3 pt-2 border-t border-gray-100">
+                    <Link
+                      href={session.notes?.startsWith('Challenge:') ? `/challenge/wynik/${session.id}` : `/trening/podsumowanie/${session.id}`}
+                      className="p-2.5 rounded-xl text-purple-500 bg-purple-50 hover:text-purple-700 hover:bg-purple-100 transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                      title="Podsumowanie"
+                    ><BarChart3 className="w-5 h-5" strokeWidth={2} /></Link>
+                    {isLoggedIn && session.userId === authUserId && (
+                      <>
+                        {sameDaySessions.length > 1 && session.id !== mainSession.id && (
+                          <button
+                            onClick={() => handleMerge(mainSession.id, session.id)}
+                            disabled={merging === session.id}
+                            className="inline-flex items-center gap-1 px-2 py-1.5 rounded-xl text-xs font-semibold text-orange-600 bg-orange-50 hover:bg-orange-100 transition-colors active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                            title="Połącz z głównym treningiem tego dnia"
+                          >
+                            {merging === session.id ? '...' : (<><Link2 className="w-3.5 h-3.5" strokeWidth={2} /> Połącz</>)}
+                          </button>
+                        )}
                         <button
-                          onClick={() => setExpandedRating(isExpanded ? null : session.id)}
-                          className="flex items-center gap-1.5 bg-gray-50 rounded-xl px-2.5 py-1.5 transition-colors hover:bg-gray-100 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                          title="Kliknij aby zobaczyć ocenę i wskazówki"
-                        >
-                          <Stars count={rating.stars} />
-                        </button>
-                      ) : (
-                        <div className="flex items-center gap-1 px-2 py-1">
-                          <Stars count={0} />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex gap-1 items-center shrink-0">
-                      <Link
-                        href={session.notes?.startsWith('Challenge:') ? `/challenge/wynik/${session.id}` : `/trening/podsumowanie/${session.id}`}
-                        className="p-2 rounded-xl text-purple-500 bg-purple-50 hover:text-purple-700 hover:bg-purple-100 transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                        title="Podsumowanie"
-                      ><BarChart3 className="w-4 h-4" strokeWidth={2} /></Link>
-                      {isLoggedIn && session.userId === authUserId && (
-                        <>
-                          {sameDaySessions.length > 1 && session.id !== mainSession.id && (
-                            <button
-                              onClick={() => handleMerge(mainSession.id, session.id)}
-                              disabled={merging === session.id}
-                              className="inline-flex items-center gap-1 px-2 py-1.5 rounded-xl text-xs font-semibold text-orange-600 bg-orange-50 hover:bg-orange-100 transition-colors active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                              title="Połącz z głównym treningiem tego dnia"
-                            >
-                              {merging === session.id ? '...' : (<><Link2 className="w-3.5 h-3.5" strokeWidth={2} /> Połącz</>)}
-                            </button>
-                          )}
-                          <button
-                            onClick={() => { setSavingTemplateFor(savingTemplateFor === session.id ? null : session.id); setTemplateNameDraft(''); }}
-                            className="p-2 rounded-xl text-emerald-600 bg-emerald-50 hover:text-emerald-800 hover:bg-emerald-100 transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                            title="Zapisz jako szablon"
-                          ><BookmarkPlus className="w-4 h-4" strokeWidth={2} /></button>
-                          <button
-                            onClick={() => router.push(`/trening?sessionId=${session.id}`)}
-                            className="p-2 rounded-xl text-blue-500 bg-blue-50 hover:text-blue-700 hover:bg-blue-100 transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                            title="Edytuj trening"
-                          ><Pencil className="w-4 h-4" strokeWidth={2} /></button>
-                          <button
-                            onClick={() => setConfirmDelete(session.id)}
-                            className="p-2 rounded-xl text-red-500 bg-red-50 hover:text-red-700 hover:bg-red-100 transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                            title="Usuń trening"
-                          ><Trash2 className="w-4 h-4" strokeWidth={2} /></button>
-                        </>
-                      )}
-                    </div>
+                          onClick={() => { setSavingTemplateFor(savingTemplateFor === session.id ? null : session.id); setTemplateNameDraft(''); }}
+                          className="p-2.5 rounded-xl text-emerald-600 bg-emerald-50 hover:text-emerald-800 hover:bg-emerald-100 transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                          title="Zapisz jako szablon"
+                        ><BookmarkPlus className="w-5 h-5" strokeWidth={2} /></button>
+                        <button
+                          onClick={() => router.push(`/trening?sessionId=${session.id}`)}
+                          className="p-2.5 rounded-xl text-blue-500 bg-blue-50 hover:text-blue-700 hover:bg-blue-100 transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                          title="Edytuj trening"
+                        ><Pencil className="w-5 h-5" strokeWidth={2} /></button>
+                        <button
+                          onClick={() => setConfirmDelete(session.id)}
+                          className="p-2.5 rounded-xl text-red-500 bg-red-50 hover:text-red-700 hover:bg-red-100 transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                          title="Usuń trening"
+                        ><Trash2 className="w-5 h-5" strokeWidth={2} /></button>
+                      </>
+                    )}
                   </div>
 
                   {/* Mini-formularz zapisu jako szablon */}
