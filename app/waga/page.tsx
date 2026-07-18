@@ -75,6 +75,24 @@ export default function WagaPage() {
     waga: e.weight,
   }));
 
+  // Oś Y z wymuszonym minimalnym zakresem — bez tego Recharts ('auto') dociska
+  // skalę dokładnie do min/max danych, więc np. wahania 88-89kg (1kg) wypełniają
+  // całą wysokość wykresu i wyglądają jak duży skok. Wymuszamy min. 6kg rozpiętości
+  // (plus zapas 30% nad realnym zakresem, gdy dane rozciągają się szerzej).
+  const chartWeights = chartData.map(d => d.waga);
+  const yDomain: [number, number] = (() => {
+    if (chartWeights.length === 0) return [0, 1];
+    const minW = Math.min(...chartWeights);
+    const maxW = Math.max(...chartWeights);
+    const MIN_SPAN = 6;
+    const span = Math.max((maxW - minW) * 1.3, MIN_SPAN);
+    const center = (minW + maxW) / 2;
+    return [
+      Math.round((center - span / 2) * 2) / 2,
+      Math.round((center + span / 2) * 2) / 2,
+    ];
+  })();
+
   const latest = entries[0];
   const oldest = entries[entries.length - 1];
   const diff = latest && oldest && latest.id !== oldest.id
@@ -147,7 +165,7 @@ export default function WagaPage() {
               <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} />
-                <YAxis tick={{ fontSize: 11 }} tickLine={false} unit="kg" domain={['auto', 'auto']} />
+                <YAxis tick={{ fontSize: 11 }} tickLine={false} unit="kg" domain={yDomain} />
                 <Tooltip formatter={(v) => [`${v}kg`, 'Waga']} />
                 <Line type="monotone" dataKey="waga" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} />
               </LineChart>
