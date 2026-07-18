@@ -19,6 +19,7 @@ import {
   Footprints,
   MapPin,
   Zap,
+  Sparkles,
 } from 'lucide-react';
 
 function formatDur(seconds: number): string {
@@ -103,6 +104,7 @@ interface Session {
   maxHr?: number | null;
   hrSeries?: number[];
   runs?: Run[];
+  aiComment?: string | null;
 }
 
 // Tempo w formacie min'ss"/km
@@ -171,6 +173,9 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
   const [weightKg, setWeightKg] = useState(0);
   const [loading, setLoading] = useState(true);
   const [compareRuns, setCompareRuns] = useState<Run[]>([]);
+  const [aiComment, setAiComment] = useState<string | null>(null);
+  const [aiCommentLoading, setAiCommentLoading] = useState(false);
+  const [aiCommentAttempted, setAiCommentAttempted] = useState(false);
   const { userId: authUserId } = useAuth();
 
   const attachTcx = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -194,12 +199,15 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
   };
 
   useEffect(() => {
+    setAiComment(null);
+    setAiCommentAttempted(false);
     Promise.all([
       fetch(`/api/sessions/${id}`).then(r => r.json()),
       fetch(`/api/sessions/${id}/rating`).then(r => r.json()),
     ]).then(([sess, rat]) => {
       if (sess && !sess.error) {
         setSession(sess);
+        if (sess.aiComment) { setAiComment(sess.aiComment); setAiCommentAttempted(true); }
         // Waga ciała właściciela treningu — do szacowania kcal
         if (sess.user?.id) {
           fetch(`/api/body-weight?userId=${sess.user.id}&limit=1`)
@@ -212,6 +220,23 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [id]);
+
+  // Komentarz trenera AI — generowany raz i cache'owany w bazie (WorkoutSession.aiComment),
+  // więc odpalamy tylko gdy jeszcze go nie ma.
+  useEffect(() => {
+    if (!session || aiComment || aiCommentLoading || aiCommentAttempted) return;
+    setAiCommentLoading(true);
+    setAiCommentAttempted(true);
+    fetch('/api/ai/session-comment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: session.id }),
+    })
+      .then(r => r.json())
+      .then(d => { if (d?.comment) setAiComment(d.comment); })
+      .catch(() => {})
+      .finally(() => setAiCommentLoading(false));
+  }, [session, aiComment, aiCommentLoading, aiCommentAttempted]);
 
   // Bieg przypięty do treningu (np. bieg + challenge tego samego dnia) — do porównania
   // (Twoje śr./najlepsze tempo) pobieramy pozostałe biegi właściciela sesji.
@@ -316,6 +341,14 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Komentarz trenera AI */}
+        {aiComment && (
+          <div className="bg-white rounded-2xl shadow-sm p-4 flex items-start gap-2.5">
+            <Sparkles className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" strokeWidth={2} />
+            <p className="text-sm text-gray-700 italic">{aiComment}</p>
           </div>
         )}
 

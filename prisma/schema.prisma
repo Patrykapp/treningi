@@ -41,6 +41,7 @@ model Exercise {
   v2ImageUrl   String?        // statyczny obraz (miniatura / poster)
   v2VideoUrl   String?        // animowane wideo (MP4) — odtwarzane jak GIF
   v2Checked    Boolean        @default(false) // już próbowano dopasować (także gdy brak trafienia)
+  aiTip        String?        // wskazówka techniczna AI — generowana raz, cache w bazie
   entries      WorkoutEntry[]
   favorites    UserFavorite[]
   goals        Goal[]
@@ -63,6 +64,9 @@ model WorkoutSession {
   avgHr       Int?
   maxHr       Int?
   hrSeries    Json           @default("[]") // śr. tętno per 30 s
+  // Komentarz trenera AI (podsumowanie treningu) albo komentarz do Wyzwania —
+  // generowany raz, cache w bazie (sesja jest niezmienna po fakcie).
+  aiComment   String?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 

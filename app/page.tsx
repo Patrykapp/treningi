@@ -185,7 +185,32 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [viewUserId, setViewUserId] = useState<string | null>(null); // null = zalogowany
   const [comparisonPeriod, setComparisonPeriod] = useState<'week' | 'alltime'>('week');
+  const [dailyTip, setDailyTip] = useState<string | null>(null);
   const { isLoggedIn, name, userId } = useAuth();
+
+  // Porada/ciekawostka dnia (AI) — cache w localStorage na 24h per użytkownik,
+  // żeby nie odpytywać Groq przy każdym wejściu na dashboard tego samego dnia.
+  useEffect(() => {
+    if (!isLoggedIn || !userId) { setDailyTip(null); return; }
+    const today = new Date().toISOString().slice(0, 10);
+    const cacheKey = `dailyTip_v1_${userId}`;
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached) as { date: string; tip: string };
+        if (parsed?.date === today && parsed.tip) { setDailyTip(parsed.tip); return; }
+      }
+    } catch { /* uszkodzony cache — pomiń */ }
+    fetch('/api/ai/daily-tip')
+      .then(r => r.json())
+      .then(d => {
+        if (d?.tip) {
+          setDailyTip(d.tip);
+          try { localStorage.setItem(cacheKey, JSON.stringify({ date: today, tip: d.tip })); } catch { /* quota — pomiń */ }
+        }
+      })
+      .catch(() => {});
+  }, [isLoggedIn, userId]);
 
   const loadDashboard = useCallback(async () => {
     // 1. Natychmiast pokaż ostatnie dane z cache (jeśli są), odśwież w tle
@@ -360,6 +385,16 @@ export default function DashboardPage() {
             >
               <X className="w-4 h-4" strokeWidth={2} />
             </button>
+          </div>
+        )}
+
+        {isLoggedIn && dailyTip && (
+          <div className="bg-white rounded-2xl p-4 shadow-sm flex items-start gap-2.5">
+            <Sparkles className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" strokeWidth={2} />
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-0.5">Porada dnia</p>
+              <p className="text-sm text-gray-700">{dailyTip}</p>
+            </div>
           </div>
         )}
 

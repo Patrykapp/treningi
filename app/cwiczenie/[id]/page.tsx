@@ -12,7 +12,7 @@ import { activeSession } from '@/hooks/useActiveSession';
 import { SkeletonCard, Skeleton } from '@/components/ui/Skeleton';
 import {
   ChevronLeft, Undo2, Plus, X, Users, AlertTriangle,
-  ChevronUp, ChevronDown, BarChart3, Trash2,
+  ChevronUp, ChevronDown, BarChart3, Trash2, Sparkles,
 } from 'lucide-react';
 
 interface EntryWithSession {
@@ -178,12 +178,17 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
   const [formPrefilled, setFormPrefilled] = useState(false);
 
   const [showTechnika, setShowTechnika] = useState(false);
+  const [aiTip, setAiTip] = useState<string | null>(null);
+  const [aiTipLoading, setAiTipLoading] = useState(false);
+  const [aiTipAttempted, setAiTipAttempted] = useState(false);
   const [linkedDb, setLinkedDb] = useState<DbExercise | null>(null);
   const [suggestions, setSuggestions] = useState<DbExercise[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [linking, setLinking] = useState(false);
 
   const loadData = async () => {
+    setAiTip(null);
+    setAiTipAttempted(false);
     const uq = authUserId ? `&userId=${authUserId}` : '';
     const [exRes, entRes, usersRes] = await Promise.all([
       fetch('/api/exercises').then(r => r.json()),
@@ -192,6 +197,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
     ]);
     const ex = (Array.isArray(exRes) ? exRes : []).find((e: Exercise) => e.id === id) || null;
     setExercise(ex);
+    if (ex?.aiTip) { setAiTip(ex.aiTip); setAiTipAttempted(true); }
     const loadedEntries = Array.isArray(entRes) ? entRes : [];
     setEntries(loadedEntries);
     setUsers(Array.isArray(usersRes) ? usersRes : []);
@@ -241,6 +247,23 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
       .catch(() => setSuggestions([]))
       .finally(() => setLoadingSuggestions(false));
   }, [showTechnika, linkedDb, exercise]);
+
+  // Wskazówka techniczna AI — generowana raz na ćwiczenie (cache w bazie),
+  // dociągana leniwie dopiero po rozwinięciu sekcji "Technika i opis".
+  useEffect(() => {
+    if (!showTechnika || !exercise || aiTip || aiTipLoading || aiTipAttempted) return;
+    setAiTipLoading(true);
+    setAiTipAttempted(true);
+    fetch('/api/ai/exercise-tip', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ exerciseId: exercise.id }),
+    })
+      .then(r => r.json())
+      .then(d => { if (d?.tip) setAiTip(d.tip); })
+      .catch(() => {})
+      .finally(() => setAiTipLoading(false));
+  }, [showTechnika, exercise, aiTip, aiTipLoading, aiTipAttempted]);
 
   const linkExercise = async (dbEx: DbExercise) => {
     setLinking(true);
@@ -825,6 +848,12 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
 
           {showTechnika && (
             <div className="border-t border-gray-100">
+              {aiTip && (
+                <div className="px-4 pt-3 flex items-start gap-2">
+                  <Sparkles className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" strokeWidth={2} />
+                  <p className="text-sm text-gray-600 italic">{aiTip}</p>
+                </div>
+              )}
               {linkedDb ? (
                 <div className="p-4 space-y-4">
                   <div className="flex gap-3">

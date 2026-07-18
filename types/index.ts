@@ -16,6 +16,8 @@ export interface Exercise {
   images?: string[];
   // Liczba wpisów treningowych (popularność) — z bazy, przez /api/exercises.
   usageCount?: number;
+  // Wskazówka techniczna AI — generowana raz, cache w bazie.
+  aiTip?: string | null;
   createdAt: string;
   updatedAt: string;
 }

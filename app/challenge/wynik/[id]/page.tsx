@@ -3,7 +3,7 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { SkeletonCard, Skeleton } from '@/components/ui/Skeleton';
-import { Trophy, ArrowLeft, Footprints, MapPin, Timer, Zap, Flame } from 'lucide-react';
+import { Trophy, ArrowLeft, Footprints, MapPin, Timer, Zap, Flame, Sparkles } from 'lucide-react';
 import { latestWeight, runCalories } from '@/lib/calories';
 
 interface SetResult {
@@ -57,8 +57,13 @@ export default function ChallengeWynikPage({ params }: { params: Promise<{ id: s
   const [error, setError] = useState(false);
   const [weightKg, setWeightKg] = useState(0);
   const [compareRuns, setCompareRuns] = useState<Run[]>([]);
+  const [aiComment, setAiComment] = useState<string | null>(null);
+  const [aiCommentLoading, setAiCommentLoading] = useState(false);
+  const [aiCommentAttempted, setAiCommentAttempted] = useState(false);
 
   useEffect(() => {
+    setAiComment(null);
+    setAiCommentAttempted(false);
     fetch(`/api/sessions/${id}`)
       .then(r => r.json())
       .then(session => {
@@ -91,6 +96,7 @@ export default function ChallengeWynikPage({ params }: { params: Promise<{ id: s
           userId: session.user?.id || '',
           runs: Array.isArray(session.runs) ? session.runs : [],
         });
+        if (session.aiComment) { setAiComment(session.aiComment); setAiCommentAttempted(true); }
         setLoading(false);
 
         if (session.user?.id) {
@@ -102,6 +108,23 @@ export default function ChallengeWynikPage({ params }: { params: Promise<{ id: s
       })
       .catch(() => setError(true));
   }, [id]);
+
+  // Komentarz AI do Wyzwania — generowany raz i cache'owany w bazie
+  // (WorkoutSession.aiComment), więc odpalamy tylko gdy jeszcze go nie ma.
+  useEffect(() => {
+    if (!data || aiComment || aiCommentLoading || aiCommentAttempted) return;
+    setAiCommentLoading(true);
+    setAiCommentAttempted(true);
+    fetch('/api/ai/session-comment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: id }),
+    })
+      .then(r => r.json())
+      .then(d => { if (d?.comment) setAiComment(d.comment); })
+      .catch(() => {})
+      .finally(() => setAiCommentLoading(false));
+  }, [data, aiComment, aiCommentLoading, aiCommentAttempted, id]);
 
   // Bieg przypięty do tego challengu — do porównania (śr./najlepsze tempo)
   // pobieramy pozostałe biegi właściciela sesji.
@@ -162,6 +185,14 @@ export default function ChallengeWynikPage({ params }: { params: Promise<{ id: s
           <div className="text-6xl font-black">{data.totalReps}</div>
           <div className="text-sm opacity-80 mt-1">powtórzeń w {data.sets.length} seriach</div>
         </div>
+
+        {/* Komentarz AI */}
+        {aiComment && (
+          <div className="bg-white rounded-2xl shadow-sm p-4 flex items-start gap-2.5">
+            <Sparkles className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" strokeWidth={2} />
+            <p className="text-sm text-gray-700 italic">{aiComment}</p>
+          </div>
+        )}
 
         {/* Bieg przypięty do tego challengu (np. bieg + challenge tego samego dnia) */}
         {data.runs.map(run => {
