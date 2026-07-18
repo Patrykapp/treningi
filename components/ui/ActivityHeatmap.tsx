@@ -67,17 +67,18 @@ function HeatmapGrid({
   return (
     <div ref={scrollRef} className="overflow-x-auto">
       <div className="inline-flex flex-col">
-        {/* Month labels */}
-        <div className="flex mb-1" style={{ paddingLeft: `${dayLabelWidth + 4}px` }}>
-          {monthLabels.map((m, i) => {
-            const prevCol = i > 0 ? monthLabels[i - 1].col : 0;
-            const cols = i === 0 ? m.col : m.col - prevCol;
-            return (
-              <div key={i} className="shrink-0 text-gray-400" style={{ width: `${cols * colWidth}px`, fontSize }}>
-                {m.label}
-              </div>
-            );
-          })}
+        {/* Month labels — pozycjonowane bezwzględnie nad kolumną tygodnia,
+            w której zaczyna się dany miesiąc (naprawia przesunięcie nagłówków). */}
+        <div className="relative mb-1" style={{ height: Math.ceil(fontSize * 1.4) }}>
+          {monthLabels.map((m, i) => (
+            <div
+              key={i}
+              className="absolute top-0 text-gray-400 whitespace-nowrap"
+              style={{ left: `${dayLabelWidth + 4 + m.col * colWidth}px`, fontSize }}
+            >
+              {m.label}
+            </div>
+          ))}
         </div>
 
         <div className="flex">
