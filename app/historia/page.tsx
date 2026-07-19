@@ -614,7 +614,12 @@ function HistoriaPage() {
                   <div key={`run-${r.id}`} className="bg-white rounded-2xl p-4 shadow-sm border-l-4 border-orange-300">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="inline-flex items-center gap-1.5 font-bold text-gray-900"><Footprints className="w-4 h-4" strokeWidth={2} /> Bieg</span>
+                        <Link
+                          href={`/bieg/${r.id}`}
+                          className="inline-flex items-center gap-1.5 font-bold text-gray-900 rounded underline decoration-dotted decoration-gray-300 underline-offset-4 transition-colors hover:text-blue-600 hover:decoration-blue-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                        >
+                          <Footprints className="w-4 h-4" strokeWidth={2} /> Bieg
+                        </Link>
                         <span className="text-sm text-gray-500">{formatDate(r.date)}</span>
                         <span className="text-[10px] font-semibold rounded-md px-1.5 py-0.5 bg-orange-100 text-orange-700">Bieg</span>
                         {!mine && owner && (

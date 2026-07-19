@@ -2,6 +2,25 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuthUserId } from '@/lib/auth';
 
+// GET /api/runs/[id] — pojedynczy bieg (strona statystyk /bieg/[id])
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const authUserId = await getAuthUserId();
+    if (!authUserId) return NextResponse.json({ error: 'Nieautoryzowany' }, { status: 401 });
+    const { id } = await params;
+    const run = await prisma.runSession.findUnique({
+      where: { id },
+      include: { user: { select: { id: true, name: true } } },
+    });
+    if (!run) return NextResponse.json({ error: 'Nie znaleziono' }, { status: 404 });
+    // Odczyt dostępny dla każdego zalogowanego — wspólna aplikacja, jak przy treningach/aktywnościach.
+    return NextResponse.json(run);
+  } catch (e) {
+    console.error('GET /api/runs/[id]', e);
+    return NextResponse.json({ error: 'Błąd serwera' }, { status: 500 });
+  }
+}
+
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const authUserId = await getAuthUserId();
