@@ -5,6 +5,8 @@ import { Navigation } from "@/components/layout/Navigation";
 import { DarkModeInit } from "@/components/DarkModeInit";
 import { WorkoutDraftBar } from "@/components/ui/WorkoutDraftBar";
 import { PwaInit } from "@/components/PwaInit";
+import { AuthProvider } from "@/components/AuthProvider";
+import { getAuthUser } from "@/lib/auth";
 
 const inter = Inter({
   subsets: ["latin", "latin-ext"],
@@ -30,15 +32,21 @@ export const viewport: Viewport = {
   themeColor: "#2563eb",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Auth ustalany raz na serwerze i podawany klientowi przez kontekst —
+  // eliminuje fetch '/api/auth' przy każdej nawigacji.
+  const authUser = await getAuthUser();
+
   return (
     <html lang="pl" className={inter.variable}>
       <body className="bg-gray-50 min-h-screen">
-        <DarkModeInit />
-        <PwaInit />
-        <main className="pb-16">{children}</main>
-        <WorkoutDraftBar />
-        <Navigation />
+        <AuthProvider initial={authUser}>
+          <DarkModeInit />
+          <PwaInit />
+          <main className="pb-16">{children}</main>
+          <WorkoutDraftBar />
+          <Navigation />
+        </AuthProvider>
       </body>
     </html>
   );
