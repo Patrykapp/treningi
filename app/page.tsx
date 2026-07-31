@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { WorkoutSession } from '@/types';
 import { formatDate, formatDateInput } from '@/lib/utils';
@@ -87,6 +87,91 @@ function useReminderBanner(myActivities: Dated[]) {
   };
 
   return { visible, daysSince, dismiss };
+}
+
+// Zachęta typu "X zrobił challenge — może ty też?": jeśli INNY użytkownik zrobił
+// challenge w ostatnich 3 dniach, a zalogowany jeszcze nie odpowiedział na niego
+// tym samym ćwiczeniem, pokaż baner z wynikiem do pobicia. Chowanie per
+// konkretny challenge (klucz = sessionId) w localStorage, więc nowy challenge
+// pokaże się ponownie, a już schowany zostaje schowany.
+const CHALLENGE_NUDGE_DISMISSED_KEY = 'challengeNudgeDismissedId';
+const CHALLENGE_NUDGE_WINDOW_DAYS = 3;
+
+interface ChallengeNudge {
+  userName: string;
+  exerciseName: string;
+  exerciseId: string;
+  totalReps: number;
+  sessionId: string;
+  daysAgo: number;
+}
+
+function useChallengeNudge(
+  sessionsByUser: Record<string, WorkoutSession[]>,
+  users: AppUser[],
+  myUserId: string | null,
+): { nudge: ChallengeNudge | null; dismiss: () => void } {
+  const [dismissedId, setDismissedId] = useState<string | null>(null);
+  useEffect(() => {
+    try { setDismissedId(localStorage.getItem(CHALLENGE_NUDGE_DISMISSED_KEY)); } catch { /* brak dostępu do storage */ }
+  }, []);
+
+  const nudge = useMemo<ChallengeNudge | null>(() => {
+    if (!myUserId) return null;
+    const now = Date.now();
+    const windowMs = CHALLENGE_NUDGE_WINDOW_DAYS * 86400000;
+
+    let best: ChallengeNudge | null = null;
+    let bestTs = -1;
+    for (const u of users) {
+      if (u.id === myUserId) continue;
+      for (const s of sessionsByUser[u.id] || []) {
+        if (!s.notes?.startsWith('Challenge:')) continue;
+        const ts = new Date(s.date).getTime();
+        if (now - ts > windowMs) continue;
+        const entry = s.entries?.[0];
+        if (!entry) continue;
+        const totalReps = Array.isArray(entry.setsData)
+          ? entry.setsData.reduce((a, x) => a + (x.reps || 0), 0)
+          : 0;
+        if (ts > bestTs) {
+          bestTs = ts;
+          best = {
+            userName: u.name,
+            exerciseName: entry.exercise?.name || 'ćwiczenie',
+            exerciseId: entry.exerciseId,
+            totalReps,
+            sessionId: s.id,
+            daysAgo: Math.max(0, Math.round((now - ts) / 86400000)),
+          };
+        }
+      }
+    }
+    if (!best) return null;
+
+    // Nie zachęcaj, jeśli sam zrobiłem już challenge tego ćwiczenia nie wcześniej niż on.
+    const answered = (sessionsByUser[myUserId] || []).some(s =>
+      s.notes?.startsWith('Challenge:') &&
+      new Date(s.date).getTime() >= bestTs &&
+      (s.entries || []).some(e => e.exerciseId === best!.exerciseId)
+    );
+    return answered ? null : best;
+  }, [sessionsByUser, users, myUserId]);
+
+  const dismiss = () => {
+    if (!nudge) return;
+    try { localStorage.setItem(CHALLENGE_NUDGE_DISMISSED_KEY, nudge.sessionId); } catch { /* pełny storage */ }
+    setDismissedId(nudge.sessionId);
+  };
+
+  if (nudge && dismissedId === nudge.sessionId) return { nudge: null, dismiss };
+  return { nudge, dismiss };
+}
+
+function nudgeTimeLabel(daysAgo: number): string {
+  if (daysAgo <= 0) return 'dzisiaj';
+  if (daysAgo === 1) return 'wczoraj';
+  return `${daysAgo} dni temu`;
 }
 
 function calcStreak(sessions: Dated[]): number {
@@ -270,6 +355,7 @@ export default function DashboardPage() {
     ...(activitiesByUser[userId] || []).filter(a => !a.sessionId),
   ] : [];
   const reminder = useReminderBanner(myActivities);
+  const challengeNudge = useChallengeNudge(sessionsByUser, users, userId);
 
   // Aktywny plan treningowy zalogowanego — pokazuje "dziś wg planu" niezależnie
   // od tego, czyj profil jest oglądany (tak jak przypomnienie o treningu wyżej).
@@ -382,6 +468,33 @@ export default function DashboardPage() {
               onClick={reminder.dismiss}
               className="p-1.5 rounded-lg text-amber-400 transition-colors hover:text-amber-700 hover:bg-amber-100 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
               aria-label="Ukryj przypomnienie na dziś"
+            >
+              <X className="w-4 h-4" strokeWidth={2} />
+            </button>
+          </div>
+        )}
+
+        {isLoggedIn && challengeNudge.nudge && (
+          <div className="bg-blue-50 border border-blue-200 rounded-2xl px-4 py-3 flex items-center gap-3">
+            <Zap className="w-6 h-6 text-blue-500 shrink-0" strokeWidth={2} />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-blue-700">
+                Nowy challenge od {challengeNudge.nudge.userName}!
+              </p>
+              <p className="text-xs text-blue-600">
+                {challengeNudge.nudge.exerciseName}: {challengeNudge.nudge.totalReps} powt. ({nudgeTimeLabel(challengeNudge.nudge.daysAgo)}) — może ty też? Pobij wynik!
+              </p>
+            </div>
+            <Link
+              href="/challenge"
+              className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold bg-blue-600 text-white rounded-xl px-3 py-2 transition-colors hover:bg-blue-700 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            >
+              <Zap className="w-3.5 h-3.5" strokeWidth={2} /> Zrób
+            </Link>
+            <button
+              onClick={challengeNudge.dismiss}
+              className="p-1.5 rounded-lg text-blue-400 transition-colors hover:text-blue-700 hover:bg-blue-100 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+              aria-label="Ukryj tę zachętę"
             >
               <X className="w-4 h-4" strokeWidth={2} />
             </button>
