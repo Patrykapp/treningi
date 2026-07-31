@@ -70,7 +70,7 @@ function formatLastResult(last: LastResult): string {
 function TreningPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { userId: authUserId, name: authName } = useAuth();
+  const { userId: authUserId, name: authName, isolated: meIsolated } = useAuth();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [date, setDate] = useState(formatDateInput(new Date()));
   const [notes, setNotes] = useState('');
@@ -88,7 +88,7 @@ function TreningPage() {
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [templateName, setTemplateName] = useState('');
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
-  const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
+  const [users, setUsers] = useState<{ id: string; name: string; isolated?: boolean }[]>([]);
   // null = zalogowany user, 'all' = wszyscy, string = konkretny userId
   const [saveAsUserId, setSaveAsUserId] = useState<string | null>(null);
   const [existingSessionId, setExistingSessionId] = useState<string | null>(null);
@@ -205,6 +205,10 @@ function TreningPage() {
 
   // Użytkownik, dla którego pokazujemy podpowiedzi progresji
   const hintUserId = saveAsUserId && saveAsUserId !== 'all' ? saveAsUserId : authUserId;
+
+  // "Zapisz dla" to interakcja — pomija konta boczne (isolated). Konto boczne
+  // zapisuje tylko za siebie (pusta lista = brak przełącznika, brak "Oboje").
+  const saveTargets = meIsolated ? [] : users.filter(u => !u.isolated);
 
   // Ulubione zalogowanego użytkownika (sekcja ★ w pickerze ćwiczeń)
   useEffect(() => {
@@ -508,9 +512,9 @@ function TreningPage() {
     };
   };
 
-  // Lista użytkowników, dla których zapisujemy
+  // Lista użytkowników, dla których zapisujemy ('all' = tylko konta nieizolowane)
   const getTargetUserIds = (): string[] =>
-    saveAsUserId === 'all' ? users.map(u => u.id) : [saveAsUserId || authUserId || ''];
+    saveAsUserId === 'all' ? saveTargets.map(u => u.id) : [saveAsUserId || authUserId || ''];
 
   // Zapisz razem — dopisz ćwiczenia do istniejącej sesji tego dnia
   // (jeden atomowy request; przy "Oboje" dopisuje/tworzy dla każdego użytkownika)
@@ -594,7 +598,7 @@ function TreningPage() {
           await finishAndRedirect(mainId, 'Trening zapisany!');
         } else {
           const msg = saveAsUserId === 'all'
-            ? `Trening zapisany dla ${users.map(u => u.name).join(' i ')}!`
+            ? `Trening zapisany dla ${saveTargets.map(u => u.name).join(' i ')}!`
             : 'Trening zapisany!';
           setToast({ message: msg, type: 'success' });
           setTimeout(() => router.push('/'), 1500);
@@ -1042,11 +1046,11 @@ function TreningPage() {
           </div>
         )}
 
-        {users.length > 1 && !editingSession && (
+        {saveTargets.length > 1 && !editingSession && (
           <div className="bg-white rounded-2xl p-4 space-y-2">
             <label className="text-sm font-medium text-gray-700 block">Zapisz dla</label>
             <div className="flex gap-2">
-              {users.map(u => (
+              {saveTargets.map(u => (
                 <button key={u.id} type="button" onClick={() => setSaveAsUserId(u.id)}
                   className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
                     saveAsUserId === u.id

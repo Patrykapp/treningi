@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuthUserId } from '@/lib/auth';
+import { canWriteForTargets } from '@/lib/access';
 
 export async function GET(request: Request) {
   try {
@@ -96,6 +97,11 @@ export async function POST(request: Request) {
     const found = await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true } });
     if (found.length !== userIds.length) {
       return NextResponse.json({ error: 'Nieprawidłowy użytkownik docelowy' }, { status: 400 });
+    }
+
+    // Izolacja kont bocznych: nie pozwól zapisywać za/do konta isolated (poza sobą).
+    if (!(await canWriteForTargets(authUserId, userIds))) {
+      return NextResponse.json({ error: 'Brak uprawnień do zapisu dla tego użytkownika' }, { status: 403 });
     }
 
     const mapped = (entries as EntryInput[]).map(mapEntry);

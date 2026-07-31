@@ -7,6 +7,7 @@ export interface AuthState {
   userId: string | null;
   name: string | null;
   email: string | null;
+  isolated: boolean;
   loading: boolean;
 }
 
@@ -17,6 +18,7 @@ const AuthContext = createContext<AuthState>({
   userId: null,
   name: null,
   email: null,
+  isolated: false,
   loading: true,
 });
 
@@ -24,6 +26,7 @@ export interface InitialAuth {
   userId: string;
   name: string;
   email: string;
+  isolated: boolean;
 }
 
 // Auth jest ustalany raz na serwerze (layout.tsx -> getAuthUser) i podawany w
@@ -42,6 +45,7 @@ export function AuthProvider({
         userId: initial.userId,
         name: initial.name,
         email: initial.email,
+        isolated: initial.isolated,
         loading: false,
       }
     : {
@@ -49,6 +53,7 @@ export function AuthProvider({
         userId: null,
         name: null,
         email: null,
+        isolated: false,
         loading: false,
       };
 

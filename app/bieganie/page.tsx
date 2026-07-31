@@ -109,11 +109,11 @@ function splitDistance(index: number, distance: number): number {
 
 // ─── component ──────────────────────────────────────────────────────────────
 
-interface User { id: string; name: string; }
+interface User { id: string; name: string; isolated?: boolean; }
 
 export default function BieganiePage() {
   const router = useRouter();
-  const { isLoggedIn, loading, userId } = useAuth();
+  const { isLoggedIn, loading, userId, isolated: meIsolated } = useAuth();
 
   const [users, setUsers] = useState<User[]>([]);
   const [viewAsUserId, setViewAsUserId] = useState<string | null>(null);
@@ -177,6 +177,10 @@ export default function BieganiePage() {
   // ─── data loading ──────────────────────────────────────────────────────────
 
   const activeUserId = viewAsUserId || userId;
+
+  // Przełącznik "kogo oglądam / dla kogo zapisuję bieg" to interakcja — pomija
+  // konta boczne (isolated). Konto boczne widzi tylko siebie (brak przełącznika).
+  const switchTargets = meIsolated ? [] : users.filter(u => !u.isolated);
 
   const loadRuns = useCallback(async () => {
     if (!activeUserId) return;
@@ -351,9 +355,9 @@ export default function BieganiePage() {
       <div className="max-w-lg md:max-w-3xl lg:max-w-4xl mx-auto px-4 pt-6 space-y-6">
 
         {/* User switcher */}
-        {users.length > 1 && (
+        {switchTargets.length > 1 && (
           <div className="flex gap-2">
-            {users.map(u => (
+            {switchTargets.map(u => (
               <button
                 key={u.id}
                 onClick={() => setViewAsUserId(u.id === userId ? null : u.id)}

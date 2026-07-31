@@ -63,13 +63,16 @@ function formatTime(sec: number) {
 }
 
 export default function ChallengePage() {
-  const { isLoggedIn, userId } = useAuth();
+  const { isLoggedIn, userId, isolated: meIsolated } = useAuth();
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
+  const [users, setUsers] = useState<{ id: string; name: string; isolated?: boolean }[]>([]);
+  // "Zapisz jako" to interakcja — pomija konta boczne (isolated). Konto boczne
+  // zapisuje challenge tylko za siebie (brak przełącznika).
+  const saveTargets = meIsolated ? [] : users.filter(u => !u.isolated);
   const [saveAsUserId, setSaveAsUserId] = useState('');
 
   const [phase, setPhase] = useState<Phase>('setup');
@@ -567,11 +570,11 @@ export default function ChallengePage() {
           </div>
         </div>
 
-        {users.length > 1 && (
+        {saveTargets.length > 1 && (
           <div className="bg-white rounded-2xl shadow-sm p-4">
             <label className="text-sm font-medium text-gray-700 block mb-2">Zapisz jako</label>
             <div className="flex gap-2">
-              {users.map(u => (
+              {saveTargets.map(u => (
                 <button key={u.id} onClick={() => setSaveAsUserId(u.id)}
                   className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
                     (saveAsUserId || userId) === u.id ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'

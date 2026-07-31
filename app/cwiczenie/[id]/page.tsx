@@ -40,7 +40,7 @@ interface DbExercise {
   images?: string[];
 }
 
-interface AppUser { id: string; name: string; }
+interface AppUser { id: string; name: string; isolated?: boolean; }
 
 function calcMax(e: EntryWithSession) {
   if (e.setsData && e.setsData.length > 0) return Math.max(...e.setsData.map(s => s.weight));
@@ -145,7 +145,7 @@ function buildChart(
 
 export default function CwiczeniePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { isLoggedIn, userId: authUserId, name: authName, loading: authLoading } = useAuth();
+  const { isLoggedIn, userId: authUserId, name: authName, loading: authLoading, isolated: meIsolated } = useAuth();
 
   const [exercise, setExercise] = useState<Exercise | null>(null);
   const [entries, setEntries] = useState<EntryWithSession[]>([]);
@@ -299,7 +299,10 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
   const lastEntry = entries[0];
   const chartData = buildChart(entries, compareEntries, chartType);
   const compareName = users.find(u => u.id === compareUserId)?.name || 'Porownanie';
-  const otherUsers = users.filter(u => u.id !== authUserId);
+  const otherUsers = users.filter(u => u.id !== authUserId); // porównanie: wszyscy (podgląd wzajemny)
+  // Zapis "jako inny user" to interakcja — pomija konta boczne (isolated); konto
+  // boczne nie może zapisywać za innych (tylko za siebie).
+  const saveTargets = meIsolated ? [] : users.filter(u => !u.isolated);
 
   // Otwiera formularz i opcjonalnie wypełnia ostatnimi wartościami
   const openForm = (prefill = true) => {
@@ -379,7 +382,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
     setSaving(true);
     try {
       const targetIds: string[] = saveAsUserId === 'all'
-        ? users.map(u => u.id)
+        ? saveTargets.map(u => u.id)
         : [saveAsUserId || authUserId || ''];
       const res = await fetch('/api/sessions', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -409,7 +412,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
         const msg = isPR
           ? `🏆 Nowy rekord 1RM: ${new1RM} kg!`
           : saveAsUserId === 'all'
-            ? `Zapisano dla ${users.map(u => u.name).join(' i ')}!`
+            ? `Zapisano dla ${saveTargets.map(u => u.name).join(' i ')}!`
             : appendToExisting ? 'Dodano do treningu z tego dnia!' : 'Zapisano!';
         setToast({ message: msg, type: isPR ? 'success' : 'success' });
         setShowForm(false);
@@ -651,11 +654,11 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                 <input type="text" value={formComment} onChange={e => setFormComment(e.target.value)} placeholder="np. pas"
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm" /></div>
             </div>
-            {users.length > 1 && (
+            {saveTargets.length > 1 && (
               <div>
                 <label className="text-xs text-gray-500 block mb-1">Zapisz dla</label>
                 <div className="flex gap-2">
-                  {users.map(u => (
+                  {saveTargets.map(u => (
                     <button key={u.id} onClick={() => setSaveAsUserId(u.id)}
                       className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
                         saveAsUserId === u.id

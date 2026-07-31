@@ -17,6 +17,8 @@ model User {
   name            String
   email           String?           @unique
   passwordHash    String?
+  accessCode      String?           @unique // osobisty kod logowania (np. konto boczne Maciej)
+  isolated        Boolean           @default(false) // konto "z boku": brak interakcji z innymi (bez przełącznika profilu, zachęt, zapisu jako inny user). Podgląd historii i porównania pozostają.
   sessions        WorkoutSession[]
   bodyWeights     BodyWeight[]
   bodyMeasurements BodyMeasurement[]

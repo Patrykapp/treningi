@@ -9,7 +9,13 @@ export async function GET() {
     const authUserId = await getAuthUserId();
     if (!authUserId) return NextResponse.json({ error: 'Nieautoryzowany' }, { status: 401 });
 
+    // Konto "z boku" (isolated) widzi na pulpicie tylko siebie — bez przełącznika
+    // profilu i danych innych. Konta zwykłe widzą grupę zwykłych kont (bez isolated).
+    const me = await prisma.user.findUnique({ where: { id: authUserId }, select: { isolated: true } });
+    const viewerIsolated = me?.isolated ?? false;
+
     const users = await prisma.user.findMany({
+      where: viewerIsolated ? { id: authUserId } : { isolated: false },
       orderBy: { name: 'asc' },
       select: { id: true, name: true },
     });

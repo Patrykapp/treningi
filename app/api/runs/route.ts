@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuthUser } from '@/lib/auth';
+import { canWriteForTargets } from '@/lib/access';
 
 export async function GET(request: Request) {
   try {
@@ -38,6 +39,11 @@ export async function POST(request: Request) {
     }
 
     const targetUserId = userId || user.userId;
+
+    // Izolacja kont bocznych: bieg można zapisać tylko za siebie / za konto zwykłe.
+    if (!(await canWriteForTargets(user.userId, [targetUserId]))) {
+      return NextResponse.json({ error: 'Brak uprawnień do zapisu dla tego użytkownika' }, { status: 403 });
+    }
 
     const run = await prisma.runSession.create({
       data: {

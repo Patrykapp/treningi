@@ -4,7 +4,13 @@ import { getAuthUserId } from '@/lib/auth';
 
 export async function GET() {
   try {
-    const users = await prisma.user.findMany({ orderBy: { name: 'asc' } });
+    // Tylko bezpieczne pola — NIE wystawiamy passwordHash ani accessCode.
+    // isolated potrzebne, by front odróżnił konta "z boku" (ukryć je z list
+    // interaktywnych: zapisz-jako, przełącznik profilu, zachęty).
+    const users = await prisma.user.findMany({
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true, email: true, isolated: true },
+    });
     return NextResponse.json(users);
   } catch {
     return NextResponse.json({ error: 'Błąd serwera' }, { status: 500 });

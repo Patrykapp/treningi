@@ -5,6 +5,7 @@ export interface AuthPayload {
   userId: string;
   email: string;
   name: string;
+  isolated: boolean;
 }
 
 export async function getAuthUser(): Promise<AuthPayload | null> {
@@ -19,6 +20,7 @@ export async function getAuthUser(): Promise<AuthPayload | null> {
       userId: payload.userId as string,
       email: payload.email as string,
       name: payload.name as string,
+      isolated: payload.isolated === true,
     };
   } catch {
     return null;
