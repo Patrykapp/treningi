@@ -63,6 +63,23 @@ function formatActDuration(min: number): string {
   return m === 0 ? `${h} h` : `${h} h ${m} min`;
 }
 
+// Przerwa między seriami w formacie mm:ss (np. 3:00). Challenge trzyma ją
+// w JSON-ie pola comment pierwszego wpisu: { challenge:true, restSeconds:N }.
+function restLabelMs(sec: number): string {
+  const m = Math.floor(sec / 60).toString().padStart(2, '0');
+  const s = (sec % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
+}
+function challengeRestSeconds(session: WorkoutSession): number | null {
+  for (const e of session.entries) {
+    try {
+      const p = JSON.parse(e.comment || '');
+      if (p?.challenge && typeof p.restSeconds === 'number') return p.restSeconds;
+    } catch { /* stary format bez JSON */ }
+  }
+  return null;
+}
+
 interface SessionRating {
   score: number;
   stars: number;
@@ -716,6 +733,14 @@ function HistoriaPage() {
                           <Zap className="w-3.5 h-3.5" strokeWidth={2} /> Challenge →
                         </Link>
                       )}
+                      {session.notes?.startsWith('Challenge:') && (() => {
+                        const rest = challengeRestSeconds(session);
+                        return rest != null ? (
+                          <span className="ml-2 inline-flex items-center gap-1 text-xs text-gray-500 whitespace-nowrap">
+                            <Timer className="w-3.5 h-3.5" strokeWidth={2} /> przerwa {restLabelMs(rest)}
+                          </span>
+                        ) : null;
+                      })()}
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 mb-2">

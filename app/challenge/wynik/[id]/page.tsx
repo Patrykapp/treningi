@@ -26,12 +26,18 @@ interface ChallengeData {
   date: string;
   userId: string;
   runs: Run[];
+  restSeconds: number | null;
 }
 
 function formatTime(sec: number) {
   const m = Math.floor(sec / 60).toString().padStart(2, '0');
   const s = (sec % 60).toString().padStart(2, '0');
   return `${m}:${s}`;
+}
+
+// Etykieta przerwy między seriami — mm:ss dla czytelności (np. 3:00).
+function restLabel(sec: number): string {
+  return formatTime(sec);
 }
 
 // Tempo w formacie min'ss"/km
@@ -74,14 +80,16 @@ export default function ChallengeWynikPage({ params }: { params: Promise<{ id: s
 
         const setsData: { reps: number; weight: number }[] = Array.isArray(entry.setsData) ? entry.setsData : [];
 
-        // Try to parse durations from comment JSON
+        // Try to parse durations + rest interval from comment JSON
         let durations: number[] | null = null;
+        let restSeconds: number | null = null;
         try {
           const parsed = JSON.parse(entry.comment || '');
-          if (parsed?.challenge && Array.isArray(parsed.durations)) {
-            durations = parsed.durations;
+          if (parsed?.challenge) {
+            if (Array.isArray(parsed.durations)) durations = parsed.durations;
+            if (typeof parsed.restSeconds === 'number') restSeconds = parsed.restSeconds;
           }
-        } catch { /* old format — no durations */ }
+        } catch { /* old format — no durations/rest */ }
 
         const sets: SetResult[] = setsData.map((s, i) => ({
           reps: s.reps,
@@ -95,6 +103,7 @@ export default function ChallengeWynikPage({ params }: { params: Promise<{ id: s
           date: session.date,
           userId: session.user?.id || '',
           runs: Array.isArray(session.runs) ? session.runs : [],
+          restSeconds,
         });
         if (session.aiComment) { setAiComment(session.aiComment); setAiCommentAttempted(true); }
         setLoading(false);
@@ -275,6 +284,10 @@ export default function ChallengeWynikPage({ params }: { params: Promise<{ id: s
           <div className="flex justify-between text-sm">
             <span className="text-gray-500">Najsłabsza seria</span>
             <span className="font-bold text-gray-900">{Math.min(...data.sets.map(s => s.reps))} powt.</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-500">Przerwa między seriami</span>
+            <span className="font-bold text-gray-900">{data.restSeconds != null ? restLabel(data.restSeconds) : 'b/d'}</span>
           </div>
         </div>
       </div>
