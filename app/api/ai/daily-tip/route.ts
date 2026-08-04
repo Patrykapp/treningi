@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuthUserId } from '@/lib/auth';
+import { GROQ_MODEL, AI_EXTRA, aiMaxTokens, aiContent } from '@/lib/ai';
 
 function normalizeMuscle(raw?: string | null): string | null {
   if (!raw) return null;
@@ -45,12 +46,13 @@ export async function GET() {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: GROQ_MODEL,
+        ...AI_EXTRA,
         messages: [
           { role: 'system', content: system },
           { role: 'user', content: user },
         ],
-        max_tokens: 90,
+        max_tokens: aiMaxTokens(90),
         temperature: 0.95,
       }),
     });
@@ -61,7 +63,7 @@ export async function GET() {
     }
 
     const data = await groqRes.json();
-    const raw = data.choices?.[0]?.message?.content?.trim() || '';
+    const raw = aiContent(data) || '';
     const tip = raw.replace(/^["'"]+|["'"]+$/g, '');
     if (!tip) return NextResponse.json({ error: 'AI zwróciło pustą odpowiedź' }, { status: 502 });
 

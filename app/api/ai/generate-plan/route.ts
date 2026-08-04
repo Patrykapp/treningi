@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getAuthUserId } from '@/lib/auth';
+import { GROQ_MODEL, AI_EXTRA, aiMaxTokens, aiContent } from '@/lib/ai';
 
 export const maxDuration = 60;
 
@@ -150,9 +151,10 @@ FORMAT JSON:
       method: 'POST',
       headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: GROQ_MODEL,
+        ...AI_EXTRA,
         messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMessage }],
-        max_tokens: 800,
+        max_tokens: aiMaxTokens(800),
         temperature: 0.5,
         response_format: { type: 'json_object' },
       }),
@@ -162,7 +164,7 @@ FORMAT JSON:
       return null;
     }
     const groqData = await groqRes.json();
-    const raw = groqData.choices?.[0]?.message?.content?.trim() || '{}';
+    const raw = aiContent(groqData) || '{}';
     let parsed: GroqResponse;
     try {
       parsed = JSON.parse(raw);

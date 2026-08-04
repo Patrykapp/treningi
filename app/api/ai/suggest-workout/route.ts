@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuthUser } from '@/lib/auth';
+import { GROQ_MODEL, AI_EXTRA, aiMaxTokens, aiContent } from '@/lib/ai';
 
 interface SuggestedExercise {
   exerciseId: string;
@@ -163,12 +164,13 @@ Ułóż plan treningu.`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: GROQ_MODEL,
+        ...AI_EXTRA,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage },
         ],
-        max_tokens: 800,
+        max_tokens: aiMaxTokens(800),
         temperature: 0.5,
         response_format: { type: 'json_object' },
       }),
@@ -181,7 +183,7 @@ Ułóż plan treningu.`;
     }
 
     const groqData = await groqRes.json();
-    const raw = groqData.choices?.[0]?.message?.content?.trim() || '{}';
+    const raw = aiContent(groqData) || '{}';
 
     let plan: GroqResponse;
     try {

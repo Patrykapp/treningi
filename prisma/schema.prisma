@@ -258,6 +258,10 @@ model FoodProduct {
   servingG    Float?      // typowa porcja, np. bułka = 60 g
   servingLabel String?    // opis porcji, np. "1 bułka"
   source      String      @default("OWN") // OWN | SEED | OFF
+  // Dania złożone (np. z generatora AI) — sposób przygotowania i skład.
+  // Dla zwykłych produktów oba pola zostają puste.
+  recipe      String?
+  ingredients Json?       // [{ nazwa, gramy }]
   createdById String?     // kto dodał (null dla SEED i OFF)
   createdBy   User?       @relation(fields: [createdById], references: [id], onDelete: SetNull)
   usageCount  Int         @default(0) // do sortowania "najczęściej jadane"

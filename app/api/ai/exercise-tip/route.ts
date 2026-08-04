@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuthUserId } from '@/lib/auth';
+import { GROQ_MODEL, AI_EXTRA, aiMaxTokens, aiContent } from '@/lib/ai';
 
 // Wskazówka techniczna AI dla ćwiczenia — generowana RAZ i cache'owana w bazie
 // (Exercise.aiTip), więc kolejne wejścia na stronę ćwiczenia (przez dowolnego
@@ -36,12 +37,13 @@ export async function POST(request: Request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: GROQ_MODEL,
+        ...AI_EXTRA,
         messages: [
           { role: 'system', content: system },
           { role: 'user', content: user },
         ],
-        max_tokens: 80,
+        max_tokens: aiMaxTokens(80),
         temperature: 0.6,
       }),
     });
@@ -52,7 +54,7 @@ export async function POST(request: Request) {
     }
 
     const groqData = await groqRes.json();
-    const raw = groqData.choices?.[0]?.message?.content?.trim() || '';
+    const raw = aiContent(groqData) || '';
     const tip = raw.replace(/^["'"]+|["'"]+$/g, '');
     if (!tip) return NextResponse.json({ error: 'AI zwróciło pustą odpowiedź' }, { status: 502 });
 

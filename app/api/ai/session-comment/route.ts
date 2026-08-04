@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getAuthUserId } from '@/lib/auth';
 import { computeRating } from '@/lib/rating';
+import { GROQ_MODEL, AI_EXTRA, aiMaxTokens, aiContent } from '@/lib/ai';
 
 type SetData = { reps: number; weight: number };
 
@@ -27,12 +28,13 @@ async function callGroq(system: string, user: string): Promise<string | null> {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: GROQ_MODEL,
+        ...AI_EXTRA,
         messages: [
           { role: 'system', content: system },
           { role: 'user', content: user },
         ],
-        max_tokens: 100,
+        max_tokens: aiMaxTokens(100),
         temperature: 0.7,
       }),
     });
@@ -41,7 +43,7 @@ async function callGroq(system: string, user: string): Promise<string | null> {
       return null;
     }
     const data = await res.json();
-    const text = data.choices?.[0]?.message?.content?.trim() || null;
+    const text = aiContent(data) || null;
     // Groq czasem owija odpowiedź w cudzysłowy mimo instrukcji — zdejmij je.
     return text ? text.replace(/^["'"]+|["'"]+$/g, '') : null;
   } catch (e) {

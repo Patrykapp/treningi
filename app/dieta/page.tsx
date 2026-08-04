@@ -13,13 +13,16 @@ import { Modal } from '@/components/ui/Modal';
 import { Toast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { FoodPicker, type Candidate } from '@/components/ui/FoodPicker';
+import { WeekSummary } from '@/components/ui/WeekSummary';
+import { AiMealPlan } from '@/components/ui/AiMealPlan';
 import { MEALS, ACTIVITY_LEVELS, GOAL_TYPES } from '@/lib/nutrition';
 import { formatDate } from '@/lib/utils';
-import { ChevronLeft, ChevronRight, Plus, Trash2, Settings2, Flame, CalendarDays } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Trash2, Settings2, Flame, CalendarDays, Sparkles, ChefHat } from 'lucide-react';
 
 type Entry = {
   id: string; meal: string; name: string; grams: number;
   kcal: number; protein: number; carbs: number; fat: number;
+  product?: { recipe: string | null; ingredients: unknown; servingG: number | null } | null;
 };
 
 type Targets = {
@@ -79,6 +82,9 @@ export default function DietaPage() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
+  const [view, setView] = useState<'day' | 'week'>('day');
+  const [aiOpen, setAiOpen] = useState(false);
+  const [openRecipe, setOpenRecipe] = useState<string | null>(null);
   const [pickerMeal, setPickerMeal] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -206,6 +212,25 @@ export default function DietaPage() {
         </div>
       </div>
 
+      {/* Przełącznik widoku */}
+      <div className="flex gap-2">
+        {([['day', 'Dzień'], ['week', 'Tydzień']] as const).map(([v, label]) => (
+          <button
+            key={v}
+            onClick={() => setView(v)}
+            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+              view === v ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {view === 'week' && <WeekSummary anchorDate={date} />}
+
+      {view === 'day' && (
+      <>
       {/* Podsumowanie dnia */}
       <section className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
         {loading && !data ? (
@@ -257,6 +282,15 @@ export default function DietaPage() {
         )}
       </section>
 
+      {/* Generator jadłospisu */}
+      <button
+        onClick={() => setAiOpen(true)}
+        className="w-full flex items-center justify-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 py-3 font-medium text-blue-700 hover:bg-blue-100"
+      >
+        <Sparkles className="w-5 h-5" />
+        {(data?.entries.length ?? 0) > 0 ? 'Ułóż ten dzień od nowa (AI)' : 'Zaplanuj ten dzień z AI'}
+      </button>
+
       {/* Posiłki */}
       {MEALS.map((m) => {
         const items = byMeal[m.key] ?? [];
@@ -271,19 +305,43 @@ export default function DietaPage() {
             {items.length > 0 && (
               <ul className="divide-y divide-gray-100 mb-2">
                 {items.map((e) => (
-                  <li key={e.id} className="py-2 flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm">{e.name}</p>
-                      <p className="text-xs text-gray-500">
-                        {Math.round(e.grams)} g · B {e.protein} · W {e.carbs} · T {e.fat}
-                      </p>
+                  <li key={e.id} className="py-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm">{e.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {Math.round(e.grams)} g · B {e.protein} · W {e.carbs} · T {e.fat}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {e.product?.recipe && (
+                          <button
+                            onClick={() => setOpenRecipe(openRecipe === e.id ? null : e.id)}
+                            className="p-2 text-gray-400 hover:text-blue-600"
+                            aria-label="Przepis"
+                          >
+                            <ChefHat className="w-4 h-4" />
+                          </button>
+                        )}
+                        <span className="text-sm font-medium">{Math.round(e.kcal)}</span>
+                        <button onClick={() => setDeleteId(e.id)} className="p-2 text-gray-400 hover:text-red-500" aria-label="Usuń">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <span className="text-sm font-medium">{Math.round(e.kcal)}</span>
-                      <button onClick={() => setDeleteId(e.id)} className="p-2 text-gray-400 hover:text-red-500" aria-label="Usuń">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                    {openRecipe === e.id && e.product?.recipe && (
+                      <div className="mt-1 rounded-lg bg-gray-50 p-2 text-xs text-gray-600 space-y-1">
+                        {Array.isArray(e.product.ingredients) && e.product.ingredients.length > 0 && (
+                          <p>
+                            <strong>Składniki:</strong>{' '}
+                            {(e.product.ingredients as { nazwa: string; gramy: number }[])
+                              .map((i) => `${i.nazwa} ${i.gramy} g`)
+                              .join(', ')}
+                          </p>
+                        )}
+                        <p>{e.product.recipe}</p>
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -298,6 +356,22 @@ export default function DietaPage() {
           </section>
         );
       })}
+
+      </>
+      )}
+
+      <AiMealPlan
+        isOpen={aiOpen}
+        date={date}
+        dateLabel={date === todayISO() ? 'dzisiaj' : formatDate(date)}
+        hasEntries={(data?.entries.length ?? 0) > 0}
+        onClose={() => setAiOpen(false)}
+        onSaved={() => {
+          setAiOpen(false);
+          setToast({ msg: 'Jadłospis zapisany', type: 'success' });
+          void load(date);
+        }}
+      />
 
       <FoodPicker
         isOpen={pickerMeal !== null}

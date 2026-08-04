@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuthUser } from '@/lib/auth';
+import { GROQ_MODEL, AI_EXTRA, aiMaxTokens, aiContent } from '@/lib/ai';
 
 function formatDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -196,12 +197,13 @@ Odpowiedź: max 200 słów. Zwróć się do użytkownika po imieniu.`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: GROQ_MODEL,
+        ...AI_EXTRA,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage },
         ],
-        max_tokens: 500,
+        max_tokens: aiMaxTokens(500),
         temperature: 0.7,
       }),
     });
@@ -213,7 +215,7 @@ Odpowiedź: max 200 słów. Zwróć się do użytkownika po imieniu.`;
     }
 
     const groqData = await groqRes.json();
-    const insight = groqData.choices?.[0]?.message?.content?.trim() || '';
+    const insight = aiContent(groqData) || '';
 
     return NextResponse.json({
       insight,

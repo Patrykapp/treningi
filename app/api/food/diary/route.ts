@@ -48,6 +48,9 @@ export async function GET(request: Request) {
       prisma.mealEntry.findMany({
         where: { userId, date },
         orderBy: { createdAt: 'asc' },
+        // Przepis dołączamy od razu — dania z generatora mają go zapisany
+        // przy produkcie i chcemy je pokazać bez dodatkowego zapytania.
+        include: { product: { select: { recipe: true, ingredients: true, servingG: true } } },
       }),
       prisma.nutritionProfile.findUnique({ where: { userId } }),
       prisma.bodyWeight.findMany({ where: { userId }, orderBy: { date: 'desc' }, take: 1 }),
