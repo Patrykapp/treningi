@@ -28,6 +28,9 @@ model User {
   templates       WorkoutTemplate[]
   runs            RunSession[]
   otherActivities OtherActivity[]
+  mealEntries     MealEntry[]
+  foodProducts    FoodProduct[]
+  nutritionProfile NutritionProfile?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 }
@@ -229,4 +232,81 @@ model OtherActivity {
 
   @@index([userId, date])
   @@index([sessionId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  MODUŁ DIETY
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Katalog produktów. Trzy źródła w jednej tabeli, bo wyszukiwarka i tak musi
+/// przeszukiwać je razem:
+///   OWN  — wpisane ręcznie przez użytkownika (najwyższy priorytet)
+///   SEED — wbudowana lista podstawowych produktów (pieczywo, jaja, mięso...)
+///   OFF  — pobrane z Open Food Facts i zapisane, żeby drugi raz nie pytać API
+model FoodProduct {
+  id          String      @id @default(cuid())
+  name        String
+  brand       String?
+  barcode     String?     @unique // null dla produktów bez opakowania
+  kcal100     Float
+  protein100  Float       @default(0)
+  carbs100    Float       @default(0)
+  fat100      Float       @default(0)
+  fiber100    Float?
+  sugars100   Float?
+  salt100     Float?
+  servingG    Float?      // typowa porcja, np. bułka = 60 g
+  servingLabel String?    // opis porcji, np. "1 bułka"
+  source      String      @default("OWN") // OWN | SEED | OFF
+  createdById String?     // kto dodał (null dla SEED i OFF)
+  createdBy   User?       @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  usageCount  Int         @default(0) // do sortowania "najczęściej jadane"
+  entries     MealEntry[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([name])
+  @@index([source])
+}
+
+/// Pojedynczy wpis w dzienniku.
+/// Makroskładniki są zapisane jako SNAPSHOT — późniejsza korekta produktu
+/// w katalogu nie może zmieniać historii sprzed tygodni.
+model MealEntry {
+  id        String       @id @default(cuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime     // północ dnia, którego dotyczy wpis
+  meal      String       // SNIADANIE | OBIAD | KOLACJA | PRZEKASKA
+  productId String?
+  product   FoodProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  name      String       // snapshot nazwy (produkt może zniknąć)
+  grams     Float
+  kcal      Float
+  protein   Float        @default(0)
+  carbs     Float        @default(0)
+  fat       Float        @default(0)
+  createdAt DateTime     @default(now())
+
+  @@index([userId, date])
+}
+
+/// Dane potrzebne do wyliczenia dziennego zapotrzebowania (Mifflin-St Jeor).
+/// Waga nie jest tu trzymana — bierzemy najświeższy wpis z BodyWeight.
+model NutritionProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  heightCm       Float?
+  birthYear      Int?
+  sex            String?  // M | K
+  activityLevel  String   @default("MODERATE") // SEDENTARY | LIGHT | MODERATE | HIGH | ATHLETE
+  goalType       String   @default("MAINTAIN") // LOSE | MAINTAIN | GAIN
+  customKcal     Int?     // ręczne nadpisanie wyliczonego celu
+  proteinPct     Int      @default(30)
+  carbsPct       Int      @default(40)
+  fatPct         Int      @default(30)
+  addWorkoutKcal Boolean  @default(false) // czy doliczać kalorie spalone na treningu
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }

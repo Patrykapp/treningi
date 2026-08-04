@@ -85,10 +85,22 @@ export async function GET(request: Request) {
       signal: AbortSignal.timeout(TIMEOUT_MS),
       next: { revalidate: 86400 }, // produkty zmieniają się rzadko
     });
-    if (!res.ok) return NextResponse.json({ error: 'Baza produktów niedostępna' }, { status: 502 });
+    // UWAGA: OFF na nieznany produkt odpowiada HTTP 404 (z ciałem
+    // {"status":0,"status_verbose":"product not found"}). To NIE jest awaria —
+    // trzeba to odróżnić od realnego błędu, inaczej każdy produkt spoza bazy
+    // wygląda jak zepsute API.
+    if (res.status === 404) {
+      return NextResponse.json({ error: 'not_found', code: raw }, { status: 404 });
+    }
+    if (!res.ok) {
+      return NextResponse.json(
+        { error: 'Baza produktów niedostępna', upstreamStatus: res.status },
+        { status: 502 }
+      );
+    }
 
-    const json = await res.json();
-    if (json?.status !== 1 || !json?.product) {
+    const json = await res.json().catch(() => null);
+    if (!json || json.status !== 1 || !json.product) {
       return NextResponse.json({ error: 'not_found', code: raw }, { status: 404 });
     }
 

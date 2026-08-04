@@ -746,7 +746,7 @@ export default function DashboardPage() {
             { href: '/plan', icon: Calendar, label: 'Plan' },
             { href: '/insighty', icon: Sparkles, label: 'AI Insighty' },
             ...(DIET_USERS.includes((name ?? '').trim().toLowerCase())
-              ? [{ href: '/dieta-test', icon: Utensils, label: 'Dieta' }]
+              ? [{ href: '/dieta', icon: Utensils, label: 'Dieta' }]
               : []),
           ].map(({ href, icon: Icon, label }) => (
             <Link key={href} href={href} className="bg-white rounded-2xl p-4 text-center shadow-sm block transition-all hover:shadow-md hover:border-gray-300 border border-transparent active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
