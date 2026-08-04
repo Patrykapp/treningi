@@ -12,8 +12,12 @@ import { SkeletonCard } from '@/components/ui/Skeleton';
 import {
   Plus, Flag, BarChart3, PersonStanding, Bike, Scale, Sparkles,
   Crown, Flame, Zap, ChevronRight, Dumbbell, TrendingUp, Ruler, Target,
-  BellRing, X, Calendar, Play,
+  BellRing, X, Calendar, Play, Utensils,
 } from 'lucide-react';
+
+// Moduł diety jest na razie prototypem — kafelek widzą tylko konta główne.
+// Konta boczne (isolated) i ewentualni przyszli użytkownicy go nie dostają.
+const DIET_USERS = ['patryk', 'adrian'];
 
 interface Run {
   id: string;
@@ -741,6 +745,9 @@ export default function DashboardPage() {
             { href: '/cele', icon: Target, label: 'Cele' },
             { href: '/plan', icon: Calendar, label: 'Plan' },
             { href: '/insighty', icon: Sparkles, label: 'AI Insighty' },
+            ...(DIET_USERS.includes((name ?? '').trim().toLowerCase())
+              ? [{ href: '/dieta-test', icon: Utensils, label: 'Dieta' }]
+              : []),
           ].map(({ href, icon: Icon, label }) => (
             <Link key={href} href={href} className="bg-white rounded-2xl p-4 text-center shadow-sm block transition-all hover:shadow-md hover:border-gray-300 border border-transparent active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
               <Icon className="w-6 h-6 mx-auto mb-1 text-gray-700" strokeWidth={2} />
