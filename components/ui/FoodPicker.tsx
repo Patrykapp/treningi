@@ -15,7 +15,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
-import { Camera, CameraOff, Search, PackagePlus, Flashlight, AlertTriangle, ArrowLeft, Star, Sparkles } from 'lucide-react';
+import { Camera, CameraOff, Search, PackagePlus, Flashlight, AlertTriangle, ArrowLeft, Star, Sparkles, Link as LinkIcon } from 'lucide-react';
 
 // --- typy Shape Detection API (brak w standardowych typach TS) ---
 type DetectedBarcode = { rawValue: string; format: string };
@@ -112,7 +112,11 @@ export function FoodPicker({
   const [parsing, setParsing] = useState(false);
   const [composed, setComposed] = useState<ParsedMeal | null>(null);
   const [picked, setPicked] = useState<Candidate | null>(null);
-  const [grams, setGrams] = useState(100);
+  // Gramatura trzymana jako TEKST. Przy trzymaniu liczby `parseInt('') || 0`
+  // zamieniał puste pole na „0" i nie dawało się skasować ostatniej cyfry,
+  // żeby wpisać wartość od nowa.
+  const [gramsStr, setGramsStr] = useState('100');
+  const grams = parseInt(gramsStr, 10) || 0;
   const [saving, setSaving] = useState(false);
   const [note, setNote] = useState('');
 
@@ -131,6 +135,11 @@ export function FoodPicker({
   const [torchOn, setTorchOn] = useState(false);
   const [torchAvailable, setTorchAvailable] = useState(false);
   const [scannerReady, setScannerReady] = useState<boolean | null>(null);
+
+  // import przepisu z adresu strony
+  const [recipeUrl, setRecipeUrl] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [importInfo, setImportInfo] = useState('');
 
   // ręczny wpis
   const [form, setForm] = useState({ name: '', brand: '', kcal: '', protein: '', carbs: '', fat: '', serving: '', barcode: '' });
@@ -155,6 +164,8 @@ export function FoodPicker({
       setTab('search');
       setDescribeText('');
       setComposed(null);
+      setRecipeUrl('');
+      setImportInfo('');
     }
   }, [isOpen, stopScan]);
 
@@ -167,7 +178,7 @@ export function FoodPicker({
 
   const choose = useCallback((c: Candidate) => {
     setPicked(c);
-    setGrams(c.servingG && c.servingG > 0 && c.servingG <= 500 ? Math.round(c.servingG) : 100);
+    setGramsStr(String(c.servingG && c.servingG > 0 && c.servingG <= 500 ? Math.round(c.servingG) : 100));
     setNote('');
     stopScan();
   }, [stopScan]);
@@ -338,8 +349,10 @@ export function FoodPicker({
       if (!prev) return prev;
       const ing = [...prev.ingredients];
       const old = ing[idx];
-      if (!old || old.grams <= 0 || grams <= 0) return prev;
+      if (!old || old.grams <= 0) return prev;
+      if (grams <= 0) return { ...prev, ingredients: ing.map((x, k2) => (k2 === idx ? { ...x, grams: 0, kcal: 0, protein: 0, carbs: 0, fat: 0 } : x)) };
       const k = grams / old.grams;
+      if (!Number.isFinite(k)) return prev;
       ing[idx] = {
         ...old,
         grams,
@@ -360,6 +373,45 @@ export function FoodPicker({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ isFavorite: next }),
     });
+  };
+
+  /**
+   * Import przepisu z bloga kulinarnego. Wypełnia formularz niżej, więc
+   * przed zapisaniem widzisz i możesz poprawić każdą wartość.
+   */
+  const importRecipe = async () => {
+    const url = recipeUrl.trim();
+    if (!url) return;
+    setImporting(true);
+    setImportInfo('');
+    setNote('');
+    try {
+      const res = await fetch('/api/food/recipe-import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const b = await res.json();
+      if (!res.ok) {
+        setNote(b?.error || 'Nie udało się zaimportować przepisu.');
+        return;
+      }
+      setForm({
+        name: b.name || '',
+        brand: '',
+        kcal: String(b.kcal100 ?? ''),
+        protein: String(b.protein100 ?? ''),
+        carbs: String(b.carbs100 ?? ''),
+        fat: String(b.fat100 ?? ''),
+        serving: b.servingG ? String(b.servingG) : '',
+        barcode: '',
+      });
+      setImportInfo(`${b.note ?? ''} Źródło: ${b.source}.${b.servingLabel ? ` Wydajność: ${b.servingLabel}.` : ''}`);
+    } catch {
+      setNote('Brak połączenia z serwerem.');
+    } finally {
+      setImporting(false);
+    }
   };
 
   const pickManual = () => {
@@ -439,21 +491,22 @@ export function FoodPicker({
 
           <div className="flex items-center gap-2 flex-wrap">
             <input
-              type="number"
-              value={grams}
-              onChange={(e) => setGrams(Math.max(0, parseInt(e.target.value) || 0))}
+              type="text"
+              inputMode="numeric"
+              value={gramsStr}
+              onChange={(e) => setGramsStr(e.target.value.replace(/\D/g, '').slice(0, 4))}
               className="w-28 rounded-lg border border-gray-300 px-3 py-2 text-lg font-semibold"
               autoFocus
             />
             <span className="text-gray-600">g</span>
             {[50, 100, 150, 200].map((g) => (
-              <button key={g} onClick={() => setGrams(g)} className="px-3 py-1.5 rounded-lg bg-gray-100 text-sm">
+              <button key={g} onClick={() => setGramsStr(String(g))} className="px-3 py-1.5 rounded-lg bg-gray-100 text-sm">
                 {g}
               </button>
             ))}
             {picked.servingG ? (
               <button
-                onClick={() => setGrams(Math.round(picked.servingG!))}
+                onClick={() => setGramsStr(String(Math.round(picked.servingG!)))}
                 className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-sm"
               >
                 porcja {Math.round(picked.servingG)} g
@@ -620,9 +673,10 @@ export function FoodPicker({
                       <li key={`${i.name}-${idx}`} className="flex items-center gap-2">
                         <span className="flex-1 min-w-0 text-sm truncate">{i.name}</span>
                         <input
-                          type="number"
-                          value={i.grams}
-                          onChange={(e) => setIngredientGrams(idx, Math.max(0, parseInt(e.target.value) || 0))}
+                          type="text"
+                          inputMode="numeric"
+                          value={i.grams === 0 ? '' : String(i.grams)}
+                          onChange={(e) => setIngredientGrams(idx, parseInt(e.target.value.replace(/\D/g, '').slice(0, 4), 10) || 0)}
                           className="w-20 rounded-lg border border-gray-300 px-2 py-1 text-sm text-right"
                         />
                         <span className="text-xs text-gray-500 w-16 text-right shrink-0">{i.kcal} kcal</span>
@@ -731,7 +785,33 @@ export function FoodPicker({
 
           {tab === 'new' && (
             <div className="space-y-2">
-              <div className="flex items-center gap-2 font-semibold text-sm">
+              {/* Import z przepisu — wypełnia formularz niżej */}
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 space-y-2">
+                <div className="flex items-center gap-2 font-semibold text-sm text-blue-800">
+                  <LinkIcon className="w-4 h-4" /> Z przepisu w internecie
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    value={recipeUrl}
+                    onChange={(e) => setRecipeUrl(e.target.value)}
+                    placeholder="https://aniagotuje.pl/przepis/..."
+                    className="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  />
+                  <button
+                    onClick={importRecipe}
+                    disabled={importing || !recipeUrl.trim()}
+                    className="px-4 rounded-lg bg-blue-600 text-white text-sm disabled:opacity-50 shrink-0"
+                  >
+                    {importing ? '…' : 'Pobierz'}
+                  </button>
+                </div>
+                {importInfo && <p className="text-xs text-blue-800">{importInfo}</p>}
+                <p className="text-xs text-gray-500">
+                  Czytam tabelę wartości odżywczych z przepisu. Jeśli autor jej nie podał, liczę ze składników.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 font-semibold text-sm pt-1">
                 <PackagePlus className="w-4 h-4" /> Wartości na 100 g
               </div>
               <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nazwa (np. Bułka kajzerka)" className={inputCls} autoFocus />

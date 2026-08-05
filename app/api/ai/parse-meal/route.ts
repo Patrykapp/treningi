@@ -76,12 +76,16 @@ ZASADY:
 1. Używaj wyłącznie numerów z listy. Nie wymyślaj produktów.
 2. Jeśli użytkownik podał ilość („dwie kanapki", „150 g ryżu", „trzy jajka"), przelicz ją na gramy.
 3. Jeśli nie podał, przyjmij typową porcję podaną w nawiasie przy produkcie.
-4. Dobieraj najbliższy sensowny odpowiednik: „pulpety" to gotowe danie z listy, nie mielone mięso.
-   „Surówka" bez doprecyzowania to surówka z marchewki. „Puree" to puree ziemniaczane.
-5. Czego naprawdę nie ma na liście, wpisz do "nierozpoznane" jako tekst.
-6. "nazwa" to krótka nazwa całego posiłku po polsku, np. „Pulpety z puree i surówką".
-7. NIE podawaj kalorii ani makroskładników — policzy je system.
-8. Odpowiedz tylko w JSON.
+4. Dobieraj najbliższy sensowny odpowiednik TEGO SAMEGO dania: „pulpety" to gotowe danie z listy,
+   nie mielone mięso. „Surówka" bez doprecyzowania to surówka z marchewki. „Puree" to puree ziemniaczane.
+5. NIGDY nie składaj dania z przypadkowych składników o podobnej nazwie. Jeśli użytkownik podał nazwę
+   potrawy (np. „chlebek bananowy", „szarlotka babci"), której nie ma na liście jako CAŁOŚCI, wpisz ją
+   do "nierozpoznane" i NIE zastępuj jej bananem z chlebem. Lepiej nie rozpoznać niż policzyć bzdurę.
+   Rozbijaj na składniki tylko wtedy, gdy użytkownik sam je wymienił („kanapka z szynką i pomidorem").
+6. Czego nie ma na liście, wpisz do "nierozpoznane" jako tekst.
+7. "nazwa" to krótka nazwa całego posiłku po polsku, np. „Pulpety z puree i surówką".
+8. NIE podawaj kalorii ani makroskładników — policzy je system.
+9. Odpowiedz tylko w JSON.
 
 FORMAT:
 {"nazwa":"Pulpety z puree i surówką","skladniki":[{"id":12,"gramy":200},{"id":45,"gramy":200}],"nierozpoznane":[]}
@@ -141,7 +145,11 @@ ${menu}`;
 
     if (ingredients.length === 0) {
       return NextResponse.json(
-        { error: 'Nie rozpoznałem żadnego składnika. Spróbuj prościej, np. „pulpety, puree, surówka".' },
+        {
+          error:
+            'Nie rozpoznałem tego dania w bazie. Jeśli to coś z przepisu, wklej link w zakładce „Nowy" — ' +
+            'policzę makro z przepisu i zapamiętam danie na stałe.',
+        },
         { status: 422 }
       );
     }

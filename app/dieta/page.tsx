@@ -89,6 +89,9 @@ export default function DietaPage() {
   const [openRecipe, setOpenRecipe] = useState<string | null>(null);
   const [pickerMeal, setPickerMeal] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [editEntry, setEditEntry] = useState<Entry | null>(null);
+  const [editGrams, setEditGrams] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [form, setForm] = useState<Profile | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -172,6 +175,33 @@ export default function DietaPage() {
       }
     } finally {
       setCopying(false);
+    }
+  };
+
+  const openEdit = (e: Entry) => {
+    setEditEntry(e);
+    setEditGrams(String(Math.round(e.grams)));
+  };
+
+  /** Zmiana gramatury wpisu — serwer przelicza makro z aktualnego produktu. */
+  const saveEdit = async () => {
+    const g = parseInt(editGrams, 10);
+    if (!editEntry || !Number.isFinite(g) || g <= 0) return;
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`/api/food/diary/${editEntry.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ grams: g }),
+      });
+      if (res.ok) {
+        setEditEntry(null);
+        void load(date);
+      } else {
+        setToast({ msg: 'Nie udało się zapisać zmiany', type: 'error' });
+      }
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -359,12 +389,12 @@ export default function DietaPage() {
                 {items.map((e) => (
                   <li key={e.id} className="py-2">
                     <div className="flex items-center justify-between gap-2">
-                      <div className="min-w-0">
+                      <button onClick={() => openEdit(e)} className="min-w-0 text-left flex-1">
                         <p className="truncate text-sm">{e.name}</p>
                         <p className="text-xs text-gray-500">
                           {Math.round(e.grams)} g · B {e.protein} · W {e.carbs} · T {e.fat}
                         </p>
-                      </div>
+                      </button>
                       <div className="flex items-center gap-1 shrink-0">
                         {e.product?.recipe && (
                           <button
@@ -432,6 +462,50 @@ export default function DietaPage() {
         onPick={addFood}
         onPickMeal={addComposed}
       />
+
+      {/* Edycja gramatury wpisu */}
+      <Modal isOpen={editEntry !== null} onClose={() => setEditEntry(null)} title="Zmień ilość">
+        {editEntry && (
+          <div className="space-y-4">
+            <p className="font-semibold">{editEntry.name}</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <input
+                type="text"
+                inputMode="numeric"
+                value={editGrams}
+                onChange={(ev) => setEditGrams(ev.target.value.replace(/\D/g, '').slice(0, 4))}
+                className="w-28 rounded-lg border border-gray-300 px-3 py-2 text-lg font-semibold"
+                autoFocus
+              />
+              <span className="text-gray-600">g</span>
+              {[50, 100, 150, 200, 250].map((g) => (
+                <button key={g} onClick={() => setEditGrams(String(g))} className="px-3 py-1.5 rounded-lg bg-gray-100 text-sm">
+                  {g}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500">
+              Teraz: {Math.round(editEntry.grams)} g · {Math.round(editEntry.kcal)} kcal. Po zapisaniu przeliczę
+              makro proporcjonalnie.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setEditEntry(null); setDeleteId(editEntry.id); }}
+                className="px-4 rounded-xl border border-gray-300 text-red-600 py-3"
+              >
+                Usuń
+              </button>
+              <button
+                onClick={saveEdit}
+                disabled={savingEdit || !editGrams || parseInt(editGrams, 10) <= 0}
+                className="flex-1 rounded-xl bg-blue-600 text-white py-3 font-semibold disabled:opacity-50"
+              >
+                {savingEdit ? 'Zapisuję…' : 'Zapisz'}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       <ConfirmDialog
         isOpen={deleteId !== null}
@@ -523,8 +597,11 @@ export default function DietaPage() {
                 <label key={k} className="text-sm">
                   <span className="block text-gray-600 mb-1">{label}</span>
                   <input
-                    value={form[k]}
-                    onChange={(e) => setForm({ ...form, [k]: parseInt(e.target.value) || 0 })}
+                    value={form[k] === 0 ? '' : String(form[k])}
+                    onChange={(e) => {
+                      const v = e.target.value.replace(/\D/g, '').slice(0, 3);
+                      setForm({ ...form, [k]: v === '' ? 0 : parseInt(v, 10) });
+                    }}
                     inputMode="numeric"
                     className={inputCls}
                   />
