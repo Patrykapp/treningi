@@ -4,8 +4,9 @@
  * Generator dziennego jadłospisu. Pokazuje propozycję do zatwierdzenia —
  * dopiero „Zapisz" tworzy wpisy w dzienniku.
  *
- * Świadomie pokazujemy, ile składników udało się dopasować do prawdziwych
- * produktów z bazy. Reszta to szacunek modelu i użytkownik ma o tym wiedzieć.
+ * Wszystkie wartości odżywcze pochodzą z bazy produktów — model wybiera
+ * wyłącznie z zamkniętej listy i nie podaje żadnych liczb. Gramatury
+ * dostraja serwer, żeby dzień trafiał w cel kaloryczny.
  */
 
 import { useState } from 'react';
@@ -14,8 +15,8 @@ import { Sparkles, ShoppingCart, Check, Copy, RefreshCw, AlertTriangle } from 'l
 import { MEALS } from '@/lib/nutrition';
 
 type Ingredient = {
-  name: string; grams: number; kcal: number; protein: number; carbs: number; fat: number;
-  matchedProductId: string | null; matchedName: string | null; corrected: boolean;
+  productId: string; name: string; grams: number;
+  kcal: number; protein: number; carbs: number; fat: number;
 };
 type Meal = {
   meal: string; title: string; recipe: string; ingredients: Ingredient[];
@@ -26,9 +27,8 @@ type Plan = {
   totals: { kcal: number; protein: number; carbs: number; fat: number };
   targets: { kcal: number; protein: number; carbs: number; fat: number };
   shopping: { name: string; grams: number }[];
-  matched: number;
-  corrected: number;
   totalIngredients: number;
+  catalogSize: number;
   accuracy: number;
   retried: boolean;
 };
@@ -141,8 +141,8 @@ export function AiMealPlan({
         {!plan && (
           <>
             <p className="text-sm text-gray-600">
-              Ułożę cztery posiłki pod twój dzienny cel, z przepisami i listą zakupów. Nic się nie zapisze,
-              dopóki planu nie zatwierdzisz.
+              Ułożę cztery posiłki pod twój dzienny cel, z przepisami i listą zakupów. Wszystkie wartości
+              biorę z bazy produktów, nie z głowy modelu. Nic się nie zapisze, dopóki nie zatwierdzisz.
             </p>
 
             <div>
@@ -230,15 +230,12 @@ export function AiMealPlan({
               <div className="text-xs text-gray-500 pt-1 space-y-0.5 border-t border-gray-200 mt-2">
                 <p className="pt-1">
                   Trafienie w cel kaloryczny: <strong>{plan.accuracy}%</strong>
-                  {plan.retried && ' (druga próba — pierwsza chybiła)'}
+                  {plan.retried && ' (druga próba — w pierwszej było za mało białka)'}
                 </p>
-                <p>
-                  {plan.matched} z {plan.totalIngredients} składników policzone z twojej bazy, reszta to szacunek modelu.
+                <p className="text-gray-400">
+                  {plan.totalIngredients} składników, wszystkie z bazy ({plan.catalogSize} produktów).
+                  Gramatury dobrał serwer pod twój cel.
                 </p>
-                {plan.corrected > 0 && (
-                  <p>Poprawiłem kalorie {plan.corrected} składnikom — model podał je niezgodnie z makro.</p>
-                )}
-                <p className="text-gray-400">Sumy liczy aplikacja, nie model. Przejrzyj plan przed zapisaniem.</p>
               </div>
             </div>
 
@@ -256,10 +253,7 @@ export function AiMealPlan({
                 <ul className="text-sm text-gray-700 space-y-0.5">
                   {m.ingredients.map((i, k) => (
                     <li key={k} className="flex justify-between gap-2">
-                      <span className="min-w-0 truncate">
-                        {i.name}
-                        {i.matchedProductId && <span className="text-green-600" title={i.matchedName ?? ''}> ✓</span>}
-                      </span>
+                      <span className="min-w-0 truncate">{i.name}</span>
                       <span className="text-gray-500 shrink-0">{i.grams} g · {i.kcal} kcal</span>
                     </li>
                   ))}
