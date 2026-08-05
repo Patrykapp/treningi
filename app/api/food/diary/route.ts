@@ -50,7 +50,7 @@ export async function GET(request: Request) {
         orderBy: { createdAt: 'asc' },
         // Przepis dołączamy od razu — dania z generatora mają go zapisany
         // przy produkcie i chcemy je pokazać bez dodatkowego zapytania.
-        include: { product: { select: { recipe: true, ingredients: true, servingG: true } } },
+        include: { product: { select: { recipe: true, ingredients: true, servingG: true, unit: true } } },
       }),
       prisma.nutritionProfile.findUnique({ where: { userId } }),
       prisma.bodyWeight.findMany({ where: { userId }, orderBy: { date: 'desc' }, take: 1 }),
@@ -141,6 +141,7 @@ export async function POST(request: Request) {
         salt100: p.salt100 != null ? num(p.salt100) : null,
         servingG: p.servingG != null ? num(p.servingG) : null,
         source: p.source === 'OFF' || p.source === 'SEED' ? p.source : 'OWN',
+        unit: p.unit === 'ml' ? 'ml' : 'g',
         createdById: p.source === 'OFF' ? null : userId,
       };
 
@@ -165,6 +166,7 @@ export async function POST(request: Request) {
           productId: product.id,
           name: product.brand ? `${product.brand} ${product.name}` : product.name,
           grams,
+          unit: product.unit === 'ml' ? 'ml' : 'g',
           // snapshot — korekta produktu nie zmieni historii
           kcal: Math.round(product.kcal100 * f * 10) / 10,
           protein: Math.round(product.protein100 * f * 10) / 10,

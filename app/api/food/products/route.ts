@@ -85,6 +85,7 @@ export async function POST(request: Request) {
       servingG: b?.servingG != null ? num(b.servingG) || null : null,
       servingLabel: b?.servingLabel ? String(b.servingLabel).trim() || null : null,
       category: b?.category ? String(b.category).trim() || null : null,
+      unit: b?.unit === 'ml' ? 'ml' : 'g',
       source: b?.source === 'OFF' || b?.source === 'SEED' ? String(b.source) : 'OWN',
       createdById: userId,
     };

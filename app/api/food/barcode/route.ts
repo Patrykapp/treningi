@@ -24,7 +24,9 @@ export type FoodProduct = {
   brand: string | null;
   imageUrl: string | null;
   quantity: string | null;      // np. "500 g" — całe opakowanie
-  servingSizeG: number | null;  // porcja producenta w gramach (jeśli podana)
+  servingSizeG: number | null;  // porcja producenta (w jednostce `unit`)
+  unit: 'g' | 'ml';             // napoje liczymy w mililitrach
+  hasNutrition: boolean;        // czy wpis w OFF ma w ogóle wartości odżywcze
   per100g: {
     kcal: number | null;
     protein: number | null;
@@ -52,6 +54,19 @@ function parseServingG(s: unknown): number | null {
   return m ? num(m[1]) : null;
 }
 
+/**
+ * Napój czy nie. Rozstrzygamy po jednostce w gramaturze opakowania albo
+ * w porcji — OFF prawie zawsze podaje tam „500 ml" dla płynów. Kategorie
+ * bywają nieuzupełnione, więc traktujemy je jako drugą wskazówkę.
+ */
+function detectUnit(p: Record<string, unknown>): 'g' | 'ml' {
+  const hay = [p.quantity, p.serving_size].filter((x) => typeof x === 'string').join(' ').toLowerCase();
+  if (/\d\s*(ml|l\b|litr)/.test(hay)) return 'ml';
+  const cats = Array.isArray(p.categories_tags) ? p.categories_tags.join(' ') : '';
+  if (/beverage|drink|water|juice|soda|beer|napoj|napoje/i.test(cats)) return 'ml';
+  return 'g';
+}
+
 function kcalPer100(n: Record<string, unknown>): number | null {
   const direct = num(n['energy-kcal_100g']);
   if (direct !== null) return direct;
@@ -74,6 +89,7 @@ export async function GET(request: Request) {
   const fields = [
     'code', 'product_name', 'product_name_pl', 'generic_name_pl', 'brands',
     'image_front_small_url', 'quantity', 'serving_size', 'nutriments', 'completeness',
+    'categories_tags',
   ].join(',');
 
   // pl.* zwraca te same dane co world.*, ale preferuje polskie nazwy
@@ -106,6 +122,7 @@ export async function GET(request: Request) {
 
     const p = json.product;
     const n: Record<string, unknown> = p.nutriments || {};
+    const kcal = kcalPer100(n);
 
     const product: FoodProduct = {
       code: raw,
@@ -114,8 +131,12 @@ export async function GET(request: Request) {
       imageUrl: p.image_front_small_url || null,
       quantity: p.quantity || null,
       servingSizeG: parseServingG(p.serving_size),
+      unit: detectUnit(p),
+      // Sporo wpisów w OFF to sama nazwa i zdjęcie, bez tabeli wartości.
+      // Front musi to odróżnić od produktu, który naprawdę ma 0 kcal.
+      hasNutrition: kcal !== null && kcal > 0,
       per100g: {
-        kcal: kcalPer100(n),
+        kcal,
         protein: num(n['proteins_100g']),
         carbs: num(n['carbohydrates_100g']),
         sugars: num(n['sugars_100g']),

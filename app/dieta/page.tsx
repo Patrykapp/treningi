@@ -21,7 +21,7 @@ import { formatDate } from '@/lib/utils';
 import { ChevronLeft, ChevronRight, Plus, Trash2, Settings2, Flame, CalendarDays, Sparkles, ChefHat, CopyPlus } from 'lucide-react';
 
 type Entry = {
-  id: string; meal: string; name: string; grams: number;
+  id: string; meal: string; name: string; grams: number; unit?: string;
   kcal: number; protein: number; carbs: number; fat: number;
   product?: { recipe: string | null; ingredients: unknown; servingG: number | null } | null;
 };
@@ -392,7 +392,7 @@ export default function DietaPage() {
                       <button onClick={() => openEdit(e)} className="min-w-0 text-left flex-1">
                         <p className="truncate text-sm">{e.name}</p>
                         <p className="text-xs text-gray-500">
-                          {Math.round(e.grams)} g · B {e.protein} · W {e.carbs} · T {e.fat}
+                          {Math.round(e.grams)} {e.unit === 'ml' ? 'ml' : 'g'} · B {e.protein} · W {e.carbs} · T {e.fat}
                         </p>
                       </button>
                       <div className="flex items-center gap-1 shrink-0">
@@ -477,15 +477,15 @@ export default function DietaPage() {
                 className="w-28 rounded-lg border border-gray-300 px-3 py-2 text-lg font-semibold"
                 autoFocus
               />
-              <span className="text-gray-600">g</span>
-              {[50, 100, 150, 200, 250].map((g) => (
+              <span className="text-gray-600">{editEntry.unit === 'ml' ? 'ml' : 'g'}</span>
+              {(editEntry.unit === 'ml' ? [200, 250, 330, 500] : [50, 100, 150, 200, 250]).map((g) => (
                 <button key={g} onClick={() => setEditGrams(String(g))} className="px-3 py-1.5 rounded-lg bg-gray-100 text-sm">
                   {g}
                 </button>
               ))}
             </div>
             <p className="text-xs text-gray-500">
-              Teraz: {Math.round(editEntry.grams)} g · {Math.round(editEntry.kcal)} kcal. Po zapisaniu przeliczę
+              Teraz: {Math.round(editEntry.grams)} {editEntry.unit === 'ml' ? 'ml' : 'g'} · {Math.round(editEntry.kcal)} kcal. Po zapisaniu przeliczę
               makro proporcjonalnie.
             </p>
             <div className="flex gap-2">

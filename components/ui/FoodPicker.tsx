@@ -43,6 +43,7 @@ export type Candidate = {
   sugars100?: number | null;
   salt100?: number | null;
   servingG?: number | null;
+  unit: 'g' | 'ml';
   source: 'OWN' | 'SEED' | 'OFF';
 };
 
@@ -51,7 +52,7 @@ type CatalogRow = {
   kcal100: number; protein100: number; carbs100: number; fat100: number;
   fiber100: number | null; sugars100: number | null; salt100: number | null;
   servingG: number | null; source: string; usageCount: number;
-  isFavorite?: boolean; recipe?: string | null;
+  unit?: string; isFavorite?: boolean; recipe?: string | null;
 };
 
 type ParsedIngredient = {
@@ -86,6 +87,7 @@ function fromCatalog(r: CatalogRow): Candidate {
     sugars100: r.sugars100,
     salt100: r.salt100,
     servingG: r.servingG,
+    unit: r.unit === 'ml' ? 'ml' : 'g',
     source: r.source === 'SEED' ? 'SEED' : r.source === 'OFF' ? 'OFF' : 'OWN',
   };
 }
@@ -143,6 +145,7 @@ export function FoodPicker({
 
   // ręczny wpis
   const [form, setForm] = useState({ name: '', brand: '', kcal: '', protein: '', carbs: '', fat: '', serving: '', barcode: '' });
+  const [formUnit, setFormUnit] = useState<'g' | 'ml'>('g');
 
   const stopScan = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -167,6 +170,7 @@ export function FoodPicker({
       setRecipeUrl('');
       setImportInfo('');
       setForm({ name: '', brand: '', kcal: '', protein: '', carbs: '', fat: '', serving: '', barcode: '' });
+      setFormUnit('g');
     }
   }, [isOpen, stopScan]);
 
@@ -234,10 +238,29 @@ export function FoodPicker({
       return;
     }
     const p = await res.json();
+    // Sporo wpisów w OFF to sama nazwa i zdjęcie. Dodanie takiego produktu
+    // wpisałoby do dziennika 0 kcal, co jest gorsze niż brak wpisu.
+    if (!p.hasNutrition) {
+      setNote(
+        `„${p.name}" jest w bazie, ale bez wartości odżywczych. Przepisz je z etykiety — zapamiętam ten kod.`
+      );
+      setForm((f) => ({
+        ...f,
+        name: p.name || '',
+        brand: p.brand || '',
+        barcode: p.code || '',
+        kcal: '', protein: '', carbs: '', fat: '',
+        serving: p.servingSizeG ? String(p.servingSizeG) : '',
+      }));
+      setFormUnit(p.unit === 'ml' ? 'ml' : 'g');
+      setTab('new');
+      return;
+    }
     choose({
       name: p.name,
       brand: p.brand,
       barcode: p.code,
+      unit: p.unit === 'ml' ? 'ml' : 'g',
       kcal100: p.per100g.kcal ?? 0,
       protein100: p.per100g.protein ?? 0,
       carbs100: p.per100g.carbs ?? 0,
@@ -427,6 +450,7 @@ export function FoodPicker({
       carbs100: Number.isFinite(dec(form.carbs)) ? dec(form.carbs) : 0,
       fat100: Number.isFinite(dec(form.fat)) ? dec(form.fat) : 0,
       servingG: Number.isFinite(dec(form.serving)) ? dec(form.serving) : null,
+      unit: formUnit,
       source: 'OWN',
     });
   };
@@ -499,8 +523,8 @@ export function FoodPicker({
               className="w-28 rounded-lg border border-gray-300 px-3 py-2 text-lg font-semibold"
               autoFocus
             />
-            <span className="text-gray-600">g</span>
-            {[50, 100, 150, 200].map((g) => (
+            <span className="text-gray-600">{picked.unit}</span>
+            {(picked.unit === 'ml' ? [200, 250, 330, 500] : [50, 100, 150, 200]).map((g) => (
               <button key={g} onClick={() => setGramsStr(String(g))} className="px-3 py-1.5 rounded-lg bg-gray-100 text-sm">
                 {g}
               </button>
@@ -510,7 +534,7 @@ export function FoodPicker({
                 onClick={() => setGramsStr(String(Math.round(picked.servingG!)))}
                 className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-sm"
               >
-                porcja {Math.round(picked.servingG)} g
+                porcja {Math.round(picked.servingG)} {picked.unit}
               </button>
             ) : null}
           </div>
@@ -577,7 +601,9 @@ export function FoodPicker({
                               {c.brand || (c.recipe ? 'twoje danie' : '—')}
                             </span>
                           </span>
-                          <span className="text-sm text-gray-600 shrink-0">{Math.round(c.kcal100)} kcal</span>
+                          <span className="text-sm text-gray-600 shrink-0">
+                            {Math.round(c.kcal100)} kcal<span className="text-gray-400">/100{c.unit === 'ml' ? 'ml' : 'g'}</span>
+                          </span>
                         </button>
                         <button
                           onClick={() => toggleFavorite(c)}
@@ -611,6 +637,7 @@ export function FoodPicker({
                               protein100: h.protein100 ?? 0,
                               carbs100: h.carbs100 ?? 0,
                               fat100: h.fat100 ?? 0,
+                              unit: 'g',
                               source: 'OFF',
                             })
                           }
@@ -813,17 +840,31 @@ export function FoodPicker({
               </div>
 
               <div className="flex items-center gap-2 font-semibold text-sm pt-1">
-                <PackagePlus className="w-4 h-4" /> Wartości na 100 g
+                <PackagePlus className="w-4 h-4" /> Wartości na 100 {formUnit}
+              </div>
+
+              <div className="flex gap-2">
+                {(['g', 'ml'] as const).map((u) => (
+                  <button
+                    key={u}
+                    onClick={() => setFormUnit(u)}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium ${
+                      formUnit === u ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
+                    }`}
+                  >
+                    {u === 'g' ? 'Waga (g)' : 'Objętość (ml)'}
+                  </button>
+                ))}
               </div>
               <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nazwa (np. Bułka kajzerka)" className={inputCls} autoFocus />
               <input value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} placeholder="Marka / sklep (opcjonalnie)" className={inputCls} />
               <div className="grid grid-cols-2 gap-2">
                 {([
-                  ['kcal', 'kcal / 100 g *'],
-                  ['protein', 'Białko / 100 g'],
-                  ['carbs', 'Węglowodany / 100 g'],
-                  ['fat', 'Tłuszcz / 100 g'],
-                  ['serving', 'Typowa porcja w g'],
+                  ['kcal', `kcal / 100 ${formUnit} *`],
+                  ['protein', `Białko / 100 ${formUnit}`],
+                  ['carbs', `Węglowodany / 100 ${formUnit}`],
+                  ['fat', `Tłuszcz / 100 ${formUnit}`],
+                  ['serving', `Typowa porcja w ${formUnit}`],
                   ['barcode', 'Kod kreskowy (opcj.)'],
                 ] as const).map(([k, label]) => (
                   <input

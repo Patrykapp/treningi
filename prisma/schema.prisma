@@ -258,6 +258,10 @@ model FoodProduct {
   salt100     Float?
   servingG    Float?      // typowa porcja, np. bułka = 60 g
   servingLabel String?    // opis porcji, np. "1 bułka"
+  // g albo ml. Napoje liczy się w mililitrach — dla płynów o gęstości bliskiej
+  // wodzie wartości na 100 ml i na 100 g są tożsame, więc zmienia się tylko
+  // etykieta, nie arytmetyka.
+  unit        String      @default("g")
   source      String      @default("OWN") // OWN | SEED | OFF
   category    String?     // dział sklepu — do grupowania listy zakupów
   isFavorite  Boolean     @default(false) // przypięte na górze wyszukiwarki
@@ -288,7 +292,8 @@ model MealEntry {
   productId String?
   product   FoodProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
   name      String       // snapshot nazwy (produkt może zniknąć)
-  grams     Float
+  grams     Float        // ilość w jednostce `unit`
+  unit      String       @default("g")
   kcal      Float
   protein   Float        @default(0)
   carbs     Float        @default(0)

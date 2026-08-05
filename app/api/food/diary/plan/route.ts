@@ -92,6 +92,7 @@ export async function POST(request: Request) {
           productId: product.id,
           name: title,
           grams: Math.round(grams),
+          unit: 'g', // danie złożone ważymy, nawet jeśli ma płynne składniki
           kcal: Math.round(kcal * 10) / 10,
           protein: Math.round(protein * 10) / 10,
           carbs: Math.round(carbs * 10) / 10,

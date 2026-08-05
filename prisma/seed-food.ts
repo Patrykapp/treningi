@@ -34,6 +34,7 @@ type Item = {
   serving?: number; // typowa porcja w gramach
   label?: string;   // opis porcji
   cat?: string;     // dział sklepu — wypełniany automatycznie z sekcji niżej
+  unit?: 'g' | 'ml'; // napoje liczymy w mililitrach
 };
 
 const ITEMS: Item[] = [
@@ -71,13 +72,13 @@ const ITEMS: Item[] = [
   { name: 'Mąka pszenna', kcal: 348, p: 10, c: 72, f: 1, serving: 30 , cat: 'Sypkie' },
 
   // ── NABIAŁ I JAJA ───────────────────────────────────────────────────────
-  { name: 'Mleko 2%', kcal: 51, p: 3.4, c: 4.8, f: 2, serving: 250, label: '1 szklanka' , cat: 'Nabiał' },
-  { name: 'Mleko 3,2%', kcal: 61, p: 3.3, c: 4.7, f: 3.2, serving: 250, label: '1 szklanka' , cat: 'Nabiał' },
+  { name: 'Mleko 2%', kcal: 51, p: 3.4, c: 4.8, f: 2, serving: 250, label: '1 szklanka' , cat: 'Nabiał', unit: 'ml' },
+  { name: 'Mleko 3,2%', kcal: 61, p: 3.3, c: 4.7, f: 3.2, serving: 250, label: '1 szklanka' , cat: 'Nabiał', unit: 'ml' },
   { name: 'Jogurt naturalny 2%', kcal: 60, p: 4.3, c: 6, f: 2, serving: 150, label: '1 kubek' , cat: 'Nabiał' },
   { name: 'Jogurt grecki 2%', kcal: 73, p: 9, c: 4, f: 2, serving: 150, label: '1 kubek' , cat: 'Nabiał' },
   { name: 'Skyr naturalny', kcal: 63, p: 11, c: 4, f: 0.2, serving: 150, label: '1 kubek' , cat: 'Nabiał' },
-  { name: 'Kefir 2%', kcal: 51, p: 3.4, c: 4.7, f: 2, serving: 250, label: '1 szklanka' , cat: 'Nabiał' },
-  { name: 'Maślanka naturalna', kcal: 40, p: 3.4, c: 4.7, f: 0.5, serving: 250 , cat: 'Nabiał' },
+  { name: 'Kefir 2%', kcal: 51, p: 3.4, c: 4.7, f: 2, serving: 250, label: '1 szklanka' , cat: 'Nabiał', unit: 'ml' },
+  { name: 'Maślanka naturalna', kcal: 40, p: 3.4, c: 4.7, f: 0.5, serving: 250 , cat: 'Nabiał', unit: 'ml' },
   { name: 'Serek wiejski', kcal: 98, p: 12, c: 3, f: 4.3, serving: 200, label: '1 opakowanie' , cat: 'Nabiał' },
   { name: 'Twaróg chudy', kcal: 99, p: 19.8, c: 3.5, f: 0.5, serving: 100 , cat: 'Nabiał' },
   { name: 'Twaróg półtłusty', kcal: 133, p: 18, c: 3.5, f: 5, serving: 100 , cat: 'Nabiał' },
@@ -86,12 +87,12 @@ const ITEMS: Item[] = [
   { name: 'Ser mozzarella', kcal: 280, p: 18, c: 2, f: 22, serving: 125 , cat: 'Nabiał' },
   { name: 'Ser feta', kcal: 264, p: 14, c: 4, f: 21, serving: 50 , cat: 'Nabiał' },
   { name: 'Serek topiony', kcal: 290, p: 11, c: 5, f: 25, serving: 30 , cat: 'Nabiał' },
-  { name: 'Śmietana 18%', kcal: 184, p: 2.5, c: 3.5, f: 18, serving: 50 , cat: 'Nabiał' },
+  { name: 'Śmietana 18%', kcal: 184, p: 2.5, c: 3.5, f: 18, serving: 50 , cat: 'Nabiał', unit: 'ml' },
   { name: 'Masło', kcal: 735, p: 0.7, c: 0.7, f: 82, serving: 10, label: '1 łyżeczka' , cat: 'Nabiał' },
   { name: 'Jajko kurze', kcal: 139, p: 12.5, c: 0.6, f: 9.7, serving: 55, label: '1 sztuka' , cat: 'Nabiał' },
   { name: 'Białko jaja', kcal: 48, p: 11, c: 0.7, f: 0.2, serving: 33 , cat: 'Nabiał' },
-  { name: 'Mleko owsiane', kcal: 47, p: 0.5, c: 7, f: 1.5, serving: 250 , cat: 'Nabiał' },
-  { name: 'Napój migdałowy niesłodzony', kcal: 15, p: 0.5, c: 0.3, f: 1.2, serving: 250 , cat: 'Nabiał' },
+  { name: 'Mleko owsiane', kcal: 47, p: 0.5, c: 7, f: 1.5, serving: 250 , cat: 'Nabiał', unit: 'ml' },
+  { name: 'Napój migdałowy niesłodzony', kcal: 15, p: 0.5, c: 0.3, f: 1.2, serving: 250 , cat: 'Nabiał', unit: 'ml' },
 
   // ── MIĘSO I WĘDLINY ─────────────────────────────────────────────────────
   { name: 'Pierś z kurczaka', kcal: 99, p: 21.5, c: 0, f: 1.3, serving: 150 , cat: 'Mięso i wędliny' },
@@ -204,7 +205,7 @@ const ITEMS: Item[] = [
   { name: 'Cukier', kcal: 400, p: 0, c: 100, f: 0, serving: 5, label: '1 łyżeczka' , cat: 'Słodycze i przekąski' },
 
   // ── NAPOJE I SUPLEMENTY ─────────────────────────────────────────────────
-  { name: 'Sok pomarańczowy', kcal: 45, p: 0.7, c: 10, f: 0.2, serving: 250 , cat: 'Napoje' },
+  { name: 'Sok pomarańczowy', kcal: 45, p: 0.7, c: 10, f: 0.2, serving: 250 , cat: 'Napoje', unit: 'ml' },
   { name: 'Odżywka białkowa WPC', kcal: 380, p: 78, c: 6, f: 5, serving: 30, label: '1 miarka' , cat: 'Napoje' },
 
   // ── PIECZYWO (uzupełnienie) ─────────────────────────────────────────────
@@ -252,15 +253,15 @@ const ITEMS: Item[] = [
   { name: 'Hot dog', kcal: 260, p: 9, c: 26, f: 13, serving: 150, label: '1 sztuka', cat: 'Dania gotowe' },
 
   // ── ZUPY ────────────────────────────────────────────────────────────────
-  { name: 'Rosół z makaronem', kcal: 45, p: 3, c: 5, f: 1.5, serving: 350, label: '1 talerz', cat: 'Dania gotowe' },
-  { name: 'Zupa pomidorowa z ryżem', kcal: 60, p: 2, c: 9, f: 1.8, serving: 350, cat: 'Dania gotowe' },
-  { name: 'Żurek', kcal: 70, p: 3, c: 7, f: 3.5, serving: 350, cat: 'Dania gotowe' },
-  { name: 'Barszcz czerwony czysty', kcal: 30, p: 1, c: 5, f: 0.5, serving: 300, cat: 'Dania gotowe' },
-  { name: 'Krupnik', kcal: 55, p: 2.5, c: 8, f: 1.5, serving: 350, cat: 'Dania gotowe' },
-  { name: 'Zupa jarzynowa', kcal: 45, p: 2, c: 6, f: 1.5, serving: 350, cat: 'Dania gotowe' },
-  { name: 'Zupa ogórkowa', kcal: 50, p: 1.5, c: 6, f: 2, serving: 350, cat: 'Dania gotowe' },
-  { name: 'Kapuśniak', kcal: 45, p: 2, c: 5, f: 2, serving: 350, cat: 'Dania gotowe' },
-  { name: 'Zupa krem z pomidorów', kcal: 65, p: 1.5, c: 8, f: 3, serving: 300, cat: 'Dania gotowe' },
+  { name: 'Rosół z makaronem', kcal: 45, p: 3, c: 5, f: 1.5, serving: 350, label: '1 talerz', cat: 'Dania gotowe', unit: 'ml' },
+  { name: 'Zupa pomidorowa z ryżem', kcal: 60, p: 2, c: 9, f: 1.8, serving: 350, cat: 'Dania gotowe', unit: 'ml' },
+  { name: 'Żurek', kcal: 70, p: 3, c: 7, f: 3.5, serving: 350, cat: 'Dania gotowe', unit: 'ml' },
+  { name: 'Barszcz czerwony czysty', kcal: 30, p: 1, c: 5, f: 0.5, serving: 300, cat: 'Dania gotowe', unit: 'ml' },
+  { name: 'Krupnik', kcal: 55, p: 2.5, c: 8, f: 1.5, serving: 350, cat: 'Dania gotowe', unit: 'ml' },
+  { name: 'Zupa jarzynowa', kcal: 45, p: 2, c: 6, f: 1.5, serving: 350, cat: 'Dania gotowe', unit: 'ml' },
+  { name: 'Zupa ogórkowa', kcal: 50, p: 1.5, c: 6, f: 2, serving: 350, cat: 'Dania gotowe', unit: 'ml' },
+  { name: 'Kapuśniak', kcal: 45, p: 2, c: 5, f: 2, serving: 350, cat: 'Dania gotowe', unit: 'ml' },
+  { name: 'Zupa krem z pomidorów', kcal: 65, p: 1.5, c: 8, f: 3, serving: 300, cat: 'Dania gotowe', unit: 'ml' },
 
   // ── DODATKI GOTOWANE I SURÓWKI ──────────────────────────────────────────
   { name: 'Puree ziemniaczane', kcal: 90, p: 2, c: 14, f: 2.5, serving: 200, label: '1 porcja', cat: 'Dania gotowe' },
@@ -304,6 +305,7 @@ function row(it: Item) {
     servingG: it.serving ?? null,
     servingLabel: it.label ?? null,
     category: it.cat ?? null,
+    unit: it.unit ?? 'g',
     source: 'SEED',
     createdById: null,
   };
