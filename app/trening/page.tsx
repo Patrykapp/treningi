@@ -919,7 +919,7 @@ function TreningPage() {
                         className="w-8 h-8 rounded-lg bg-gray-100 font-bold text-gray-600 flex items-center justify-center shrink-0 text-lg transition-colors hover:bg-gray-200 active:scale-[0.97] active:bg-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"><Minus className="w-4 h-4" strokeWidth={2} /></button>
                       <input type="number" min="1" inputMode="numeric"
                         value={s.reps === 0 ? '' : s.reps} placeholder="0"
-                        onChange={e => updateSet(entry.key, si, 'reps', parseInt(e.target.value) || 1)}
+                        onChange={e => updateSet(entry.key, si, 'reps', e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0))}
                         className="w-12 border border-gray-200 rounded-lg px-1 py-1.5 text-sm text-center font-medium" />
                       <button type="button"
                         onClick={() => updateSet(entry.key, si, 'reps', s.reps + 1)}

@@ -166,6 +166,7 @@ export function FoodPicker({
       setComposed(null);
       setRecipeUrl('');
       setImportInfo('');
+      setForm({ name: '', brand: '', kcal: '', protein: '', carbs: '', fat: '', serving: '', barcode: '' });
     }
   }, [isOpen, stopScan]);
 

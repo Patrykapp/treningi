@@ -817,10 +817,12 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
             <div className="px-4 pb-4 border-t border-gray-100 space-y-3">
               <div className="grid grid-cols-2 gap-3 mt-3">
                 <div><label className="text-xs text-gray-500 block mb-1">Ciężar (kg)</label>
-                  <input type="number" value={calcWeight} onChange={e => setCalcWeight(Number(e.target.value))} min={0} step={0.5}
+                  <input type="number" value={calcWeight === 0 ? '' : calcWeight} placeholder="0"
+                    onChange={e => setCalcWeight(e.target.value === '' ? 0 : Number(e.target.value))} min={0} step={0.5}
                     className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-center" /></div>
                 <div><label className="text-xs text-gray-500 block mb-1">Powtorzenia</label>
-                  <input type="number" value={calcReps} onChange={e => setCalcReps(Number(e.target.value))} min={1} max={30}
+                  <input type="number" value={calcReps === 0 ? '' : calcReps} placeholder="0"
+                    onChange={e => setCalcReps(e.target.value === '' ? 0 : Number(e.target.value))} min={1} max={30}
                     className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-center" /></div>
               </div>
               <div className="bg-blue-50 rounded-xl p-3 text-center">

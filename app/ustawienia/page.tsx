@@ -58,6 +58,12 @@ export default function UstawieniaPage() {
   const router = useRouter();
   const { dark, toggle: toggleDark } = useDarkMode();
   const reminder = useReminderSettings();
+  // Kopia wartości pola jako tekst — inaczej nie da się skasować cyfry,
+  // bo kontrolka natychmiast wracałaby do liczby z ustawień.
+  const [thresholdInput, setThresholdInput] = useState('3');
+  useEffect(() => {
+    setThresholdInput(String(reminder.thresholdDays));
+  }, [reminder.thresholdDays]);
   const { name: authName, email: authEmail, userId: authUserId } = useAuth();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [otherUsers, setOtherUsers] = useState<UserOption[]>([]);
@@ -261,11 +267,18 @@ export default function UstawieniaPage() {
                 type="number"
                 min={1}
                 max={14}
-                value={reminder.thresholdDays}
+                value={thresholdInput}
                 onChange={e => {
-                  const v = parseInt(e.target.value, 10);
-                  reminder.save({ enabled: reminder.enabled, thresholdDays: Number.isFinite(v) && v > 0 ? v : 1 });
+                  // Pole trzyma tekst, żeby dało się je wyczyścić i wpisać
+                  // wartość od nowa. Do ustawień zapisujemy tylko sensowne liczby.
+                  const raw = e.target.value.replace(/\D/g, '').slice(0, 2);
+                  setThresholdInput(raw);
+                  const v = parseInt(raw, 10);
+                  if (Number.isFinite(v) && v > 0 && v <= 14) {
+                    reminder.save({ enabled: reminder.enabled, thresholdDays: v });
+                  }
                 }}
+                onBlur={() => setThresholdInput(String(reminder.thresholdDays))}
                 className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
               <span className="text-sm text-gray-700">dniach bez treningu</span>
