@@ -12,12 +12,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { Modal } from '@/components/ui/Modal';
 import { Toast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { FoodPicker, type Candidate } from '@/components/ui/FoodPicker';
+import { FoodPicker, type Candidate, type ComposedMeal } from '@/components/ui/FoodPicker';
 import { WeekSummary } from '@/components/ui/WeekSummary';
 import { AiMealPlan } from '@/components/ui/AiMealPlan';
+import { ShoppingList } from '@/components/ui/ShoppingList';
 import { MEALS, ACTIVITY_LEVELS, GOAL_TYPES } from '@/lib/nutrition';
 import { formatDate } from '@/lib/utils';
-import { ChevronLeft, ChevronRight, Plus, Trash2, Settings2, Flame, CalendarDays, Sparkles, ChefHat } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Trash2, Settings2, Flame, CalendarDays, Sparkles, ChefHat, CopyPlus } from 'lucide-react';
 
 type Entry = {
   id: string; meal: string; name: string; grams: number;
@@ -82,7 +83,8 @@ export default function DietaPage() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
-  const [view, setView] = useState<'day' | 'week'>('day');
+  const [view, setView] = useState<'day' | 'week' | 'shopping'>('day');
+  const [copying, setCopying] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [openRecipe, setOpenRecipe] = useState<string | null>(null);
   const [pickerMeal, setPickerMeal] = useState<string | null>(null);
@@ -133,6 +135,43 @@ export default function DietaPage() {
       void load(date);
     } else {
       setToast({ msg: 'Nie udało się zapisać', type: 'error' });
+    }
+  };
+
+  // Posiłek opisany zdaniem zapisujemy jako jedną pozycję — tą samą drogą
+  // co zaakceptowany jadłospis AI.
+  const addComposed = async (m: ComposedMeal) => {
+    const res = await fetch('/api/food/diary/plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date, replace: false, meals: [{ ...m, meal: pickerMeal }] }),
+    });
+    if (res.ok) {
+      setPickerMeal(null);
+      setToast({ msg: 'Dodano', type: 'success' });
+      void load(date);
+    } else {
+      setToast({ msg: 'Nie udało się zapisać', type: 'error' });
+    }
+  };
+
+  const copyFromYesterday = async () => {
+    setCopying(true);
+    try {
+      const res = await fetch('/api/food/diary/copy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: shiftDay(date, -1), to: date, replace: false }),
+      });
+      const body = await res.json().catch(() => null);
+      if (res.ok) {
+        setToast({ msg: `Skopiowano ${body?.copied ?? 0} pozycji`, type: 'success' });
+        void load(date);
+      } else {
+        setToast({ msg: body?.error || 'Nie udało się skopiować', type: 'error' });
+      }
+    } finally {
+      setCopying(false);
     }
   };
 
@@ -214,7 +253,7 @@ export default function DietaPage() {
 
       {/* Przełącznik widoku */}
       <div className="flex gap-2">
-        {([['day', 'Dzień'], ['week', 'Tydzień']] as const).map(([v, label]) => (
+        {([['day', 'Dzień'], ['week', 'Tydzień'], ['shopping', 'Zakupy']] as const).map(([v, label]) => (
           <button
             key={v}
             onClick={() => setView(v)}
@@ -228,6 +267,8 @@ export default function DietaPage() {
       </div>
 
       {view === 'week' && <WeekSummary anchorDate={date} />}
+
+      {view === 'shopping' && <ShoppingList anchorDate={date} />}
 
       {view === 'day' && (
       <>
@@ -282,14 +323,25 @@ export default function DietaPage() {
         )}
       </section>
 
-      {/* Generator jadłospisu */}
-      <button
-        onClick={() => setAiOpen(true)}
-        className="w-full flex items-center justify-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 py-3 font-medium text-blue-700 hover:bg-blue-100"
-      >
-        <Sparkles className="w-5 h-5" />
-        {(data?.entries.length ?? 0) > 0 ? 'Ułóż ten dzień od nowa (AI)' : 'Zaplanuj ten dzień z AI'}
-      </button>
+      {/* Generator jadłospisu i kopiowanie */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setAiOpen(true)}
+          className="flex-1 flex items-center justify-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 py-3 font-medium text-blue-700 hover:bg-blue-100"
+        >
+          <Sparkles className="w-5 h-5" />
+          {(data?.entries.length ?? 0) > 0 ? 'Ułóż od nowa (AI)' : 'Zaplanuj z AI'}
+        </button>
+        <button
+          onClick={copyFromYesterday}
+          disabled={copying}
+          className="flex items-center justify-center gap-2 px-4 rounded-2xl border border-gray-300 text-sm text-gray-700 disabled:opacity-50"
+          title="Skopiuj wszystkie wpisy z poprzedniego dnia"
+        >
+          <CopyPlus className="w-5 h-5" />
+          Z wczoraj
+        </button>
+      </div>
 
       {/* Posiłki */}
       {MEALS.map((m) => {
@@ -378,6 +430,7 @@ export default function DietaPage() {
         mealLabel={MEALS.find((m) => m.key === pickerMeal)?.label ?? ''}
         onClose={() => setPickerMeal(null)}
         onPick={addFood}
+        onPickMeal={addComposed}
       />
 
       <ConfirmDialog

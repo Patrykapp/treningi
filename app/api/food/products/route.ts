@@ -23,23 +23,32 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const q = (searchParams.get('q') || '').trim();
     const barcode = (searchParams.get('barcode') || '').replace(/\D/g, '');
+    // dishes=1 → tylko dania złożone (mają przepis): biblioteka gotowych posiłków
+    const onlyDishes = searchParams.get('dishes') === '1';
+    const onlyFavorites = searchParams.get('favorites') === '1';
 
     if (barcode) {
       const p = await prisma.foodProduct.findUnique({ where: { barcode } });
       return NextResponse.json(p ? [p] : []);
     }
 
+    const filters: Record<string, unknown>[] = [];
+    if (q) {
+      filters.push({
+        OR: [
+          { name: { contains: q, mode: 'insensitive' } },
+          { brand: { contains: q, mode: 'insensitive' } },
+        ],
+      });
+    }
+    if (onlyDishes) filters.push({ recipe: { not: null } });
+    if (onlyFavorites) filters.push({ isFavorite: true });
+
     const products = await prisma.foodProduct.findMany({
-      where: q
-        ? {
-            OR: [
-              { name: { contains: q, mode: 'insensitive' } },
-              { brand: { contains: q, mode: 'insensitive' } },
-            ],
-          }
-        : undefined,
-      orderBy: [{ usageCount: 'desc' }, { updatedAt: 'desc' }],
-      take: q ? 30 : 20,
+      where: filters.length > 0 ? { AND: filters } : undefined,
+      // Ulubione zawsze na górze — to one skracają codzienne wpisywanie.
+      orderBy: [{ isFavorite: 'desc' }, { usageCount: 'desc' }, { updatedAt: 'desc' }],
+      take: q || onlyDishes || onlyFavorites ? 40 : 20,
     });
 
     return NextResponse.json(products);
@@ -75,6 +84,7 @@ export async function POST(request: Request) {
       salt100: b?.salt100 != null ? num(b.salt100) : null,
       servingG: b?.servingG != null ? num(b.servingG) || null : null,
       servingLabel: b?.servingLabel ? String(b.servingLabel).trim() || null : null,
+      category: b?.category ? String(b.category).trim() || null : null,
       source: b?.source === 'OFF' || b?.source === 'SEED' ? String(b.source) : 'OWN',
       createdById: userId,
     };

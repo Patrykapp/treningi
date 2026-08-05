@@ -11,7 +11,7 @@
 
 import { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
-import { Sparkles, ShoppingCart, Check, Copy, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Sparkles, ShoppingCart, Check, Copy, RefreshCw, AlertTriangle, ListPlus } from 'lucide-react';
 import { MEALS } from '@/lib/nutrition';
 
 type Ingredient = {
@@ -77,6 +77,7 @@ export function AiMealPlan({
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
   const [showShopping, setShowShopping] = useState(false);
+  const [addedToList, setAddedToList] = useState(false);
 
   const generate = async () => {
     setLoading(true);
@@ -120,6 +121,22 @@ export function AiMealPlan({
       onSaved();
     } finally {
       setSaving(false);
+    }
+  };
+
+  /** Przerzucenie składników na trwałą listę zakupów (z odhaczaniem). */
+  const addToShoppingList = async () => {
+    if (!plan) return;
+    const res = await fetch('/api/food/shopping', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: plan.shopping }),
+    });
+    if (res.ok) {
+      setAddedToList(true);
+      setTimeout(() => setAddedToList(false), 2500);
+    } else {
+      setError('Nie udało się dodać do listy zakupów.');
     }
   };
 
@@ -285,13 +302,22 @@ export function AiMealPlan({
                       </li>
                     ))}
                   </ul>
-                  <button
-                    onClick={copyShopping}
-                    className="w-full flex items-center justify-center gap-2 rounded-lg border border-gray-300 py-2 text-sm"
-                  >
-                    {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
-                    {copied ? 'Skopiowano' : 'Kopiuj listę'}
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={addToShoppingList}
+                      className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-gray-300 py-2 text-sm"
+                    >
+                      {addedToList ? <Check className="w-4 h-4 text-green-600" /> : <ListPlus className="w-4 h-4" />}
+                      {addedToList ? 'Dodano' : 'Na listę zakupów'}
+                    </button>
+                    <button
+                      onClick={copyShopping}
+                      className="flex items-center justify-center gap-2 px-4 rounded-lg border border-gray-300 py-2 text-sm"
+                    >
+                      {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                      {copied ? 'Skopiowano' : 'Kopiuj'}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

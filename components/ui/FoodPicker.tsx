@@ -1,19 +1,21 @@
 'use client';
 
 /**
- * Wybór produktu do dziennika. Trzy drogi do tego samego celu:
- *   Szukaj — najpierw nasz katalog (własne + wcześniej zeskanowane),
+ * Wybór posiłku do dziennika. Cztery drogi do tego samego celu:
+ *   Szukaj — najpierw nasz katalog (ulubione, własne, baza podstawowa),
  *            potem Open Food Facts, jeśli w katalogu nic nie ma
+ *   Opisz  — całe zdanie („pulpety, puree i surówka") rozbijane przez AI
+ *            na pozycje z bazy; makro liczy serwer, nie model
  *   Skanuj — kod kreskowy (Chrome na Androidzie)
  *   Nowy   — ręczne przepisanie z etykiety, dla rzeczy bez opakowania
  *
- * Komponent niczego nie zapisuje sam — zwraca wybrany produkt przez onPick,
- * a zapisem zajmuje się strona /dieta.
+ * Komponent niczego nie zapisuje sam — oddaje wybór przez onPick (pojedynczy
+ * produkt) albo onPickMeal (posiłek złożony), a zapisem zajmuje się /dieta.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
-import { Camera, CameraOff, Search, PackagePlus, Flashlight, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { Camera, CameraOff, Search, PackagePlus, Flashlight, AlertTriangle, ArrowLeft, Star, Sparkles } from 'lucide-react';
 
 // --- typy Shape Detection API (brak w standardowych typach TS) ---
 type DetectedBarcode = { rawValue: string; format: string };
@@ -49,6 +51,20 @@ type CatalogRow = {
   kcal100: number; protein100: number; carbs100: number; fat100: number;
   fiber100: number | null; sugars100: number | null; salt100: number | null;
   servingG: number | null; source: string; usageCount: number;
+  isFavorite?: boolean; recipe?: string | null;
+};
+
+type ParsedIngredient = {
+  name: string; grams: number; kcal: number; protein: number; carbs: number; fat: number;
+};
+type ParsedMeal = { title: string; ingredients: ParsedIngredient[]; unmatched: string[] };
+
+/** Posiłek złożony — z zakładki „Opisz". Zapisuje się jako jedna pozycja w dzienniku. */
+export type ComposedMeal = {
+  title: string;
+  recipe: string;
+  ingredients: { name: string; grams: number }[];
+  kcal: number; protein: number; carbs: number; fat: number;
 };
 
 type OffHit = {
@@ -81,13 +97,20 @@ export function FoodPicker({
   mealLabel,
   onClose,
   onPick,
+  onPickMeal,
 }: {
   isOpen: boolean;
   mealLabel: string;
   onClose: () => void;
   onPick: (c: Candidate, grams: number) => Promise<void>;
+  onPickMeal: (m: ComposedMeal) => Promise<void>;
 }) {
-  const [tab, setTab] = useState<'search' | 'scan' | 'new'>('search');
+  const [tab, setTab] = useState<'search' | 'describe' | 'scan' | 'new'>('search');
+
+  // zakładka „Opisz"
+  const [describeText, setDescribeText] = useState('');
+  const [parsing, setParsing] = useState(false);
+  const [composed, setComposed] = useState<ParsedMeal | null>(null);
   const [picked, setPicked] = useState<Candidate | null>(null);
   const [grams, setGrams] = useState(100);
   const [saving, setSaving] = useState(false);
@@ -130,6 +153,8 @@ export function FoodPicker({
       setCatalog([]);
       setOff([]);
       setTab('search');
+      setDescribeText('');
+      setComposed(null);
     }
   }, [isOpen, stopScan]);
 
@@ -281,6 +306,62 @@ export function FoodPicker({
     }
   }, [torchOn]);
 
+  /** Rozpoznanie posiłku opisanego zdaniem — model mapuje tekst na produkty z bazy. */
+  const parseDescription = async () => {
+    const text = describeText.trim();
+    if (text.length < 3) return;
+    setParsing(true);
+    setNote('');
+    setComposed(null);
+    try {
+      const res = await fetch('/api/ai/parse-meal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        setNote(body?.error || 'Nie udało się rozpoznać posiłku.');
+        return;
+      }
+      setComposed(body);
+    } catch {
+      setNote('Brak połączenia z serwerem.');
+    } finally {
+      setParsing(false);
+    }
+  };
+
+  /** Zmiana gramatury pojedynczego składnika — makro przeliczamy proporcjonalnie. */
+  const setIngredientGrams = (idx: number, grams: number) => {
+    setComposed((prev) => {
+      if (!prev) return prev;
+      const ing = [...prev.ingredients];
+      const old = ing[idx];
+      if (!old || old.grams <= 0 || grams <= 0) return prev;
+      const k = grams / old.grams;
+      ing[idx] = {
+        ...old,
+        grams,
+        kcal: Math.round(old.kcal * k),
+        protein: Math.round(old.protein * k * 10) / 10,
+        carbs: Math.round(old.carbs * k * 10) / 10,
+        fat: Math.round(old.fat * k * 10) / 10,
+      };
+      return { ...prev, ingredients: ing };
+    });
+  };
+
+  const toggleFavorite = async (row: CatalogRow) => {
+    const next = !row.isFavorite;
+    setCatalog((prev) => prev.map((c) => (c.id === row.id ? { ...c, isFavorite: next } : c)));
+    await fetch(`/api/food/products/${row.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isFavorite: next }),
+    });
+  };
+
   const pickManual = () => {
     const kcal = dec(form.kcal);
     if (!form.name.trim() || !Number.isFinite(kcal)) return;
@@ -307,9 +388,34 @@ export function FoodPicker({
     }
   };
 
+  const composedTotals = (composed?.ingredients ?? []).reduce(
+    (a, i) => ({ kcal: a.kcal + i.kcal, protein: a.protein + i.protein, carbs: a.carbs + i.carbs, fat: a.fat + i.fat }),
+    { kcal: 0, protein: 0, carbs: 0, fat: 0 }
+  );
+
+  const saveComposed = async () => {
+    if (!composed || composed.ingredients.length === 0) return;
+    setSaving(true);
+    try {
+      await onPickMeal({
+        title: composed.title,
+        // Przepis budujemy ze składu — przy takim wpisie nie ma sensu prosić
+        // model o instrukcję gotowania czegoś, co użytkownik właśnie zjadł.
+        recipe: composed.ingredients.map((i) => `${i.name} ${i.grams} g`).join(', '),
+        ingredients: composed.ingredients.map((i) => ({ name: i.name, grams: i.grams })),
+        kcal: Math.round(composedTotals.kcal),
+        protein: Math.round(composedTotals.protein * 10) / 10,
+        carbs: Math.round(composedTotals.carbs * 10) / 10,
+        fat: Math.round(composedTotals.fat * 10) / 10,
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const inputCls = 'rounded-lg border border-gray-300 px-3 py-2 w-full';
   const tabCls = (t: string) =>
-    `flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
+    `flex-1 py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors ${
       tab === t ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
     }`;
 
@@ -379,8 +485,9 @@ export function FoodPicker({
         </div>
       ) : (
         <div className="space-y-3">
-          <div className="flex gap-2">
+          <div className="flex gap-1.5">
             <button onClick={() => { stopScan(); setTab('search'); }} className={tabCls('search')}>Szukaj</button>
+            <button onClick={() => { stopScan(); setTab('describe'); }} className={tabCls('describe')}>Opisz</button>
             <button onClick={() => setTab('scan')} className={tabCls('scan')}>Skanuj</button>
             <button onClick={() => { stopScan(); setTab('new'); }} className={tabCls('new')}>Nowy</button>
           </div>
@@ -404,17 +511,29 @@ export function FoodPicker({
               {catalog.length > 0 && (
                 <div>
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
-                    {q.trim() ? 'Z twojej bazy' : 'Ostatnio używane'}
+                    {q.trim() ? 'Z twojej bazy' : 'Ulubione i ostatnio używane'}
                   </p>
                   <ul className="divide-y divide-gray-100">
                     {catalog.map((c) => (
-                      <li key={c.id}>
-                        <button onClick={() => choose(fromCatalog(c))} className="w-full text-left py-2 flex justify-between gap-3">
+                      <li key={c.id} className="flex items-center gap-1">
+                        <button onClick={() => choose(fromCatalog(c))} className="flex-1 min-w-0 text-left py-2 flex justify-between gap-3">
                           <span className="min-w-0">
                             <span className="block truncate">{c.name}</span>
-                            <span className="block text-xs text-gray-500">{c.brand || '—'}</span>
+                            <span className="block text-xs text-gray-500">
+                              {c.brand || (c.recipe ? 'twoje danie' : '—')}
+                            </span>
                           </span>
                           <span className="text-sm text-gray-600 shrink-0">{Math.round(c.kcal100)} kcal</span>
+                        </button>
+                        <button
+                          onClick={() => toggleFavorite(c)}
+                          className="p-2 shrink-0"
+                          aria-label={c.isFavorite ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}
+                        >
+                          <Star
+                            className={`w-4 h-4 ${c.isFavorite ? 'text-amber-400' : 'text-gray-300'}`}
+                            fill={c.isFavorite ? 'currentColor' : 'none'}
+                          />
                         </button>
                       </li>
                     ))}
@@ -467,6 +586,95 @@ export function FoodPicker({
                 </div>
               )}
             </>
+          )}
+
+          {tab === 'describe' && (
+            <div className="space-y-3">
+              <p className="text-sm text-gray-600">
+                Napisz, co zjadłeś, zwykłym zdaniem. Rozbiję to na składniki z bazy i policzę makro
+                z prawdziwych wartości — możesz potem poprawić każdą gramaturę.
+              </p>
+              <textarea
+                value={describeText}
+                onChange={(e) => setDescribeText(e.target.value)}
+                rows={2}
+                placeholder="np. pulpety, puree i surówka z marchewki"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                autoFocus
+              />
+              <button
+                onClick={parseDescription}
+                disabled={parsing || describeText.trim().length < 3}
+                className="w-full flex items-center justify-center gap-2 rounded-lg bg-blue-600 text-white py-2.5 font-medium disabled:opacity-50"
+              >
+                <Sparkles className="w-5 h-5" />
+                {parsing ? 'Rozpoznaję…' : 'Rozpoznaj posiłek'}
+              </button>
+
+              {composed && (
+                <div className="space-y-3 border-t border-gray-200 pt-3">
+                  <p className="font-semibold">{composed.title}</p>
+
+                  <ul className="space-y-2">
+                    {composed.ingredients.map((i, idx) => (
+                      <li key={`${i.name}-${idx}`} className="flex items-center gap-2">
+                        <span className="flex-1 min-w-0 text-sm truncate">{i.name}</span>
+                        <input
+                          type="number"
+                          value={i.grams}
+                          onChange={(e) => setIngredientGrams(idx, Math.max(0, parseInt(e.target.value) || 0))}
+                          className="w-20 rounded-lg border border-gray-300 px-2 py-1 text-sm text-right"
+                        />
+                        <span className="text-xs text-gray-500 w-16 text-right shrink-0">{i.kcal} kcal</span>
+                        <button
+                          onClick={() =>
+                            setComposed((prev) =>
+                              prev ? { ...prev, ingredients: prev.ingredients.filter((_, k) => k !== idx) } : prev
+                            )
+                          }
+                          className="text-gray-300 hover:text-red-500 shrink-0"
+                          aria-label="Usuń składnik"
+                        >
+                          ×
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {composed.unmatched.length > 0 && (
+                    <p className="text-xs text-amber-700 flex gap-2">
+                      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                      Nie znalazłem w bazie: {composed.unmatched.join(', ')}. Dodaj to osobno przez zakładkę „Nowy".
+                    </p>
+                  )}
+
+                  <div className="grid grid-cols-4 gap-2 text-center">
+                    {[
+                      { l: 'kcal', v: Math.round(composedTotals.kcal) },
+                      { l: 'Białko', v: Math.round(composedTotals.protein * 10) / 10 },
+                      { l: 'Węgle', v: Math.round(composedTotals.carbs * 10) / 10 },
+                      { l: 'Tłuszcz', v: Math.round(composedTotals.fat * 10) / 10 },
+                    ].map((x) => (
+                      <div key={x.l} className="rounded-lg bg-gray-50 py-2">
+                        <p className="text-lg font-bold">{x.v}</p>
+                        <p className="text-xs text-gray-500">{x.l}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={saveComposed}
+                    disabled={saving || composed.ingredients.length === 0}
+                    className="w-full rounded-xl bg-green-600 text-white py-3 font-semibold disabled:opacity-50"
+                  >
+                    {saving ? 'Zapisuję…' : `Dodaj do: ${mealLabel}`}
+                  </button>
+                  <p className="text-xs text-gray-400">
+                    Zapisze się jako jedna pozycja „{composed.title}". Skład zobaczysz w dzienniku pod ikoną czapki.
+                  </p>
+                </div>
+              )}
+            </div>
           )}
 
           {tab === 'scan' && (
