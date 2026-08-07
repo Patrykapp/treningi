@@ -26,6 +26,20 @@ export function strengthCalories(weightKg: number, totalSets: number): number {
  * Liczenie takiego ćwiczenia wzorem na serie dawało ~20 kcal za dwadzieścia
  * minut na schodach, czyli ponad dziesięciokrotne zaniżenie.
  */
+/**
+ * Które ćwiczenia domyślnie mierzy się czasem.
+ *
+ * Rozstrzyga NAZWA, nie grupa mięśniowa: w katalogu jako „Cardio" oznaczone są
+ * i bieżnia, i burpee, a burpee robi się na powtórzenia. To tylko wartość
+ * początkowa przełącznika — ostatnie słowo ma użytkownik.
+ */
+export const TIMED_EXERCISE =
+  /bie[żz]ni|stepmill|schodow|orbitrek|elliptical|eliptyczn|rower stacjonarn|ergometr|wios[łl]owanie|skakank|spinning|st[ae]pper/i;
+
+export function isTimedExerciseName(name: string | null | undefined): boolean {
+  return Boolean(name && TIMED_EXERCISE.test(name));
+}
+
 const CARDIO_MET: [RegExp, number][] = [
   [/skakank/i, 11],
   [/stepmill|schodow|schody/i, 9],

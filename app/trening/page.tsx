@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Exercise, NewEntryForm, SetData } from '@/types';
 import { formatDateInput } from '@/lib/utils';
+import { isTimedExerciseName } from '@/lib/calories';
 import { fetchExercises, invalidateExerciseCache } from '@/lib/exerciseCache';
 import { Toast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -33,16 +34,6 @@ interface EntryRow extends NewEntryForm {
   timed: boolean;
   durationMin: number;
 }
-
-/**
- * Które ćwiczenia domyślnie mierzy się czasem.
- *
- * Rozstrzyga NAZWA, nie grupa mięśniowa: w katalogu jako „Cardio" oznaczone są
- * i bieżnia, i burpee, a burpee robi się na powtórzenia. Dopasowanie po nazwie
- * ustawia tylko wartość początkową przełącznika — ostatnie słowo ma użytkownik.
- */
-const TIMED_BY_DEFAULT =
-  /bie[żz]ni|stepmill|schodow|orbitrek|elliptical|eliptyczn|rower stacjonarn|ergometr|wios[łl]owanie|skakank|spinning|st[ae]pper/i;
 
 function newEntryRow(key: string, partial: Partial<EntryRow> = {}): EntryRow {
   return {
@@ -412,7 +403,7 @@ function TreningPage() {
       // o minuty, sztanga o serie — bez klikania w przełącznik za każdym razem.
       if (field === 'exerciseId') {
         const name = exercises.find(x => x.id === value)?.name ?? '';
-        return { ...e, exerciseId: String(value), timed: TIMED_BY_DEFAULT.test(name) };
+        return { ...e, exerciseId: String(value), timed: isTimedExerciseName(name) };
       }
       return { ...e, [field]: value };
     }));
@@ -500,8 +491,8 @@ function TreningPage() {
         setExercises(prev => prev.some(p => p.id === ex.id) ? prev : [...prev, ex].sort((a, b) => a.name.localeCompare(b.name)));
         setEntries(prev => {
           const lastEmpty = [...prev].reverse().find(e => !e.exerciseId);
-          if (lastEmpty) return prev.map(e => e.key === lastEmpty.key ? { ...e, exerciseId: ex.id, timed: TIMED_BY_DEFAULT.test(ex.name) } : e);
-          return [...prev, newEntryRow(String(Date.now()), { exerciseId: ex.id, timed: TIMED_BY_DEFAULT.test(ex.name) })];
+          if (lastEmpty) return prev.map(e => e.key === lastEmpty.key ? { ...e, exerciseId: ex.id, timed: isTimedExerciseName(ex.name) } : e);
+          return [...prev, newEntryRow(String(Date.now()), { exerciseId: ex.id, timed: isTimedExerciseName(ex.name) })];
         });
         setToast({ message: `"${ex.name}" już istnieje — wybrano je w formularzu`, type: 'success' });
         setNewExName(''); setShowNewEx(false);
@@ -518,9 +509,9 @@ function TreningPage() {
       setEntries(prev => {
         const lastEmpty = [...prev].reverse().find(e => !e.exerciseId);
         if (lastEmpty) {
-          return prev.map(e => e.key === lastEmpty.key ? { ...e, exerciseId: ex.id, timed: TIMED_BY_DEFAULT.test(ex.name) } : e);
+          return prev.map(e => e.key === lastEmpty.key ? { ...e, exerciseId: ex.id, timed: isTimedExerciseName(ex.name) } : e);
         }
-        return [...prev, newEntryRow(String(Date.now()), { exerciseId: ex.id, timed: TIMED_BY_DEFAULT.test(ex.name) })];
+        return [...prev, newEntryRow(String(Date.now()), { exerciseId: ex.id, timed: isTimedExerciseName(ex.name) })];
       });
       setToast({ message: `Dodano "${ex.name}" i wybrano w formularzu`, type: 'success' });
       setNewExName(''); setShowNewEx(false);

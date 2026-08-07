@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Exercise, SetData } from '@/types';
 import { formatDate, formatDateInput } from '@/lib/utils';
+import { isTimedExerciseName } from '@/lib/calories';
 import { Toast } from '@/components/ui/Toast';
 import { ExerciseAnimation } from '@/components/ui/ExerciseAnimation';
 import { useAuth } from '@/hooks/useAuth';
@@ -172,6 +173,10 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
   const [formComment, setFormComment] = useState('');
   const [formSetsData, setFormSetsData] = useState<SetData[]>([]);
   const [formBodyweight, setFormBodyweight] = useState(false);
+  // Ćwiczenia mierzone czasem (bieżnia, stepmill, ergometr) — zamiast serii,
+  // powtórzeń i ciężaru wpisuje się minuty.
+  const [formTimed, setFormTimed] = useState(false);
+  const [formDurationMin, setFormDurationMin] = useState(0);
   const [saving, setSaving] = useState(false);
 
   const [saveAsUserId, setSaveAsUserId] = useState('');
@@ -206,6 +211,10 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
     const lifts = loadedEntries.filter((e: EntryWithSession) => !(e.durationSec && e.durationSec > 0));
     const allBodyweight = lifts.length > 0 && lifts.every((e: EntryWithSession) => calcMax(e) === 0);
     if (allBodyweight) setChartType('reps');
+    // Domyślny tryb formularza: historia tego ćwiczenia jest pewniejsza niż
+    // nazwa, więc jeśli już było wpisywane na czas, zostajemy przy czasie.
+    const timedBefore = loadedEntries.some((e: EntryWithSession) => e.durationSec && e.durationSec > 0);
+    setFormTimed(timedBefore || isTimedExerciseName(ex?.name));
     setLoading(false);
     return ex;
   };
@@ -335,6 +344,10 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
       setFormRpe('');
       setFormComment('');
       setFormBodyweight(lastMax === 0);
+      if (lastEntry.durationSec && lastEntry.durationSec > 0) {
+        setFormTimed(true);
+        setFormDurationMin(Math.round(lastEntry.durationSec / 60));
+      }
       setFormPrefilled(true);
     } else {
       setFormSets(3);
@@ -368,19 +381,25 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
   const handleAddToDraft = async () => {
     const sid = activeSession.getId();
     if (!sid) { setToast({ message: 'Brak aktywnego treningu', type: 'error' }); return; }
-    const sd = formCustomSets && formSetsData.length > 0 ? formSetsData : [];
-    const res = await fetch(`/api/sessions/${sid}/entries`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ exerciseId: id, sets: formSets, reps: formReps, weight: formWeight,
-        rpe: formRpe ? parseFloat(formRpe) : undefined, comment: formComment || undefined, setsData: sd })
+    // PATCH na sesję, nie POST na /entries — takiej trasy nigdy nie było
+    // i „Dodaj do treningu" kończyło się błędem 404.
+    const res = await fetch(`/api/sessions/${sid}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ entry: buildEntry() })
     });
     if (res.ok) { setToast({ message: 'Dodano do treningu', type: 'success' }); setShowForm(false); }
     else setToast({ message: 'Błąd dodawania', type: 'error' });
   };
 
   const buildEntry = () => {
+    if (formTimed) {
+      return { exerciseId: id, sets: 1, reps: 1, weight: 0,
+        durationSec: Math.round(formDurationMin * 60),
+        rpe: formRpe ? parseFloat(formRpe) : undefined, comment: formComment || undefined, setsData: [] as SetData[] };
+    }
     const sd = formCustomSets && formSetsData.length > 0 ? formSetsData : [];
     return { exerciseId: id, sets: formSets, reps: formReps, weight: formWeight,
+      durationSec: null,
       rpe: formRpe ? parseFloat(formRpe) : undefined, comment: formComment || undefined, setsData: sd };
   };
 
@@ -561,6 +580,16 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
               <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)}
                 className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm" />
             </div>
+            {/* Na czas — bieżnia, stepmill, ergometr. Serie i ciężar znikają,
+                bo nie ma czego w nie wpisać. */}
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-gray-500">Na czas (minuty)</span>
+              <button onClick={() => { setFormTimed(t => !t); setFormCustomSets(false); setFormBodyweight(false); }}
+                className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${formTimed ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-200 hover:bg-gray-300'}`}>
+                <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${formTimed ? 'translate-x-5' : 'translate-x-1'}`} />
+              </button>
+            </div>
+            {!formTimed && (
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs text-gray-500">Własna masa ciała</span>
               <button onClick={() => { setFormBodyweight(b => !b); if (!formBodyweight) setFormWeight(0); }}
@@ -568,7 +597,33 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                 <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${formBodyweight ? 'translate-x-5' : 'translate-x-1'}`} />
               </button>
             </div>
-            {!formCustomSets ? (
+            )}
+            {formTimed ? (
+              <div>
+                <label className="text-xs text-gray-500 block mb-1">Czas (min)</label>
+                <div className="flex items-center">
+                  <button type="button" onClick={() => setFormDurationMin(m => Math.max(0, m - 5))}
+                    className="h-10 w-9 bg-gray-100 rounded-l-xl font-bold text-gray-600 text-lg shrink-0 border border-r-0 border-gray-200 transition-colors hover:bg-gray-200 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">−</button>
+                  <input type="number" inputMode="numeric"
+                    value={formDurationMin === 0 ? '' : formDurationMin} placeholder="0"
+                    onChange={e => setFormDurationMin(e.target.value === '' ? 0 : Number(e.target.value))} min={0}
+                    className="flex-1 border border-gray-200 py-2 text-center font-semibold h-10 min-w-0" />
+                  <button type="button" onClick={() => setFormDurationMin(m => m + 5)}
+                    className="h-10 w-9 bg-gray-100 rounded-r-xl font-bold text-gray-600 text-lg shrink-0 border border-l-0 border-gray-200 transition-colors hover:bg-gray-200 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">+</button>
+                </div>
+                <div className="grid grid-cols-4 gap-1 mt-2">
+                  {[10, 15, 20, 30].map(m => (
+                    <button key={m} type="button" onClick={() => setFormDurationMin(m)}
+                      className="py-1.5 rounded-lg text-xs font-bold border bg-gray-50 text-gray-600 border-gray-200 transition-colors hover:bg-gray-100 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                      {m} min
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-400 mt-2">
+                  Kalorie policzą się z czasu i rodzaju maszyny, a nie z liczby serii.
+                </p>
+              </div>
+            ) : !formCustomSets ? (
               <>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
@@ -714,23 +769,23 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
             )}
             <div className="flex gap-2">
               {activeSession.getId() && (
-                <button onClick={handleAddToDraft} className="flex-1 bg-green-600 text-white py-2 rounded-xl text-sm font-medium transition-colors hover:bg-green-700 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                <button onClick={handleAddToDraft} disabled={formTimed && formDurationMin <= 0} className="flex-1 bg-green-600 text-white py-2 rounded-xl text-sm font-medium transition-colors hover:bg-green-700 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                   Dodaj do treningu
                 </button>
               )}
               {existingSessionId ? (
                 <>
-                  <button onClick={handleAddToExisting} disabled={saving}
+                  <button onClick={handleAddToExisting} disabled={saving || (formTimed && formDurationMin <= 0)}
                     className="flex-1 bg-blue-600 text-white py-2 rounded-xl text-sm font-medium transition-colors hover:bg-blue-700 active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                     {saving ? 'Zapisuję...' : '+ Dodaj do istniejącego'}
                   </button>
-                  <button onClick={handleSaveAlone} disabled={saving}
+                  <button onClick={handleSaveAlone} disabled={saving || (formTimed && formDurationMin <= 0)}
                     className="flex-1 bg-gray-600 text-white py-2 rounded-xl text-sm font-medium transition-colors hover:bg-gray-700 active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                     Osobno
                   </button>
                 </>
               ) : (
-                <button onClick={handleSaveAlone} disabled={saving}
+                <button onClick={handleSaveAlone} disabled={saving || (formTimed && formDurationMin <= 0)}
                   className="flex-1 bg-blue-600 text-white py-2 rounded-xl text-sm font-medium transition-colors hover:bg-blue-700 active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                   {saving ? 'Zapisuję...' : 'Zapisz'}
                 </button>
