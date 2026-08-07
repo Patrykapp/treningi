@@ -157,6 +157,47 @@ function extract(html: string): Extracted {
   };
 }
 
+/**
+ * Wydajność przepisu. Pole `recipeYield` bywa jednym zdaniem zawierającym
+ * OBIE informacje naraz: „4 porcje - około 1200 g". Wcześniejsza wersja brała
+ * po prostu pierwszą liczbę z tekstu i sprawdzała, czy gdziekolwiek dalej
+ * stoi „g" — przy takim zapisie wychodziło, że całe danie waży 4 gramy,
+ * a liczby na 100 g robiły się 25 razy za duże.
+ *
+ * Teraz masa i liczba porcji są wyłuskiwane niezależnie, każda po swojej
+ * jednostce, i obie przechodzą test zdrowego rozsądku.
+ */
+function parseYield(text: string | null): { servings: number | null; totalWeight: number | null } {
+  if (!text) return { servings: null, totalWeight: null };
+  const t = text.replace(/ /g, ' ').toLowerCase();
+  const val = (m: RegExpExecArray | null) => (m ? parseFloat(m[1].replace(',', '.')) : null);
+
+  // Masa całości — kilogramy mają pierwszeństwo, bo „1,2 kg" zawiera też „g".
+  const kg = val(/(\d+(?:[.,]\d+)?)\s*kg\b/.exec(t));
+  const g = val(/(\d+(?:[.,]\d+)?)\s*g(?:ram(?:ów|y|a)?)?\b/.exec(t));
+  const l = val(/(\d+(?:[.,]\d+)?)\s*l\b/.exec(t));
+  const ml = val(/(\d+(?:[.,]\d+)?)\s*ml\b/.exec(t));
+  let totalWeight =
+    kg !== null ? kg * 1000 : ml !== null ? ml : g !== null ? g : l !== null ? l * 1000 : null;
+
+  // Liczba porcji — po słowie, a nie po pozycji w zdaniu.
+  let servings = val(/(\d+(?:[.,]\d+)?)\s*(?:porcj\w*|kawałk\w*|sztuk\w*|osob\w*|plastr\w*|plack\w*)/.exec(t));
+  // „porcje: 4" albo samo „4" — jedyna liczba w tekście bez jednostki masy.
+  if (servings === null && totalWeight === null) servings = val(/(\d{1,2})/.exec(t));
+
+  // Danie ważące 4 g albo mające 200 porcji to błąd odczytu, nie przepis.
+  if (servings !== null && !(servings >= 1 && servings <= 60)) servings = null;
+  if (totalWeight !== null && !(totalWeight >= 50 && totalWeight <= 20000)) totalWeight = null;
+
+  return { servings, totalWeight };
+}
+
+/** Czy strona sama pisze, że tabela dotyczy 100 g (nagłówek bywa poza blokiem). */
+function per100InPage(html: string): boolean {
+  const text = stripTags(html.slice(0, 400_000));
+  return /wartoś(?:ci|ć)\s+odżywcz\w*[^.]{0,80}?(?:w|na)\s*100\s*(?:g|ml)/i.test(text);
+}
+
 /** Blokada adresów wewnętrznych — endpoint pobiera dowolny URL od użytkownika. */
 function safeUrl(raw: string): URL | null {
   let u: URL;
@@ -204,22 +245,27 @@ export async function POST(request: Request) {
     const rec = extract(html);
     if (!rec.name && rec.ingredients.length === 0) {
       return NextResponse.json(
-        { error: 'Na tej stronie nie znalazłem przepisu w formacie, który umiem odczytać.' },
+        {
+          error: 'Na tej stronie nie znalazłem przepisu w formacie, który umiem odczytać.',
+          stage: 'odczyt strony',
+        },
         { status: 422 }
       );
     }
 
-    const yieldGrams = rec.yieldText ? num(rec.yieldText) : null;
-    // „820 g ciasta" to masa całości; „6 porcji" to liczba porcji — rozróżniamy po jednostce.
-    const yieldIsWeight = Boolean(rec.yieldText && /\d\s*(g|gram|kg)\b/i.test(rec.yieldText));
-    const totalWeight = yieldIsWeight ? (/(kg)/i.test(rec.yieldText!) ? (yieldGrams ?? 0) * 1000 : yieldGrams) : null;
-    const servings = !yieldIsWeight && yieldGrams && yieldGrams > 0 && yieldGrams < 100 ? yieldGrams : null;
+    const { servings, totalWeight } = parseYield(rec.yieldText);
 
     const n = rec.nutrition;
-    const per100Declared = /w\s*100\s*g|na\s*100\s*g|100\s*g\b/i.test(rec.nutritionText);
+    // Nagłówek „Wartości odżywcze (w 100 g)" bardzo często stoi OBOK bloku
+    // z liczbami, a nie w środku — dlatego szukamy go też w treści strony.
+    const per100Declared =
+      /w\s*100\s*(?:g|ml)|na\s*100\s*(?:g|ml)|100\s*g\b/i.test(rec.nutritionText) || per100InPage(html);
 
     // ── Ścieżka 1: autor podał wartości na 100 g ──────────────────────────
     if (n.kcal && per100Declared) {
+      // Gdy znamy i masę całości, i liczbę porcji, od razu wyliczamy porcję —
+      // dzięki temu przy dodawaniu do dziennika jest gotowy przycisk „porcja".
+      const portionG = servings && totalWeight ? Math.round(totalWeight / servings) : null;
       return NextResponse.json({
         source: 'strona (na 100 g)',
         name: rec.name,
@@ -228,11 +274,13 @@ export async function POST(request: Request) {
         carbs100: r1(n.carbs ?? 0),
         fat100: r1(n.fat ?? 0),
         servingLabel: rec.yieldText,
-        servingG: null,
+        servingG: portionG,
         totalWeight,
         ingredients: rec.ingredients,
         recipe: rec.instructions?.slice(0, 2000) ?? null,
-        note: 'Wartości pochodzą wprost z przepisu, podane na 100 g.',
+        note: portionG
+          ? `Wartości wprost z przepisu, podane na 100 g. Porcja wychodzi ${portionG} g.`
+          : 'Wartości pochodzą wprost z przepisu, podane na 100 g.',
       });
     }
 
@@ -259,7 +307,10 @@ export async function POST(request: Request) {
     // ── Ścieżka 3: liczymy sami ze składników ─────────────────────────────
     if (rec.ingredients.length === 0 || !process.env.GROQ_API_KEY) {
       return NextResponse.json(
-        { error: 'Przepis nie ma tabeli wartości odżywczych, a składników nie udało się odczytać.' },
+        {
+          error: 'Przepis nie ma tabeli wartości odżywczych, a składników nie udało się odczytać.',
+          stage: n.kcal ? 'tabela jest, ale bez informacji, czego dotyczy' : 'brak tabeli i składników',
+        },
         { status: 422 }
       );
     }
@@ -331,26 +382,42 @@ ${menu}`;
     }
 
     // Masa gotowego dania bywa mniejsza od sumy składników (odparowanie przy
-    // pieczeniu). Jeśli autor podał masę całości, ufamy jej.
-    const finalWeight = totalWeight && totalWeight > 0 ? totalWeight : weight;
+    // pieczeniu). Jeśli autor podał masę całości, ufamy jej — ale tylko wtedy,
+    // gdy nie kłóci się rażąco z tym, co daje suma składników. Odczytana z błędem
+    // masa całości potrafiła podnieść wynik kilkunastokrotnie.
+    const declaredIsSane =
+      totalWeight !== null && totalWeight > 0 && totalWeight >= weight * 0.4 && totalWeight <= weight * 1.6;
+    const finalWeight = declaredIsSane ? totalWeight! : weight;
     const k = 100 / finalWeight;
+
+    // Nic naturalnego nie ma powyżej 900 kcal/100 g (czysty tłuszcz to 884).
+    // Lepszy uczciwy komunikat niż propozycja, która wygląda na wynik obliczeń.
+    const kcal100 = Math.round(kcal * k);
+    if (kcal100 > 900) {
+      return NextResponse.json(
+        {
+          error: `Z tego przepisu wychodzi ${kcal100} kcal na 100 g, co jest niemożliwe — coś odczytałem źle. Wpisz wartości ręcznie.`,
+          stage: 'kontrola sensowności wyniku',
+        },
+        { status: 422 }
+      );
+    }
 
     return NextResponse.json({
       source: 'wyliczone ze składników',
       name: rec.name,
-      kcal100: Math.round(kcal * k),
+      kcal100,
       protein100: r1(protein * k),
       carbs100: r1(carbs * k),
       fat100: r1(fat * k),
       servingLabel: rec.yieldText,
-      servingG: servings && finalWeight ? Math.round(finalWeight / servings) : null,
+      servingG: servings ? Math.round(finalWeight / servings) : null,
       totalWeight: Math.round(finalWeight),
       ingredients: rec.ingredients,
       recipe: rec.instructions?.slice(0, 2000) ?? null,
-      note:
-        totalWeight && totalWeight > 0
-          ? `Policzone ze składników, podzielone przez podaną masę ${Math.round(totalWeight)} g.`
-          : `Policzone ze składników. Masa całości oszacowana na ${Math.round(weight)} g — jeśli danie się piecze i odparowuje, realna kaloryczność na 100 g będzie wyższa.`,
+      note: declaredIsSane
+        ? `Policzone ze składników, podzielone przez podaną masę ${Math.round(finalWeight)} g.`
+        : `Policzone ze składników. Masa całości oszacowana na ${Math.round(weight)} g — jeśli danie się piecze i odparowuje, realna kaloryczność na 100 g będzie wyższa.`,
     });
   } catch (e) {
     console.error('POST /api/food/recipe-import', e);

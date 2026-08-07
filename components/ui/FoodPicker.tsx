@@ -514,7 +514,9 @@ export function FoodPicker({
       });
       const b = await res.json();
       if (!res.ok) {
-        setNote(b?.error || 'Nie udało się zaimportować przepisu.');
+        // `stage` mówi, na czym import się wyłożył — bez tego każdy nieudany
+        // import wygląda tak samo i nie ma z czego zgadywać przyczyny.
+        setNote((b?.error || 'Nie udało się zaimportować przepisu.') + (b?.stage ? ` (etap: ${b.stage})` : ''));
         return;
       }
       setForm({
