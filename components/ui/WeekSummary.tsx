@@ -16,23 +16,35 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis,
-  CartesianGrid, Tooltip, ReferenceLine,
+  CartesianGrid, Tooltip,
 } from 'recharts';
-import { ChevronLeft, ChevronRight, ShoppingCart, Copy, Check, TrendingDown, TrendingUp, Minus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ShoppingCart, Copy, Check, TrendingDown, TrendingUp, Minus, Download, Flame } from 'lucide-react';
 
 type Day = {
   date: string; kcal: number; protein: number; carbs: number; fat: number; logged: boolean;
   weight: number | null; weightAvg: number | null; kcalAvg: number | null;
+  burned: number; target: number;
 };
 type WeekData = {
   start: string; end: string; days: Day[];
   weightTrend: number | null;
-  avg: { kcal: number; protein: number; carbs: number; fat: number };
+  avg: { kcal: number; protein: number; carbs: number; fat: number; burned: number };
   targets: { kcal: number; protein: number; carbs: number; fat: number };
+  addWorkoutKcal: boolean;
   daysLogged: number;
   withinTarget: number;
-  shopping: { name: string; grams: number }[];
+  shopping: { name: string; grams: number; unit?: string }[];
 };
+
+/** Ilość tak, jak się ją kupuje — napoje w mililitrach, od litra w litrach. */
+function qty(grams: number, unit?: string): string {
+  const ml = unit === 'ml';
+  if (grams >= 1000) {
+    const big = Math.round((grams / 1000) * 10) / 10;
+    return `${String(big).replace('.', ',')} ${ml ? 'l' : 'kg'}`;
+  }
+  return `${Math.round(grams)} ${ml ? 'ml' : 'g'}`;
+}
 
 const DOW = ['nd', 'pn', 'wt', 'śr', 'cz', 'pt', 'so'];
 
@@ -103,7 +115,7 @@ export function WeekSummary({ anchorDate }: { anchorDate: string }) {
   const copyShopping = async () => {
     if (!data) return;
     try {
-      await navigator.clipboard.writeText(data.shopping.map((s) => `${s.name} — ${s.grams} g`).join('\n'));
+      await navigator.clipboard.writeText(data.shopping.map((s) => `${s.name} — ${qty(s.grams, s.unit)}`).join('\n'));
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -115,6 +127,7 @@ export function WeekSummary({ anchorDate }: { anchorDate: string }) {
   if (!data) return <p className="text-sm text-red-600">Nie udało się wczytać podsumowania.</p>;
 
   const hasWeight = data.days.some((d) => d.weightAvg !== null);
+  const hasBurned = data.days.some((d) => d.burned > 0);
   const trend = data.weightTrend;
   const TrendIcon = trend === null || Math.abs(trend) < 0.2 ? Minus : trend < 0 ? TrendingDown : TrendingUp;
 
@@ -161,7 +174,8 @@ export function WeekSummary({ anchorDate }: { anchorDate: string }) {
             <span className="w-3 h-0.5 rounded" style={{ background: C.avg }} /> średnia 7 dni
           </span>
           <span className="inline-flex items-center gap-1">
-            <span className="w-3 h-0 border-t-2 border-dashed" style={{ borderColor: C.ink }} /> cel
+            <span className="w-3 h-0 border-t-2 border-dashed" style={{ borderColor: C.ink }} />
+            {data.addWorkoutKcal ? 'cel + trening' : 'cel'}
           </span>
         </div>
 
@@ -186,13 +200,23 @@ export function WeekSummary({ anchorDate }: { anchorDate: string }) {
               labelFormatter={(_: unknown, p: { payload?: { date?: string } }[] | undefined) => p?.[0]?.payload?.date ?? ''}
               formatter={(v: number, n: string) => [
                 `${Math.round(v)} kcal`,
-                n === 'kcalPokaz' ? 'zjedzone' : 'średnia 7 dni',
+                n === 'kcalPokaz' ? 'zjedzone' : n === 'target' ? 'cel' : 'średnia 7 dni',
               ]}
             />
-            {data.targets.kcal > 0 && (
-              <ReferenceLine y={data.targets.kcal} stroke={C.ink} strokeDasharray="4 4" strokeWidth={1} />
-            )}
             <Bar dataKey="kcalPokaz" fill={C.bar} radius={[4, 4, 0, 0]} maxBarSize={26} />
+            {/* Cel jako linia, a nie stała pozioma kreska: przy doliczaniu treningu
+                budżet dnia rośnie o spalone kalorie i naprawdę jest różny co dnia. */}
+            {data.targets.kcal > 0 && (
+              <Line
+                type="stepAfter"
+                dataKey="target"
+                stroke={C.ink}
+                strokeWidth={1}
+                strokeDasharray="4 4"
+                dot={false}
+                isAnimationActive={false}
+              />
+            )}
             <Line
               type="monotone"
               dataKey="kcalAvg"
@@ -313,9 +337,34 @@ export function WeekSummary({ anchorDate }: { anchorDate: string }) {
           ))}
         </div>
 
-        <button onClick={() => setShowTable((s) => !s)} className="text-xs text-blue-600 underline mt-3">
-          {showTable ? 'ukryj tabelę' : 'pokaż dane jako tabelę'}
-        </button>
+        {/* Trening: pokazujemy dopiero, gdy jest co pokazywać. Bilans netto to
+            zjedzone minus spalone — liczba, którą naprawdę porównuje się z celem. */}
+        {hasBurned && (
+          <div className="mt-3 rounded-lg bg-orange-50 p-3 text-sm flex items-start gap-2">
+            <Flame className="w-4 h-4 text-orange-600 shrink-0 mt-0.5" />
+            <span className="text-orange-900">
+              Trening spala średnio <strong>{data.avg.burned} kcal</strong> dziennie, czyli netto zostaje{' '}
+              <strong>{data.avg.kcal - data.avg.burned} kcal</strong>.{' '}
+              {data.addWorkoutKcal
+                ? 'Cel na wykresie rośnie w dni treningowe o tę wartość.'
+                : 'Nie doliczam tego do celu — włącz to w ustawieniach, jeśli chcesz jeść więcej w dni treningowe.'}
+            </span>
+          </div>
+        )}
+
+        <div className="flex items-center gap-4 mt-3">
+          <button onClick={() => setShowTable((s) => !s)} className="text-xs text-blue-600 underline">
+            {showTable ? 'ukryj tabelę' : 'pokaż dane jako tabelę'}
+          </button>
+          {/* Eksport: dziennik prowadzi się latami i dane muszą dać się wyjąć. */}
+          <a
+            href={`/api/food/export?start=${data.start}&end=${data.end}`}
+            className="text-xs text-blue-600 underline inline-flex items-center gap-1"
+            download
+          >
+            <Download className="w-3.5 h-3.5" /> pobierz CSV
+          </a>
+        </div>
         {showTable && (
           <div className="mt-2 overflow-x-auto">
             <table className="w-full text-xs">
@@ -324,6 +373,7 @@ export function WeekSummary({ anchorDate }: { anchorDate: string }) {
                   <th className="text-left font-medium py-1">Dzień</th>
                   <th className="text-right font-medium">kcal</th>
                   <th className="text-right font-medium">śr. 7 dni</th>
+                  {hasBurned && <th className="text-right font-medium">trening</th>}
                   <th className="text-right font-medium">waga</th>
                 </tr>
               </thead>
@@ -333,6 +383,7 @@ export function WeekSummary({ anchorDate }: { anchorDate: string }) {
                     <td className="py-1">{d.date.slice(5)}</td>
                     <td className="text-right">{d.logged ? d.kcal : '—'}</td>
                     <td className="text-right">{d.kcalAvg ?? '—'}</td>
+                    {hasBurned && <td className="text-right">{d.burned > 0 ? `−${d.burned}` : '—'}</td>}
                     <td className="text-right">{d.weight ?? '—'}</td>
                   </tr>
                 ))}
@@ -357,7 +408,7 @@ export function WeekSummary({ anchorDate }: { anchorDate: string }) {
                 {data.shopping.map((s) => (
                   <li key={s.name} className="py-1 flex justify-between gap-2">
                     <span className="min-w-0 truncate">{s.name}</span>
-                    <span className="text-gray-500 shrink-0">{s.grams} g</span>
+                    <span className="text-gray-500 shrink-0">{qty(s.grams, s.unit)}</span>
                   </li>
                 ))}
               </ul>

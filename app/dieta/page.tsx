@@ -191,7 +191,11 @@ export default function DietaPage() {
       });
       const body = await res.json().catch(() => null);
       if (res.ok) {
-        setToast({ msg: `Skopiowano ${body?.copied ?? 0} pozycji`, type: 'success' });
+        const copied = body?.copied ?? 0;
+        setToast({
+          msg: copied > 0 ? `Skopiowano ${copied} pozycji` : 'Poprzedni dzień jest pusty — nie ma czego kopiować',
+          type: copied > 0 ? 'success' : 'error',
+        });
         void load(date);
       } else {
         setToast({ msg: body?.error || 'Nie udało się skopiować', type: 'error' });
@@ -428,25 +432,59 @@ export default function DietaPage() {
         </section>
       )}
 
-      {/* Generator jadłospisu i kopiowanie */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => setAiOpen(true)}
-          className="flex-1 flex items-center justify-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 py-3 font-medium text-blue-700 hover:bg-blue-100"
-        >
-          <Sparkles className="w-5 h-5" />
-          {(data?.entries.length ?? 0) > 0 ? 'Ułóż od nowa (AI)' : 'Zaplanuj z AI'}
-        </button>
-        <button
-          onClick={copyFromYesterday}
-          disabled={copying}
-          className="flex items-center justify-center gap-2 px-4 rounded-2xl border border-gray-300 text-sm text-gray-700 disabled:opacity-50"
-          title="Skopiuj wszystkie wpisy z poprzedniego dnia"
-        >
-          <CopyPlus className="w-5 h-5" />
-          Z wczoraj
-        </button>
-      </div>
+      {/* Pusty dzień: cztery identyczne puste sekcje nie podpowiadają, od czego
+          zacząć. Karta startowa pokazuje trzy drogi wejścia zamiast żadnej. */}
+      {data && data.entries.length === 0 && !loading ? (
+        <section className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+          <div>
+            <h2 className="font-semibold">Pusty dzień</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Najszybciej idzie kopiowanie — dni jedzenia są do siebie podobne bardziej, niż się wydaje.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <button
+              onClick={copyFromYesterday}
+              disabled={copying}
+              className="flex items-center justify-center gap-2 rounded-xl border border-gray-300 py-2.5 text-sm font-medium disabled:opacity-50"
+            >
+              <CopyPlus className="w-4 h-4" /> {copying ? 'Kopiuję…' : 'Powtórz wczoraj'}
+            </button>
+            <button
+              onClick={() => setPickerMeal(MEALS[0].key)}
+              className="flex items-center justify-center gap-2 rounded-xl border border-gray-300 py-2.5 text-sm font-medium"
+            >
+              <Plus className="w-4 h-4" /> Zacznij od śniadania
+            </button>
+            <button
+              onClick={() => setAiOpen(true)}
+              className="flex items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 py-2.5 text-sm font-medium text-blue-700"
+            >
+              <Sparkles className="w-4 h-4" /> Zaplanuj z AI
+            </button>
+          </div>
+        </section>
+      ) : (
+        /* Generator jadłospisu i kopiowanie */
+        <div className="flex gap-2">
+          <button
+            onClick={() => setAiOpen(true)}
+            className="flex-1 flex items-center justify-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 py-3 font-medium text-blue-700 hover:bg-blue-100"
+          >
+            <Sparkles className="w-5 h-5" />
+            {(data?.entries.length ?? 0) > 0 ? 'Ułóż od nowa (AI)' : 'Zaplanuj z AI'}
+          </button>
+          <button
+            onClick={copyFromYesterday}
+            disabled={copying}
+            className="flex items-center justify-center gap-2 px-4 rounded-2xl border border-gray-300 text-sm text-gray-700 disabled:opacity-50"
+            title="Skopiuj wszystkie wpisy z poprzedniego dnia"
+          >
+            <CopyPlus className="w-5 h-5" />
+            Z wczoraj
+          </button>
+        </div>
+      )}
 
       {/* Posiłki */}
       {MEALS.map((m) => {

@@ -14,7 +14,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Plus, Trash2, Copy, Check, CalendarPlus, Eraser } from 'lucide-react';
 
 type Item = {
-  id: string; name: string; grams: number | null;
+  id: string; name: string; grams: number | null; unit?: string;
   category: string | null; checked: boolean;
 };
 
@@ -25,6 +25,21 @@ function shift(isoDate: string, days: number): string {
   const d = new Date(`${isoDate}T12:00:00`);
   d.setDate(d.getDate() + days);
   return iso(d);
+}
+
+/**
+ * Ilość tak, jak się ją kupuje: napoje w mililitrach (od litra w litrach),
+ * reszta w gramach (od kilograma w kilogramach). „Mleko 1500 g" jest formalnie
+ * poprawne i kompletnie bezużyteczne przy półce.
+ */
+function qty(grams: number | null | undefined, unit?: string): string {
+  if (!grams || grams <= 0) return '';
+  const ml = unit === 'ml';
+  if (grams >= 1000) {
+    const big = Math.round((grams / 1000) * 10) / 10;
+    return `${String(big).replace('.', ',')} ${ml ? 'l' : 'kg'}`;
+  }
+  return `${Math.round(grams)} ${ml ? 'ml' : 'g'}`;
 }
 
 const BRAK_DZIALU = 'Pozostałe';
@@ -126,7 +141,10 @@ export function ShoppingList({ anchorDate }: { anchorDate: string }) {
   const copyAll = async () => {
     const text = items
       .filter((i) => !i.checked)
-      .map((i) => `${i.name}${i.grams ? ` — ${Math.round(i.grams)} g` : ''}`)
+      .map((i) => {
+        const q = qty(i.grams, i.unit);
+        return q ? `${i.name} — ${q}` : i.name;
+      })
       .join('\n');
     try {
       await navigator.clipboard.writeText(text);
@@ -237,7 +255,9 @@ export function ShoppingList({ anchorDate }: { anchorDate: string }) {
                 </button>
                 <span className={`flex-1 min-w-0 ${i.checked ? 'line-through text-gray-400' : ''}`}>
                   <span className="block truncate">{i.name}</span>
-                  {i.grams ? <span className="block text-xs text-gray-500">{Math.round(i.grams)} g</span> : null}
+                  {qty(i.grams, i.unit) ? (
+                    <span className="block text-xs text-gray-500">{qty(i.grams, i.unit)}</span>
+                  ) : null}
                 </span>
                 <button onClick={() => remove(i.id)} className="p-2 text-gray-300 hover:text-red-500" aria-label="Usuń">
                   <Trash2 className="w-4 h-4" />

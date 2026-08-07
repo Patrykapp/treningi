@@ -15,11 +15,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
-import { Camera, CameraOff, Search, PackagePlus, Flashlight, AlertTriangle, ArrowLeft, Star, Sparkles, Link as LinkIcon, Pencil } from 'lucide-react';
-
-// Ostatnio używana zakładka. Kto skanuje, ten skanuje codziennie; kto opisuje
-// posiłki zdaniem, ten nie chce co wieczór klikać w „Opisz".
-const TAB_KEY = 'foodPickerTab';
+import { Camera, CameraOff, Search, PackagePlus, Flashlight, AlertTriangle, ArrowLeft, Star, Sparkles, Link as LinkIcon } from 'lucide-react';
 
 // --- typy Shape Detection API (brak w standardowych typach TS) ---
 type DetectedBarcode = { rawValue: string; format: string };
@@ -47,8 +43,6 @@ export type Candidate = {
   sugars100?: number | null;
   salt100?: number | null;
   servingG?: number | null;
-  servingLabel?: string | null; // opis porcji, np. „1 bułka" — włącza liczenie w sztukach
-  usualGrams?: number | null;   // ile zwykle idzie tego na ten posiłek
   unit: 'g' | 'ml';
   source: 'OWN' | 'SEED' | 'OFF';
 };
@@ -57,9 +51,8 @@ type CatalogRow = {
   id: string; name: string; brand: string | null; barcode: string | null;
   kcal100: number; protein100: number; carbs100: number; fat100: number;
   fiber100: number | null; sugars100: number | null; salt100: number | null;
-  servingG: number | null; servingLabel?: string | null; usualGrams?: number | null;
-  source: string; usageCount: number;
-  unit?: string; isFavorite?: boolean; recipe?: string | null; edited?: boolean;
+  servingG: number | null; source: string; usageCount: number;
+  unit?: string; isFavorite?: boolean; recipe?: string | null;
 };
 
 type ParsedIngredient = {
@@ -97,38 +90,12 @@ function fromCatalog(r: CatalogRow): Candidate {
     sugars100: r.sugars100,
     salt100: r.salt100,
     servingG: r.servingG,
-    servingLabel: r.servingLabel ?? null,
-    usualGrams: r.usualGrams ?? null,
     unit: r.unit === 'ml' ? 'ml' : 'g',
     source: r.source === 'SEED' ? 'SEED' : r.source === 'OFF' ? 'OFF' : 'OWN',
   };
 }
 
 const dec = (s: string) => parseFloat(s.replace(',', '.'));
-
-/** Ilość dla przycisku „+N": własny zwyczaj, a jak go nie ma — typowa porcja. */
-function quickGrams(c: Candidate): number {
-  if (c.usualGrams && c.usualGrams > 0) return Math.round(c.usualGrams);
-  return c.servingG && c.servingG > 0 ? Math.round(c.servingG) : 100;
-}
-
-/** Ilość „na start" po wybraniu produktu: własny zwyczaj bije typową porcję. */
-function initialAmount(c: Candidate): { mode: 'unit' | 'piece'; grams: string; pieces: string } {
-  const per = c.servingG && c.servingG > 0 ? c.servingG : 0;
-  const usual = c.usualGrams && c.usualGrams > 0 ? c.usualGrams : 0;
-  const base = usual || (per > 0 && per <= 500 ? Math.round(per) : 100);
-
-  // Sztuki mają sens tylko przy porcji opisanej słowem („1 bułka", „1 kromka").
-  // Bez takiego opisu „1,7 porcji" nie jest łatwiejsze niż 170 g.
-  if (per > 0 && c.servingLabel) {
-    const n = base / per;
-    const rounded = Math.round(n * 2) / 2; // do połówek
-    if (rounded > 0 && Math.abs(n - rounded) < 0.12) {
-      return { mode: 'piece', grams: String(Math.round(rounded * per)), pieces: String(rounded).replace('.', ',') };
-    }
-  }
-  return { mode: 'unit', grams: String(base), pieces: per > 0 ? '1' : '' };
-}
 
 export function FoodPicker({
   isOpen,
@@ -156,22 +123,9 @@ export function FoodPicker({
   // zamieniał puste pole na „0" i nie dawało się skasować ostatniej cyfry,
   // żeby wpisać wartość od nowa.
   const [gramsStr, setGramsStr] = useState('100');
-  // Liczenie w sztukach: dwie bułki zamiast 120 g. Przelicznik to servingG,
-  // więc do bazy i tak trafia gramatura — sztuki są tylko sposobem wpisania.
-  const [amountMode, setAmountMode] = useState<'unit' | 'piece'>('unit');
-  const [piecesStr, setPiecesStr] = useState('1');
-  const perPiece = picked?.servingG && picked.servingG > 0 ? picked.servingG : 0;
-  const grams =
-    amountMode === 'piece' && perPiece > 0
-      ? Math.round((dec(piecesStr) || 0) * perPiece)
-      : parseInt(gramsStr, 10) || 0;
+  const grams = parseInt(gramsStr, 10) || 0;
   const [saving, setSaving] = useState(false);
   const [note, setNote] = useState('');
-
-  // poprawianie wartości produktu w katalogu
-  const [editOpen, setEditOpen] = useState(false);
-  const [editForm, setEditForm] = useState({ kcal: '', protein: '', carbs: '', fat: '', serving: '' });
-  const [savingProduct, setSavingProduct] = useState(false);
 
   // szukanie
   const [q, setQ] = useState('');
@@ -186,10 +140,6 @@ export function FoodPicker({
   const streamRef = useRef<MediaStream | null>(null);
   const detectorRef = useRef<BarcodeDetectorLike | null>(null);
   const lastCodeRef = useRef('');
-  // Czy bieżący produkt przyszedł ze skanera — decyduje, czy po zapisaniu
-  // wracamy do kamery (tryb seryjny), czy do listy.
-  const fromScanRef = useRef(false);
-  const [serial, setSerial] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
   const [torchAvailable, setTorchAvailable] = useState(false);
@@ -221,39 +171,15 @@ export function FoodPicker({
       setQ('');
       setCatalog([]);
       setOff([]);
+      setTab('search');
       setDescribeText('');
       setComposed(null);
       setRecipeUrl('');
       setImportInfo('');
-      setEditOpen(false);
       setForm({ name: '', brand: '', kcal: '', protein: '', carbs: '', fat: '', serving: '', barcode: '' });
       setFormUnit('g');
     }
   }, [isOpen, stopScan]);
-
-  // Zakładka zapamiętana z poprzedniego razu. Kamery NIE włączamy sami —
-  // uruchomienie jej bez kliknięcia byłoby nadużyciem zgody na dostęp.
-  useEffect(() => {
-    if (!isOpen) return;
-    try {
-      const saved = localStorage.getItem(TAB_KEY);
-      setTab(saved === 'describe' || saved === 'scan' || saved === 'new' ? saved : 'search');
-    } catch {
-      setTab('search'); // brak dostępu do storage
-    }
-  }, [isOpen]);
-
-  /** Ręczna zmiana zakładki — tylko taka jest zapamiętywana. Przeskok na „Nowy"
-   *  po nieudanym skanie to nie jest wybór użytkownika. */
-  const pickTab = (t: 'search' | 'describe' | 'scan' | 'new') => {
-    if (t !== 'scan') stopScan();
-    setTab(t);
-    try {
-      localStorage.setItem(TAB_KEY, t);
-    } catch {
-      /* pełny storage */
-    }
-  };
 
   useEffect(() => stopScan, [stopScan]);
 
@@ -262,15 +188,10 @@ export function FoodPicker({
     setScannerReady(Boolean(Ctor));
   }, []);
 
-  const choose = useCallback((c: Candidate, viaScan = false) => {
-    const a = initialAmount(c);
+  const choose = useCallback((c: Candidate) => {
     setPicked(c);
-    setAmountMode(a.mode);
-    setGramsStr(a.grams);
-    setPiecesStr(a.pieces);
-    setEditOpen(false);
+    setGramsStr(String(c.servingG && c.servingG > 0 && c.servingG <= 500 ? Math.round(c.servingG) : 100));
     setNote('');
-    fromScanRef.current = viaScan;
     stopScan();
   }, [stopScan]);
 
@@ -314,7 +235,7 @@ export function FoodPicker({
     // 1) nasz katalog — natychmiast, bez ruszania zewnętrznego API
     const mine = await fetch(`/api/food/products?barcode=${code}`).then((r) => (r.ok ? r.json() : []));
     if (Array.isArray(mine) && mine.length > 0) {
-      choose(fromCatalog(mine[0]), true);
+      choose(fromCatalog(mine[0]));
       return;
     }
     // 2) Open Food Facts
@@ -348,24 +269,21 @@ export function FoodPicker({
       setTab('new');
       return;
     }
-    choose(
-      {
-        name: p.name,
-        brand: p.brand,
-        barcode: p.code,
-        unit: p.unit === 'ml' ? 'ml' : 'g',
-        kcal100: p.per100g.kcal ?? 0,
-        protein100: p.per100g.protein ?? 0,
-        carbs100: p.per100g.carbs ?? 0,
-        fat100: p.per100g.fat ?? 0,
-        fiber100: p.per100g.fiber,
-        sugars100: p.per100g.sugars,
-        salt100: p.per100g.salt,
-        servingG: p.servingSizeG,
-        source: 'OFF',
-      },
-      true
-    );
+    choose({
+      name: p.name,
+      brand: p.brand,
+      barcode: p.code,
+      unit: p.unit === 'ml' ? 'ml' : 'g',
+      kcal100: p.per100g.kcal ?? 0,
+      protein100: p.per100g.protein ?? 0,
+      carbs100: p.per100g.carbs ?? 0,
+      fat100: p.per100g.fat ?? 0,
+      fiber100: p.per100g.fiber,
+      sugars100: p.per100g.sugars,
+      salt100: p.per100g.salt,
+      servingG: p.servingSizeG,
+      source: 'OFF',
+    });
   }, [choose]);
 
   const startScan = useCallback(async () => {
@@ -538,23 +456,18 @@ export function FoodPicker({
   const pickManual = () => {
     const kcal = dec(form.kcal);
     if (!form.name.trim() || !Number.isFinite(kcal)) return;
-    choose(
-      {
-        name: form.name.trim(),
-        brand: form.brand.trim() || null,
-        barcode: form.barcode.replace(/\D/g, '') || null,
-        kcal100: kcal,
-        protein100: Number.isFinite(dec(form.protein)) ? dec(form.protein) : 0,
-        carbs100: Number.isFinite(dec(form.carbs)) ? dec(form.carbs) : 0,
-        fat100: Number.isFinite(dec(form.fat)) ? dec(form.fat) : 0,
-        servingG: Number.isFinite(dec(form.serving)) ? dec(form.serving) : null,
-        unit: formUnit,
-        source: 'OWN',
-      },
-      // Produkt z kodem trafił tu po nieudanym skanie — w trybie seryjnym
-      // po zapisaniu wracamy do kamery, a nie do listy.
-      Boolean(form.barcode.trim())
-    );
+    choose({
+      name: form.name.trim(),
+      brand: form.brand.trim() || null,
+      barcode: form.barcode.replace(/\D/g, '') || null,
+      kcal100: kcal,
+      protein100: Number.isFinite(dec(form.protein)) ? dec(form.protein) : 0,
+      carbs100: Number.isFinite(dec(form.carbs)) ? dec(form.carbs) : 0,
+      fat100: Number.isFinite(dec(form.fat)) ? dec(form.fat) : 0,
+      servingG: Number.isFinite(dec(form.serving)) ? dec(form.serving) : null,
+      unit: formUnit,
+      source: 'OWN',
+    });
   };
 
   const confirm = async () => {
@@ -562,19 +475,11 @@ export function FoodPicker({
     setSaving(true);
     try {
       await onPick(picked, grams);
-      const wasScan = fromScanRef.current;
       // Okno zostaje otwarte — jeden posiłek to zwykle kilka pozycji, a
       // zamykanie po każdej zmuszało do otwierania go od nowa.
       setPicked(null);
       setQ('');
       setNote(`Dodano: ${picked.name}`);
-      // Tryb seryjny: po zapisaniu kamera wraca sama, żeby przy rozpakowywaniu
-      // zakupów lecieć kod po kodzie bez klikania.
-      if (wasScan && serial) {
-        lastCodeRef.current = '';
-        setTab('scan');
-        void startScan();
-      }
     } finally {
       setSaving(false);
     }
@@ -582,52 +487,13 @@ export function FoodPicker({
 
   /** Dodanie od razu, bez ekranu gramatury — dla pozycji z typową porcją. */
   const quickAdd = async (c: Candidate) => {
-    const g = quickGrams(c);
+    const g = c.servingG && c.servingG > 0 ? Math.round(c.servingG) : 100;
     setSaving(true);
     try {
       await onPick(c, g);
       setNote(`Dodano: ${c.name} (${g} ${c.unit})`);
     } finally {
       setSaving(false);
-    }
-  };
-
-  /** Zapisanie poprawionych wartości produktu w katalogu. */
-  const saveProduct = async () => {
-    if (!picked?.productId) return;
-    const kcal = dec(editForm.kcal);
-    if (!Number.isFinite(kcal) || kcal < 0) {
-      setNote('Podaj kalorie na 100 ' + picked.unit + '.');
-      return;
-    }
-    setSavingProduct(true);
-    try {
-      const body = {
-        kcal100: kcal,
-        protein100: Number.isFinite(dec(editForm.protein)) ? dec(editForm.protein) : 0,
-        carbs100: Number.isFinite(dec(editForm.carbs)) ? dec(editForm.carbs) : 0,
-        fat100: Number.isFinite(dec(editForm.fat)) ? dec(editForm.fat) : 0,
-        servingG: editForm.serving.trim() === '' ? null : dec(editForm.serving),
-      };
-      const res = await fetch(`/api/food/products/${picked.productId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const b = await res.json().catch(() => null);
-        setNote(b?.error || 'Nie udało się zapisać poprawki.');
-        return;
-      }
-      const saved: CatalogRow = await res.json();
-      // Poprawka działa od teraz w przód — wpisy już w dzienniku mają własny
-      // snapshot i zostają takie, jakie były w chwili jedzenia.
-      setPicked(fromCatalog(saved));
-      setCatalog((prev) => prev.map((c) => (c.id === saved.id ? { ...c, ...saved } : c)));
-      setEditOpen(false);
-      setNote('Poprawione. Skrypt bazy podstawowej już tego nie nadpisze.');
-    } finally {
-      setSavingProduct(false);
     }
   };
 
@@ -675,156 +541,38 @@ export function FoodPicker({
             <ArrowLeft className="w-4 h-4" /> wróć do listy
           </button>
 
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <p className="font-semibold">{picked.name}</p>
-              <p className="text-sm text-gray-500">
-                {picked.brand || 'bez marki'} ·{' '}
-                {picked.source === 'OWN' ? 'twój produkt' : picked.source === 'SEED' ? 'baza podstawowa' : 'Open Food Facts'}
-              </p>
-            </div>
-            {picked.productId && (
-              <button
-                onClick={() => {
-                  setEditForm({
-                    kcal: String(picked.kcal100),
-                    protein: String(picked.protein100),
-                    carbs: String(picked.carbs100),
-                    fat: String(picked.fat100),
-                    serving: picked.servingG ? String(Math.round(picked.servingG)) : '',
-                  });
-                  setEditOpen((s) => !s);
-                }}
-                className="shrink-0 flex items-center gap-1 text-xs text-blue-600 px-2 py-1"
-              >
-                <Pencil className="w-3.5 h-3.5" /> popraw
-              </button>
-            )}
+          <div>
+            <p className="font-semibold">{picked.name}</p>
+            <p className="text-sm text-gray-500">
+              {picked.brand || 'bez marki'} ·{' '}
+              {picked.source === 'OWN' ? 'twój produkt' : picked.source === 'SEED' ? 'baza podstawowa' : 'Open Food Facts'}
+            </p>
           </div>
 
-          {editOpen && (
-            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 space-y-2">
-              <p className="text-xs text-blue-900">
-                Wartości na 100 {picked.unit}. Etykieta z twojej piekarni bije wartość uśrednioną — poprawka
-                zostaje na stałe i nie zniknie przy kolejnym wgraniu bazy. Wpisy już w dzienniku zostają bez zmian.
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                {([
-                  ['kcal', `kcal / 100 ${picked.unit}`],
-                  ['protein', 'Białko'],
-                  ['carbs', 'Węglowodany'],
-                  ['fat', 'Tłuszcz'],
-                  ['serving', `Typowa porcja (${picked.unit})`],
-                ] as const).map(([k, label]) => (
-                  <label key={k} className="text-xs">
-                    <span className="block text-gray-600 mb-0.5">{label}</span>
-                    <input
-                      value={editForm[k]}
-                      onChange={(e) => setEditForm({ ...editForm, [k]: e.target.value })}
-                      inputMode="decimal"
-                      className="w-full rounded-lg border border-gray-300 px-2 py-1.5"
-                    />
-                  </label>
-                ))}
-              </div>
-              <button
-                onClick={saveProduct}
-                disabled={savingProduct}
-                className="w-full rounded-lg bg-blue-600 text-white py-2 text-sm font-medium disabled:opacity-50"
-              >
-                {savingProduct ? 'Zapisuję…' : 'Zapisz poprawkę'}
+          <div className="flex items-center gap-2 flex-wrap">
+            <input
+              type="text"
+              inputMode="numeric"
+              value={gramsStr}
+              onChange={(e) => setGramsStr(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              className="w-28 rounded-lg border border-gray-300 px-3 py-2 text-lg font-semibold"
+              autoFocus
+            />
+            <span className="text-gray-600">{picked.unit}</span>
+            {(picked.unit === 'ml' ? [200, 250, 330, 500] : [50, 100, 150, 200]).map((g) => (
+              <button key={g} onClick={() => setGramsStr(String(g))} className="px-3 py-1.5 rounded-lg bg-gray-100 text-sm">
+                {g}
               </button>
-            </div>
-          )}
-
-          {/* Sztuki albo gramy. Przelicznik to typowa porcja, więc do dziennika
-              i tak trafia gramatura — sztuki są tylko wygodniejszym wpisem. */}
-          {perPiece > 0 && picked.servingLabel && (
-            <div className="flex gap-2">
-              {([
-                ['piece', picked.servingLabel.replace(/^1\s+/, '') || 'sztuki'],
-                ['unit', picked.unit === 'ml' ? 'mililitry' : 'gramy'],
-              ] as const).map(([m, label]) => (
-                <button
-                  key={m}
-                  onClick={() => {
-                    if (m === amountMode) return;
-                    if (m === 'piece') {
-                      const n = Math.round(((parseInt(gramsStr, 10) || 0) / perPiece) * 2) / 2;
-                      setPiecesStr(String(n > 0 ? n : 1).replace('.', ','));
-                    } else {
-                      setGramsStr(String(grams || Math.round(perPiece)));
-                    }
-                    setAmountMode(m);
-                  }}
-                  className={`flex-1 py-1.5 rounded-lg text-xs font-medium ${
-                    amountMode === m ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {amountMode === 'piece' && perPiece > 0 ? (
-            <div className="flex items-center gap-2 flex-wrap">
-              <input
-                type="text"
-                inputMode="decimal"
-                value={piecesStr}
-                onChange={(e) => setPiecesStr(e.target.value.replace(/[^\d.,]/g, '').slice(0, 4))}
-                className="w-24 rounded-lg border border-gray-300 px-3 py-2 text-lg font-semibold"
-                autoFocus
-              />
-              <span className="text-gray-600 text-sm">
-                × {Math.round(perPiece)} {picked.unit} = <strong>{grams} {picked.unit}</strong>
-              </span>
-              <div className="flex gap-2 w-full">
-                {['0,5', '1', '2', '3'].map((n) => (
-                  <button
-                    key={n}
-                    onClick={() => setPiecesStr(n)}
-                    className="flex-1 px-3 py-1.5 rounded-lg bg-gray-100 text-sm"
-                  >
-                    {n}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 flex-wrap">
-              <input
-                type="text"
-                inputMode="numeric"
-                value={gramsStr}
-                onChange={(e) => setGramsStr(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                className="w-28 rounded-lg border border-gray-300 px-3 py-2 text-lg font-semibold"
-                autoFocus
-              />
-              <span className="text-gray-600">{picked.unit}</span>
-              {(picked.unit === 'ml' ? [200, 250, 330, 500] : [50, 100, 150, 200]).map((g) => (
-                <button key={g} onClick={() => setGramsStr(String(g))} className="px-3 py-1.5 rounded-lg bg-gray-100 text-sm">
-                  {g}
-                </button>
-              ))}
-              {picked.usualGrams ? (
-                <button
-                  onClick={() => setGramsStr(String(Math.round(picked.usualGrams!)))}
-                  className="px-3 py-1.5 rounded-lg bg-green-50 text-green-700 text-sm"
-                >
-                  zwykle {Math.round(picked.usualGrams)} {picked.unit}
-                </button>
-              ) : picked.servingG ? (
-                <button
-                  onClick={() => setGramsStr(String(Math.round(picked.servingG!)))}
-                  className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-sm"
-                >
-                  porcja {Math.round(picked.servingG)} {picked.unit}
-                </button>
-              ) : null}
-            </div>
-          )}
+            ))}
+            {picked.servingG ? (
+              <button
+                onClick={() => setGramsStr(String(Math.round(picked.servingG!)))}
+                className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-sm"
+              >
+                porcja {Math.round(picked.servingG)} {picked.unit}
+              </button>
+            ) : null}
+          </div>
 
           <div className="grid grid-cols-4 gap-2 text-center">
             {[
@@ -851,10 +599,10 @@ export function FoodPicker({
       ) : (
         <div className="space-y-3">
           <div className="flex gap-1.5">
-            <button onClick={() => pickTab('search')} className={tabCls('search')}>Szukaj</button>
-            <button onClick={() => pickTab('describe')} className={tabCls('describe')}>Opisz</button>
-            <button onClick={() => pickTab('scan')} className={tabCls('scan')}>Skanuj</button>
-            <button onClick={() => pickTab('new')} className={tabCls('new')}>Nowy</button>
+            <button onClick={() => { stopScan(); setTab('search'); }} className={tabCls('search')}>Szukaj</button>
+            <button onClick={() => { stopScan(); setTab('describe'); }} className={tabCls('describe')}>Opisz</button>
+            <button onClick={() => setTab('scan')} className={tabCls('scan')}>Skanuj</button>
+            <button onClick={() => { stopScan(); setTab('new'); }} className={tabCls('new')}>Nowy</button>
           </div>
 
           {note && <p className="text-sm text-amber-700">{note}</p>}
@@ -904,11 +652,7 @@ export function FoodPicker({
                             <span className="block truncate">{c.name}</span>
                             <span className="block text-xs text-gray-500">
                               {c.brand || (c.recipe ? 'twoje danie' : '—')}
-                              {c.usualGrams
-                                ? ` · zwykle ${Math.round(c.usualGrams)} ${c.unit === 'ml' ? 'ml' : 'g'}`
-                                : c.servingG
-                                  ? ` · porcja ${Math.round(c.servingG)} ${c.unit === 'ml' ? 'ml' : 'g'}`
-                                  : ''}
+                              {c.servingG ? ` · porcja ${Math.round(c.servingG)} ${c.unit === 'ml' ? 'ml' : 'g'}` : ''}
                             </span>
                           </span>
                           <span className="text-sm text-gray-600 shrink-0">
@@ -926,14 +670,14 @@ export function FoodPicker({
                           />
                         </button>
                         {/* Dodanie typowej porcji bez wchodzenia w szczegóły */}
-                        {c.servingG || c.usualGrams ? (
+                        {c.servingG ? (
                           <button
                             onClick={() => quickAdd(fromCatalog(c))}
                             disabled={saving}
                             className="px-2 py-1 shrink-0 rounded-lg bg-green-50 text-green-700 text-xs font-medium border border-green-200 disabled:opacity-50"
-                            title={`Dodaj ${quickGrams(fromCatalog(c))} ${c.unit === 'ml' ? 'ml' : 'g'}`}
+                            title={`Dodaj ${Math.round(c.servingG)} ${c.unit === 'ml' ? 'ml' : 'g'}`}
                           >
-                            +{quickGrams(fromCatalog(c))}
+                            +{Math.round(c.servingG)}
                           </button>
                         ) : null}
                       </li>
@@ -1115,15 +859,6 @@ export function FoodPicker({
                   </button>
                 )}
               </div>
-              <label className="flex items-center gap-2 text-sm text-gray-600">
-                <input
-                  type="checkbox"
-                  checked={serial}
-                  onChange={(e) => setSerial(e.target.checked)}
-                  className="w-4 h-4"
-                />
-                Skanuj seryjnie — po zapisaniu kamera wraca sama
-              </label>
               {scanning && (
                 <div className="relative rounded-lg overflow-hidden bg-black">
                   {/* eslint-disable-next-line jsx-a11y/media-has-caption */}

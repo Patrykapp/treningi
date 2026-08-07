@@ -10,11 +10,22 @@ import { getAuthUserId } from '@/lib/auth';
  * (parametr `meal`), potem ulubione i ogólnie najczęściej używane.
  * Sortowanie globalne dawało rano te same podpowiedzi co wieczorem, mimo że
  * dane o porach posiłków leżą w `MealEntry` i nic nie kosztują.
+ *
+ * Przy okazji zwracamy `usualGrams` — ile zwykle idzie tego produktu na TEN
+ * posiłek. Domyślne 100 g to wartość z sufitu; własna mediana z ostatnich
+ * tygodni trafia w porcję za pierwszym razem.
  */
 
 function num(v: unknown, fallback = 0): number {
   const n = typeof v === 'string' ? parseFloat(v.replace(',', '.')) : typeof v === 'number' ? v : NaN;
   return Number.isFinite(n) ? n : fallback;
+}
+
+/** Mediana, nie średnia — jeden wpis „500 g" nie ma przesuwać podpowiedzi. */
+function median(xs: number[]): number {
+  const s = [...xs].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid] : Math.round((s[mid - 1] + s[mid]) / 2);
 }
 
 export async function GET(request: Request) {
@@ -47,18 +58,34 @@ export async function GET(request: Request) {
     if (onlyDishes) filters.push({ recipe: { not: null } });
     if (onlyFavorites) filters.push({ isFavorite: true });
 
-    // Ranking „co zwykle jadam na ten posiłek" — z ostatnich 90 dni.
+    // Historia tego posiłku z ostatnich 90 dni — jedno zapytanie daje i ranking
+    // („co zwykle jadam na śniadanie"), i typową porcję każdej pozycji.
     let mealRank: string[] = [];
+    const usualByProduct = new Map<string, number>();
     if (meal) {
       const since = new Date(Date.now() - 90 * 24 * 3600 * 1000);
-      const grouped = await prisma.mealEntry.groupBy({
-        by: ['productId'],
+      const history = await prisma.mealEntry.findMany({
         where: { userId, meal, date: { gte: since }, productId: { not: null } },
-        _count: { productId: true },
-        orderBy: { _count: { productId: 'desc' } },
-        take: 12,
+        select: { productId: true, grams: true },
       });
-      mealRank = grouped.map((g) => g.productId).filter((x): x is string => Boolean(x));
+
+      const gramsByProduct = new Map<string, number[]>();
+      for (const h of history) {
+        if (!h.productId || !(h.grams > 0)) continue;
+        const list = gramsByProduct.get(h.productId);
+        if (list) list.push(h.grams);
+        else gramsByProduct.set(h.productId, [h.grams]);
+      }
+
+      mealRank = [...gramsByProduct.entries()]
+        .sort((a, b) => b[1].length - a[1].length)
+        .slice(0, 12)
+        .map(([id]) => id);
+
+      // Podpowiadamy dopiero od drugiego wpisu — z jednego razu nie wynika nawyk.
+      for (const [id, list] of gramsByProduct) {
+        if (list.length >= 2) usualByProduct.set(id, Math.round(median(list)));
+      }
     }
 
     const products = await prisma.foodProduct.findMany({
@@ -68,8 +95,12 @@ export async function GET(request: Request) {
       take: q || onlyDishes || onlyFavorites ? 40 : 30,
     });
 
+    const limit = q || onlyDishes || onlyFavorites ? 40 : 20;
+    const withUsual = <T extends { id: string }>(rows: T[]) =>
+      rows.map((p) => ({ ...p, usualGrams: usualByProduct.get(p.id) ?? null }));
+
     if (mealRank.length === 0) {
-      return NextResponse.json(products.slice(0, q || onlyDishes || onlyFavorites ? 40 : 20));
+      return NextResponse.json(withUsual(products.slice(0, limit)));
     }
 
     // Pozycje typowe dla tej pory dnia idą na górę, w kolejności popularności.
@@ -94,7 +125,7 @@ export async function GET(request: Request) {
     const seen = new Set<string>();
     const out = merged.filter((p) => (seen.has(p.id) ? false : (seen.add(p.id), true)));
 
-    return NextResponse.json(out.slice(0, q || onlyDishes || onlyFavorites ? 40 : 20));
+    return NextResponse.json(withUsual(out.slice(0, limit)));
   } catch (e) {
     console.error('GET /api/food/products', e);
     return NextResponse.json({ error: 'Błąd serwera' }, { status: 500 });

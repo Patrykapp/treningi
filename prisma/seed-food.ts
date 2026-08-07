@@ -67,8 +67,8 @@ const ITEMS: Item[] = [
   { name: 'Makaron pszenny (suchy)', kcal: 360, p: 12, c: 72, f: 1.5, serving: 80 , cat: 'Sypkie' },
   { name: 'Makaron pełnoziarnisty (suchy)', kcal: 340, p: 13, c: 65, f: 2.5, serving: 80 , cat: 'Sypkie' },
   { name: 'Kuskus (suchy)', kcal: 376, p: 13, c: 77, f: 0.6, serving: 60 , cat: 'Sypkie' },
-  { name: 'Ziemniaki', kcal: 77, p: 2, c: 17, f: 0.1, serving: 200 , cat: 'Sypkie' },
-  { name: 'Bataty', kcal: 86, p: 1.6, c: 20, f: 0.1, serving: 200 , cat: 'Sypkie' },
+  { name: 'Ziemniaki (surowe)', kcal: 77, p: 2, c: 17, f: 0.1, serving: 200 , cat: 'Sypkie' },
+  { name: 'Bataty (surowe)', kcal: 86, p: 1.6, c: 20, f: 0.1, serving: 200 , cat: 'Sypkie' },
   { name: 'Mąka pszenna', kcal: 348, p: 10, c: 72, f: 1, serving: 30 , cat: 'Sypkie' },
 
   // ── NABIAŁ I JAJA ───────────────────────────────────────────────────────
@@ -95,14 +95,18 @@ const ITEMS: Item[] = [
   { name: 'Napój migdałowy niesłodzony', kcal: 15, p: 0.5, c: 0.3, f: 1.2, serving: 250 , cat: 'Nabiał', unit: 'ml' },
 
   // ── MIĘSO I WĘDLINY ─────────────────────────────────────────────────────
-  { name: 'Pierś z kurczaka', kcal: 99, p: 21.5, c: 0, f: 1.3, serving: 150 , cat: 'Mięso i wędliny' },
-  { name: 'Udziec z kurczaka bez skóry', kcal: 130, p: 19, c: 0, f: 6, serving: 150 , cat: 'Mięso i wędliny' },
-  { name: 'Pierś z indyka', kcal: 84, p: 19, c: 0, f: 0.7, serving: 150 , cat: 'Mięso i wędliny' },
-  { name: 'Schab wieprzowy', kcal: 137, p: 21, c: 0, f: 6, serving: 150 , cat: 'Mięso i wędliny' },
-  { name: 'Karkówka wieprzowa', kcal: 240, p: 17, c: 0, f: 19, serving: 150 , cat: 'Mięso i wędliny' },
-  { name: 'Wołowina (rostbef)', kcal: 131, p: 21, c: 0, f: 5, serving: 150 , cat: 'Mięso i wędliny' },
-  { name: 'Mięso mielone wieprzowo-wołowe', kcal: 250, p: 17, c: 0, f: 20, serving: 150 , cat: 'Mięso i wędliny' },
-  { name: 'Mięso mielone z indyka', kcal: 110, p: 20, c: 0, f: 3, serving: 150 , cat: 'Mięso i wędliny' },
+  // Surowe. Mięso traci przy obróbce ok. 25% wody, więc 100 g usmażonego ma
+  // grubo więcej kalorii niż 100 g surowego — wersje po obróbce są niżej,
+  // w sekcji dań gotowych. Bez tego rozróżnienia obiad wychodzi zaniżony
+  // o kilkadziesiąt procent.
+  { name: 'Pierś z kurczaka (surowa)', kcal: 99, p: 21.5, c: 0, f: 1.3, serving: 150 , cat: 'Mięso i wędliny' },
+  { name: 'Udziec z kurczaka bez skóry (surowy)', kcal: 130, p: 19, c: 0, f: 6, serving: 150 , cat: 'Mięso i wędliny' },
+  { name: 'Pierś z indyka (surowa)', kcal: 84, p: 19, c: 0, f: 0.7, serving: 150 , cat: 'Mięso i wędliny' },
+  { name: 'Schab wieprzowy (surowy)', kcal: 137, p: 21, c: 0, f: 6, serving: 150 , cat: 'Mięso i wędliny' },
+  { name: 'Karkówka wieprzowa (surowa)', kcal: 240, p: 17, c: 0, f: 19, serving: 150 , cat: 'Mięso i wędliny' },
+  { name: 'Wołowina rostbef (surowa)', kcal: 131, p: 21, c: 0, f: 5, serving: 150 , cat: 'Mięso i wędliny' },
+  { name: 'Mięso mielone wieprzowo-wołowe (surowe)', kcal: 250, p: 17, c: 0, f: 20, serving: 150 , cat: 'Mięso i wędliny' },
+  { name: 'Mięso mielone z indyka (surowe)', kcal: 110, p: 20, c: 0, f: 3, serving: 150 , cat: 'Mięso i wędliny' },
   { name: 'Szynka drobiowa', kcal: 105, p: 17, c: 2, f: 3, serving: 30, label: '1 plaster' , cat: 'Mięso i wędliny' },
   { name: 'Szynka wieprzowa', kcal: 130, p: 18, c: 1, f: 6, serving: 30, label: '1 plaster' , cat: 'Mięso i wędliny' },
   { name: 'Polędwica sopocka', kcal: 110, p: 20, c: 1, f: 3, serving: 25, label: '1 plaster' , cat: 'Mięso i wędliny' },
@@ -113,8 +117,8 @@ const ITEMS: Item[] = [
   // ── RYBY I OWOCE MORZA ──────────────────────────────────────────────────
   { name: 'Łosoś świeży', kcal: 208, p: 20, c: 0, f: 13, serving: 150 , cat: 'Ryby' },
   { name: 'Łosoś wędzony', kcal: 180, p: 22, c: 0, f: 10, serving: 50 , cat: 'Ryby' },
-  { name: 'Dorsz', kcal: 82, p: 18, c: 0, f: 0.7, serving: 150 , cat: 'Ryby' },
-  { name: 'Mintaj', kcal: 73, p: 17, c: 0, f: 0.5, serving: 150 , cat: 'Ryby' },
+  { name: 'Dorsz (surowy)', kcal: 82, p: 18, c: 0, f: 0.7, serving: 150 , cat: 'Ryby' },
+  { name: 'Mintaj (surowy)', kcal: 73, p: 17, c: 0, f: 0.5, serving: 150 , cat: 'Ryby' },
   { name: 'Makrela wędzona', kcal: 305, p: 19, c: 0, f: 25, serving: 100 , cat: 'Ryby' },
   { name: 'Tuńczyk w sosie własnym', kcal: 108, p: 24, c: 0, f: 1, serving: 120, label: '1 puszka' , cat: 'Ryby' },
   { name: 'Śledź w oleju', kcal: 240, p: 16, c: 0, f: 19, serving: 80 , cat: 'Ryby' },
@@ -224,6 +228,19 @@ const ITEMS: Item[] = [
   { name: 'Kotlet mielony smażony', kcal: 250, p: 15, c: 10, f: 17, serving: 100, label: '1 kotlet', cat: 'Dania gotowe' },
   { name: 'Kotlet z piersi kurczaka panierowany', kcal: 240, p: 22, c: 12, f: 12, serving: 120, cat: 'Dania gotowe' },
   { name: 'Pierś z kurczaka grillowana', kcal: 160, p: 30, c: 0, f: 4, serving: 150, cat: 'Dania gotowe' },
+  // Mięso po obróbce: ubytek wody ok. 25% podnosi wartości na 100 g, a smażenie
+  // dokłada jeszcze tłuszcz z patelni. Te pozycje wybiera się do obiadu —
+  // odpowiedniki surowe (z działu mięsnego) służą do ważenia przed gotowaniem.
+  { name: 'Pierś z kurczaka smażona', kcal: 195, p: 29, c: 0, f: 8, serving: 150, cat: 'Dania gotowe' },
+  { name: 'Pierś z kurczaka gotowana', kcal: 150, p: 30, c: 0, f: 3, serving: 150, cat: 'Dania gotowe' },
+  { name: 'Pierś z indyka smażona', kcal: 165, p: 30, c: 0, f: 5, serving: 150, cat: 'Dania gotowe' },
+  { name: 'Schab smażony', kcal: 230, p: 28, c: 0, f: 13, serving: 130, cat: 'Dania gotowe' },
+  { name: 'Schab pieczony', kcal: 190, p: 29, c: 0, f: 8, serving: 130, cat: 'Dania gotowe' },
+  { name: 'Karkówka grillowana', kcal: 290, p: 24, c: 0, f: 22, serving: 150, cat: 'Dania gotowe' },
+  { name: 'Wołowina pieczona', kcal: 190, p: 30, c: 0, f: 8, serving: 150, cat: 'Dania gotowe' },
+  { name: 'Mięso mielone smażone', kcal: 290, p: 23, c: 0, f: 22, serving: 120, cat: 'Dania gotowe' },
+  { name: 'Dorsz smażony bez panierki', kcal: 130, p: 24, c: 0, f: 4, serving: 150, cat: 'Dania gotowe' },
+  { name: 'Krewetki smażone', kcal: 130, p: 24, c: 1, f: 4, serving: 120, cat: 'Dania gotowe' },
   { name: 'Udko z kurczaka pieczone', kcal: 215, p: 25, c: 0, f: 13, serving: 150, cat: 'Dania gotowe' },
   { name: 'Gulasz wieprzowy', kcal: 165, p: 15, c: 4, f: 10, serving: 200, cat: 'Dania gotowe' },
   { name: 'Klopsiki drobiowe', kcal: 150, p: 16, c: 6, f: 7, serving: 180, cat: 'Dania gotowe' },
@@ -311,6 +328,27 @@ function row(it: Item) {
   };
 }
 
+/**
+ * Zmiany nazw już istniejących wpisów. Bez tego doprecyzowanie „Pierś
+ * z kurczaka" → „Pierś z kurczaka (surowa)" utworzyłoby drugi wiersz i katalog
+ * miałby dwie pozycje na to samo. Historia w dzienniku ma własny snapshot
+ * nazwy, więc stare wpisy zostają nietknięte.
+ */
+const RENAMES: [string, string][] = [
+  ['Pierś z kurczaka', 'Pierś z kurczaka (surowa)'],
+  ['Udziec z kurczaka bez skóry', 'Udziec z kurczaka bez skóry (surowy)'],
+  ['Pierś z indyka', 'Pierś z indyka (surowa)'],
+  ['Schab wieprzowy', 'Schab wieprzowy (surowy)'],
+  ['Karkówka wieprzowa', 'Karkówka wieprzowa (surowa)'],
+  ['Wołowina (rostbef)', 'Wołowina rostbef (surowa)'],
+  ['Mięso mielone wieprzowo-wołowe', 'Mięso mielone wieprzowo-wołowe (surowe)'],
+  ['Mięso mielone z indyka', 'Mięso mielone z indyka (surowe)'],
+  ['Dorsz', 'Dorsz (surowy)'],
+  ['Mintaj', 'Mintaj (surowy)'],
+  ['Ziemniaki', 'Ziemniaki (surowe)'],
+  ['Bataty', 'Bataty (surowe)'],
+];
+
 /** Dzieli listę na paczki — jedna transakcja na 40 pozycji zamiast 146 osobnych zapytań. */
 function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
@@ -325,13 +363,32 @@ async function main() {
   // Jedno zapytanie zamiast 146 — pobieramy od razu wszystko, co już jest.
   const existing = await prisma.foodProduct.findMany({
     where: { source: 'SEED' },
-    select: { id: true, name: true },
+    select: { id: true, name: true, edited: true },
   });
   const byName = new Map(existing.map((p) => [p.name, p.id]));
+  const editedNames = new Set(existing.filter((p) => p.edited).map((p) => p.name));
   console.log(`W bazie jest juz ${existing.length} pozycji SEED.`);
 
+  // Zmiany nazw robimy PRZED dopasowaniem, i tylko gdy nowa nazwa jeszcze nie
+  // istnieje — inaczej po dwóch uruchomieniach zrobiłby się duplikat.
+  let renamed = 0;
+  for (const [from, to] of RENAMES) {
+    const id = byName.get(from);
+    if (!id || byName.has(to)) continue;
+    await prisma.foodProduct.update({ where: { id }, data: { name: to } });
+    byName.delete(from);
+    byName.set(to, id);
+    if (editedNames.delete(from)) editedNames.add(to);
+    renamed++;
+  }
+  if (renamed > 0) console.log(`Zmieniono nazwe ${renamed} pozycji (doprecyzowanie surowe/po obrobce).`);
+
   const toCreate = ITEMS.filter((i) => !byName.has(i.name));
-  const toUpdate = ITEMS.filter((i) => byName.has(i.name));
+  // Wpisy poprawione ręcznie w aplikacji zostawiamy w spokoju — inaczej każde
+  // uruchomienie tego skryptu cofałoby korektę do wartości katalogowej.
+  const skipped = ITEMS.filter((i) => byName.has(i.name) && editedNames.has(i.name));
+  const toUpdate = ITEMS.filter((i) => byName.has(i.name) && !editedNames.has(i.name));
+  if (skipped.length > 0) console.log(`Pomijam ${skipped.length} pozycji poprawionych recznie.`);
 
   if (toCreate.length > 0) {
     await prisma.foodProduct.createMany({ data: toCreate.map(row), skipDuplicates: true });
@@ -350,7 +407,8 @@ async function main() {
   }
 
   console.log(
-    `Gotowe w ${((Date.now() - started) / 1000).toFixed(1)} s: dodano ${toCreate.length}, zaktualizowano ${toUpdate.length}.`
+    `Gotowe w ${((Date.now() - started) / 1000).toFixed(1)} s: dodano ${toCreate.length}, ` +
+      `zaktualizowano ${toUpdate.length}, pominieto ${skipped.length}.`
   );
 }
 

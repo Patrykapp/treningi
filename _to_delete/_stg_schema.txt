@@ -266,9 +266,6 @@ model FoodProduct {
   source      String      @default("OWN") // OWN | SEED | OFF
   category    String?     // dział sklepu — do grupowania listy zakupów
   isFavorite  Boolean     @default(false) // przypięte na górze wyszukiwarki
-  // Ręczna poprawka wartości w aplikacji. Skrypt `db:food` omija takie wpisy,
-  // żeby kolejne uruchomienie nie cofnęło korekty do wartości z katalogu.
-  edited      Boolean     @default(false)
   // Dania złożone (np. z generatora AI) — sposób przygotowania i skład.
   // Dla zwykłych produktów oba pola zostają puste.
   recipe      String?
@@ -337,7 +334,6 @@ model ShoppingItem {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name      String
   grams     Float?   // null dla pozycji spoza katalogu produktów
-  unit      String   @default("g") // g albo ml — napoje kupuje się w litrach
   category  String?  // dział sklepu — do grupowania
   checked   Boolean  @default(false)
   createdAt DateTime @default(now())
