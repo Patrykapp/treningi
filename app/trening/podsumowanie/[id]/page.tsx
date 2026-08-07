@@ -4,7 +4,7 @@ import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { formatDate } from '@/lib/utils';
-import { strengthCalories, latestWeight, runCalories } from '@/lib/calories';
+import { sessionCalories, latestWeight, runCalories } from '@/lib/calories';
 import { parseTcx, HR_BUCKET_SEC } from '@/lib/tcx';
 import { computeHrZones, estimateHrMax, formatZoneTime } from '@/lib/hr';
 import { useAuth } from '@/hooks/useAuth';
@@ -82,6 +82,7 @@ interface Entry {
   sets: number;
   reps: number;
   weight: number;
+  durationSec?: number | null; // ćwiczenia mierzone czasem (bieżnia, ergometr)
   rpe?: number | null;
   setsData: SetData[];
 }
@@ -143,6 +144,9 @@ function normalizeMuscle(raw?: string | null) {
 }
 
 function calcVolume(entry: Entry): number {
+  // Cardio na czas nie ma wolumenu — 1 × 1 × 0 kg i tak dałoby zero, ale
+  // wyjście wprost jest czytelniejsze niż poleganie na mnożeniu przez zero.
+  if (entry.durationSec && entry.durationSec > 0) return 0;
   if (entry.setsData?.length > 0) {
     return entry.setsData.reduce((s, x) => s + x.reps * x.weight, 0);
   }
@@ -268,7 +272,14 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
   );
 
   const totalVolume = session.entries.reduce((s, e) => s + calcVolume(e), 0);
-  const totalSets = session.entries.reduce((s, e) => s + (e.setsData?.length || e.sets), 0);
+  // Wpisy mierzone czasem nie są seriami — liczone tutaj zawyżałyby licznik
+  // serii i szacunek kalorii wzorem siłowym.
+  const totalSets = session.entries.reduce(
+    (s, e) => s + (e.durationSec && e.durationSec > 0 ? 0 : e.setsData?.length || e.sets), 0
+  );
+  const totalTimedMin = Math.round(
+    session.entries.reduce((s, e) => s + (e.durationSec ?? 0), 0) / 60
+  );
 
   // Group by muscle
   const byMuscle: Record<string, Entry[]> = {};
@@ -282,7 +293,7 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
 
   const statsByMuscle = muscleKeys.map(g => ({
     name: g,
-    sets: byMuscle[g].reduce((s, e) => s + (e.setsData?.length || e.sets), 0),
+    sets: byMuscle[g].reduce((s, e) => s + (e.durationSec && e.durationSec > 0 ? 0 : e.setsData?.length || e.sets), 0),
     volume: byMuscle[g].reduce((s, e) => s + calcVolume(e), 0),
   }));
   const maxMuscleSets = Math.max(...statsByMuscle.map(m => m.sets), 1);
@@ -359,8 +370,8 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
             <p className="text-xs text-gray-500 mt-0.5">ćwiczeń</p>
           </div>
           <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
-            <p className="text-xl font-black text-gray-900">{totalSets}</p>
-            <p className="text-xs text-gray-500 mt-0.5">serii</p>
+            <p className="text-xl font-black text-gray-900">{totalTimedMin > 0 && totalSets === 0 ? `${totalTimedMin} min` : totalSets}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{totalTimedMin > 0 && totalSets === 0 ? 'czasu' : 'serii'}</p>
           </div>
           <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
             <p className="text-xl font-black text-gray-900">{Math.round(totalVolume / 1000 * 10) / 10}t</p>
@@ -373,7 +384,7 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
             </div>
           ) : weightKg > 0 && (
             <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
-              <p className="text-xl font-black text-red-500">~{strengthCalories(weightKg, totalSets)}</p>
+              <p className="text-xl font-black text-red-500">~{sessionCalories(session, weightKg).kcal}</p>
               <p className="text-xs text-gray-500 mt-0.5 flex items-center justify-center gap-1">kcal <Flame className="w-3.5 h-3.5" strokeWidth={2} /></p>
             </div>
           )}
@@ -551,7 +562,11 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
                     )}
                   </div>
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    {sets ? sets.map((s, i) => (
+                    {entry.durationSec && entry.durationSec > 0 ? (
+                      <span className="text-xs bg-orange-100 text-orange-800 rounded-lg px-2 py-1 font-medium">
+                        {Math.round(entry.durationSec / 60)} min
+                      </span>
+                    ) : sets ? sets.map((s, i) => (
                       <span key={i} className="text-xs bg-gray-100 text-gray-700 rounded-lg px-2 py-1 font-medium">
                         {s.reps}×{s.weight > 0 ? `${s.weight}kg` : 'bw'}
                       </span>

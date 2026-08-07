@@ -89,6 +89,11 @@ model WorkoutEntry {
   sets       Int
   reps       Int
   weight     Float
+  // Ćwiczenia mierzone czasem, nie seriami: bieżnia, stepmill, orbitrek,
+  // ergometr, skakanka. Bez tego pola jedyny możliwy zapis to 1×1 @ 0 kg,
+  // czyli nic nie znaczący wiersz i kalorie liczone z liczby serii.
+  // null = zwykłe ćwiczenie siłowe.
+  durationSec Int?
   rpe        Float?
   comment    String?
   setsData   Json           @default("[]")

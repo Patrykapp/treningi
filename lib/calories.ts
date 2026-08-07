@@ -15,9 +15,45 @@ export function strengthCalories(weightKg: number, totalSets: number): number {
   return Math.round(0.25 * weightKg * totalSets);
 }
 
-// Łączna liczba serii w sesji (setsData ma pierwszeństwo nad polem sets)
-export function countSets(entries: { sets: number; setsData?: unknown }[]): number {
+/**
+ * Cardio mierzone czasem — MET × masa ciała × godziny.
+ *
+ * Wartości MET z Compendium of Physical Activities, zaokrąglone. Dobieramy je
+ * po nazwie ćwiczenia, bo to jedyna informacja, jaką mamy: intensywności nikt
+ * nie wpisuje. Stąd domyślne 6 dla nierozpoznanego cardio — to średnie tempo
+ * czegoś, przy czym da się jeszcze rozmawiać.
+ *
+ * Liczenie takiego ćwiczenia wzorem na serie dawało ~20 kcal za dwadzieścia
+ * minut na schodach, czyli ponad dziesięciokrotne zaniżenie.
+ */
+const CARDIO_MET: [RegExp, number][] = [
+  [/skakank/i, 11],
+  [/stepmill|schodow|schody/i, 9],
+  [/bie[żz]ni|bieg|trucht/i, 8],
+  [/wios[łl]owanie|ergometr/i, 7],
+  [/rower|spinning/i, 7],
+  [/orbitrek|elliptical|eliptyczn/i, 5],
+  [/marsz|ch[óo]d|spacer/i, 4],
+];
+
+export const DEFAULT_CARDIO_MET = 6;
+
+export function cardioMet(exerciseName: string | null | undefined): number {
+  if (!exerciseName) return DEFAULT_CARDIO_MET;
+  return CARDIO_MET.find(([re]) => re.test(exerciseName))?.[1] ?? DEFAULT_CARDIO_MET;
+}
+
+export function cardioCalories(weightKg: number, durationSec: number, exerciseName?: string | null): number {
+  if (!weightKg || !durationSec || durationSec <= 0) return 0;
+  return Math.round(cardioMet(exerciseName) * weightKg * (durationSec / 3600));
+}
+
+// Łączna liczba serii w sesji (setsData ma pierwszeństwo nad polem sets).
+// Wpisy mierzone czasem są pomijane — mają własny wzór i policzone tu byłyby
+// drugi raz, w dodatku źle.
+export function countSets(entries: { sets: number; setsData?: unknown; durationSec?: number | null }[]): number {
   return entries.reduce((sum, e) => {
+    if (e.durationSec && e.durationSec > 0) return sum;
     const sd = Array.isArray(e.setsData) ? e.setsData.length : 0;
     return sum + (sd > 0 ? sd : e.sets);
   }, 0);
@@ -29,12 +65,26 @@ export function latestWeight(weights: { weight: number }[] | undefined | null): 
   return weights && weights.length > 0 ? weights[0].weight : DEFAULT_WEIGHT_KG;
 }
 
-// Kcal sesji siłowej: prawdziwe z zegarka, jeśli są — inaczej szacunek z serii.
+type SessionEntry = {
+  sets: number;
+  setsData?: unknown;
+  durationSec?: number | null;
+  exercise?: { name?: string | null } | null;
+};
+
+// Kcal sesji siłowej: prawdziwe z zegarka, jeśli są — inaczej szacunek.
+// Szacunek to suma dwóch części: siłowej (z liczby serii) i cardio (z czasu),
+// bo jedna sesja potrafi zawierać oba rodzaje pracy.
 // estimated=true → w UI pokazujemy "~"
 export function sessionCalories(
-  session: { kcal?: number | null; entries?: { sets: number; setsData?: unknown }[] },
+  session: { kcal?: number | null; entries?: SessionEntry[] },
   weightKg: number
 ): { kcal: number; estimated: boolean } {
   if (session.kcal && session.kcal > 0) return { kcal: session.kcal, estimated: false };
-  return { kcal: strengthCalories(weightKg, countSets(session.entries || [])), estimated: true };
+  const entries = session.entries || [];
+  const cardio = entries.reduce(
+    (sum, e) => sum + cardioCalories(weightKg, e.durationSec ?? 0, e.exercise?.name),
+    0
+  );
+  return { kcal: strengthCalories(weightKg, countSets(entries)) + cardio, estimated: true };
 }

@@ -45,16 +45,28 @@ export async function GET(request: Request) {
 
 type EntryInput = {
   exerciseId: string; sets: number; reps: number; weight: number;
+  durationSec?: number | null;
   rpe?: number; comment?: string; setsData?: { reps: number; weight: number }[];
 };
 
+/** Czas w sekundach, z sensownym zakresem: od 10 s do 6 godzin. */
+function durationOrNull(v: unknown): number | null {
+  const n = Math.round(Number(v));
+  return Number.isFinite(n) && n >= 10 && n <= 21600 ? n : null;
+}
+
 function mapEntry(e: EntryInput) {
-  const sd = e.setsData && e.setsData.length > 0 ? e.setsData : [];
+  const durationSec = durationOrNull(e.durationSec);
+  const sd = durationSec ? [] : e.setsData && e.setsData.length > 0 ? e.setsData : [];
+  // Wpis mierzony czasem nie ma serii ani ciężaru. Zapisujemy 1×1 @ 0 kg jako
+  // wypełniacz (kolumny są wymagane), ale to `durationSec` decyduje o tym, jak
+  // wpis jest liczony i pokazywany.
   return {
     exerciseId: e.exerciseId,
-    sets: sd.length > 0 ? sd.length : Number(e.sets),
-    reps: sd.length > 0 ? Math.max(...sd.map(s => s.reps)) : Number(e.reps),
-    weight: sd.length > 0 ? Math.max(...sd.map(s => s.weight)) : Number(e.weight),
+    sets: durationSec ? 1 : sd.length > 0 ? sd.length : Number(e.sets),
+    reps: durationSec ? 1 : sd.length > 0 ? Math.max(...sd.map(s => s.reps)) : Number(e.reps),
+    weight: durationSec ? 0 : sd.length > 0 ? Math.max(...sd.map(s => s.weight)) : Number(e.weight),
+    durationSec,
     rpe: e.rpe ? Number(e.rpe) : null,
     comment: e.comment || null,
     setsData: sd,

@@ -2,6 +2,12 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuthUserId } from '@/lib/auth';
 
+/** Czas w sekundach, z sensownym zakresem: od 10 s do 6 godzin. */
+function durationOrNull(v: unknown): number | null {
+  const n = Math.round(Number(v));
+  return Number.isFinite(n) && n >= 10 && n <= 21600 ? n : null;
+}
+
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const userId = await getAuthUserId();
@@ -41,13 +47,15 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         date: new Date(date),
         notes: notes || null,
         entries: {
-          create: entries.map((e: { exerciseId: string; sets: number; reps: number; weight: number; rpe?: number; comment?: string; setsData?: { reps: number; weight: number }[] }) => {
-            const sd = e.setsData && e.setsData.length > 0 ? e.setsData : [];
+          create: entries.map((e: { exerciseId: string; sets: number; reps: number; weight: number; durationSec?: number | null; rpe?: number; comment?: string; setsData?: { reps: number; weight: number }[] }) => {
+            const durationSec = durationOrNull(e.durationSec);
+            const sd = durationSec ? [] : e.setsData && e.setsData.length > 0 ? e.setsData : [];
             return {
               exerciseId: e.exerciseId,
-              sets: sd.length > 0 ? sd.length : Number(e.sets),
-              reps: sd.length > 0 ? Math.max(...sd.map(s => s.reps)) : Number(e.reps),
-              weight: sd.length > 0 ? Math.max(...sd.map(s => s.weight)) : Number(e.weight),
+              sets: durationSec ? 1 : sd.length > 0 ? sd.length : Number(e.sets),
+              reps: durationSec ? 1 : sd.length > 0 ? Math.max(...sd.map(s => s.reps)) : Number(e.reps),
+              weight: durationSec ? 0 : sd.length > 0 ? Math.max(...sd.map(s => s.weight)) : Number(e.weight),
+              durationSec,
               rpe: e.rpe ? Number(e.rpe) : null,
               comment: e.comment || null,
               setsData: sd,
@@ -90,14 +98,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     }
 
     if (!entry) return NextResponse.json({ error: 'Brak cwiczenia' }, { status: 400 });
-    const sd = entry.setsData && entry.setsData.length > 0 ? entry.setsData : [];
+    const entryDuration = durationOrNull(entry.durationSec);
+    const sd = entryDuration ? [] : entry.setsData && entry.setsData.length > 0 ? entry.setsData : [];
     const created = await prisma.workoutEntry.create({
       data: {
         sessionId: id,
         exerciseId: entry.exerciseId,
-        sets: sd.length > 0 ? sd.length : Number(entry.sets),
-        reps: sd.length > 0 ? Math.max(...sd.map((s: { reps: number }) => s.reps)) : Number(entry.reps),
-        weight: sd.length > 0 ? Math.max(...sd.map((s: { weight: number }) => s.weight)) : Number(entry.weight),
+        sets: entryDuration ? 1 : sd.length > 0 ? sd.length : Number(entry.sets),
+        reps: entryDuration ? 1 : sd.length > 0 ? Math.max(...sd.map((s: { reps: number }) => s.reps)) : Number(entry.reps),
+        weight: entryDuration ? 0 : sd.length > 0 ? Math.max(...sd.map((s: { weight: number }) => s.weight)) : Number(entry.weight),
+        durationSec: entryDuration,
         rpe: entry.rpe ? Number(entry.rpe) : null,
         comment: entry.comment || null,
         setsData: sd,

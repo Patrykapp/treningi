@@ -49,9 +49,6 @@ export interface NewEntryForm {
   sets: number;
   reps: number;
   weight: number;
-  // Ćwiczenia mierzone czasem (bieżnia, stepmill, ergometr, skakanka).
-  // null/undefined = zwykłe ćwiczenie na serie i powtórzenia.
-  durationSec?: number | null;
   rpe?: number;
   comment?: string;
   setsData: SetData[];
@@ -65,7 +62,6 @@ export interface WorkoutEntry {
   sets: number;
   reps: number;
   weight: number;
-  durationSec?: number | null;
   rpe?: number | null;
   comment?: string | null;
   setsData: SetData[];

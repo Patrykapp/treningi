@@ -28,28 +28,6 @@ interface EntryRow extends NewEntryForm {
   key: string;
   customSets: boolean;
   bodyweight: boolean;
-  // Ćwiczenie mierzone czasem zamiast serii. W formularzu trzymamy minuty,
-  // do bazy idą sekundy.
-  timed: boolean;
-  durationMin: number;
-}
-
-/**
- * Które ćwiczenia domyślnie mierzy się czasem.
- *
- * Rozstrzyga NAZWA, nie grupa mięśniowa: w katalogu jako „Cardio" oznaczone są
- * i bieżnia, i burpee, a burpee robi się na powtórzenia. Dopasowanie po nazwie
- * ustawia tylko wartość początkową przełącznika — ostatnie słowo ma użytkownik.
- */
-const TIMED_BY_DEFAULT =
-  /bie[żz]ni|stepmill|schodow|orbitrek|elliptical|eliptyczn|rower stacjonarn|ergometr|wios[łl]owanie|skakank|spinning|st[ae]pper/i;
-
-function newEntryRow(key: string, partial: Partial<EntryRow> = {}): EntryRow {
-  return {
-    key, exerciseId: '', sets: 3, reps: 10, weight: 0,
-    customSets: false, setsData: [], bodyweight: false, timed: false, durationMin: 0,
-    ...partial,
-  };
 }
 
 interface Template {
@@ -62,7 +40,6 @@ interface LastResult {
   sets: number;
   reps: number;
   weight: number;
-  durationSec?: number | null;
   rpe: number | null;
   date: string;
   setsData: SetData[];
@@ -77,10 +54,6 @@ function calc1RM(weight: number, reps: number): number | null {
 
 // Sugestia progresji na podstawie ostatniego wyniku
 function progressionHint(last: LastResult): string {
-  // Przy ćwiczeniu na czas progresją są minuty, nie kilogramy.
-  if (last.durationSec && last.durationSec > 0) {
-    return `spróbuj ${Math.round(last.durationSec / 60) + 2} min`;
-  }
   const maxW = last.setsData.length > 0 ? Math.max(...last.setsData.map(s => s.weight)) : last.weight;
   if (maxW <= 0) return 'spróbuj +1 powtórzenie';
   if (last.rpe != null && last.rpe > 8.5) return `zostań przy ${maxW}kg (RPE ${last.rpe})`;
@@ -88,7 +61,6 @@ function progressionHint(last: LastResult): string {
 }
 
 function formatLastResult(last: LastResult): string {
-  if (last.durationSec && last.durationSec > 0) return `${Math.round(last.durationSec / 60)} min`;
   if (last.setsData.length > 0) {
     return last.setsData.map(s => `${s.reps}x${s.weight}kg`).join(' · ');
   }
@@ -102,7 +74,9 @@ function TreningPage() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [date, setDate] = useState(formatDateInput(new Date()));
   const [notes, setNotes] = useState('');
-  const [entries, setEntries] = useState<EntryRow[]>([newEntryRow('0')]);
+  const [entries, setEntries] = useState<EntryRow[]>([{
+    key: '0', exerciseId: '', sets: 3, reps: 10, weight: 0, customSets: false, setsData: [], bodyweight: false,
+  }]);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [newExName, setNewExName] = useState('');
@@ -166,15 +140,13 @@ function TreningPage() {
         setDate(formatDateInput(session.date));
         setNotes(session.notes || '');
         setEntries(session.entries.map((e: {
-          exerciseId: string; sets: number; reps: number; weight: number; durationSec?: number | null;
+          exerciseId: string; sets: number; reps: number; weight: number;
           rpe?: number | null; comment?: string | null; setsData?: SetData[]
         }, i: number) => {
           const sd: SetData[] = Array.isArray(e.setsData) && e.setsData.length > 0 ? e.setsData : [];
-          return newEntryRow(String(i), { exerciseId: e.exerciseId, sets: e.sets, reps: e.reps, weight: e.weight,
+          return { key: String(i), exerciseId: e.exerciseId, sets: e.sets, reps: e.reps, weight: e.weight,
             rpe: e.rpe || undefined, comment: e.comment || undefined, setsData: sd, customSets: sd.length > 0,
-            bodyweight: e.weight === 0 && sd.every(s => s.weight === 0),
-            timed: Boolean(e.durationSec && e.durationSec > 0),
-            durationMin: e.durationSec ? Math.round(e.durationSec / 60) : 0 });
+            bodyweight: e.weight === 0 && sd.every(s => s.weight === 0) };
         }));
         return;
       }
@@ -188,15 +160,13 @@ function TreningPage() {
         setDate(formatDateInput(session.date));
         setNotes(session.notes || '');
         setEntries(session.entries.map((e: {
-          exerciseId: string; sets: number; reps: number; weight: number; durationSec?: number | null;
+          exerciseId: string; sets: number; reps: number; weight: number;
           rpe?: number | null; comment?: string | null; setsData?: SetData[]
         }, i: number) => {
           const sd: SetData[] = Array.isArray(e.setsData) && e.setsData.length > 0 ? e.setsData : [];
-          return newEntryRow(String(i), { exerciseId: e.exerciseId, sets: e.sets, reps: e.reps, weight: e.weight,
+          return { key: String(i), exerciseId: e.exerciseId, sets: e.sets, reps: e.reps, weight: e.weight,
             rpe: e.rpe || undefined, comment: e.comment || undefined, setsData: sd, customSets: sd.length > 0,
-            bodyweight: e.weight === 0 && sd.every(s => s.weight === 0),
-            timed: Boolean(e.durationSec && e.durationSec > 0),
-            durationMin: e.durationSec ? Math.round(e.durationSec / 60) : 0 });
+            bodyweight: e.weight === 0 && sd.every(s => s.weight === 0) };
         }));
       }
       sessionStorage.removeItem('editSessionId');
@@ -209,8 +179,9 @@ function TreningPage() {
       const tplList: Template[] = Array.isArray(tplRes) ? tplRes : [];
       const tpl = tplList.find(t => t.id === templateIdParam);
       if (tpl) {
-        setEntries(tpl.entries.map((e, i) => newEntryRow(String(Date.now() + i), {
-          exerciseId: e.exerciseId, sets: e.sets, reps: e.reps, weight: e.weight,
+        setEntries(tpl.entries.map((e, i) => ({
+          key: String(Date.now() + i), exerciseId: e.exerciseId, sets: e.sets, reps: e.reps,
+          weight: e.weight, customSets: false, setsData: [], bodyweight: false,
         })));
         return;
       }
@@ -223,14 +194,7 @@ function TreningPage() {
         const draft = JSON.parse(saved);
         if (draft.date) setDate(draft.date);
         if (draft.notes !== undefined) setNotes(draft.notes);
-        // Szkic zapisany przed dodaniem pomiaru czasem nie ma nowych pól —
-        // przepuszczamy go przez fabrykę, żeby nie powstał wiersz bez `timed`
-        // i bez `durationMin` (React zgłasza wtedy niekontrolowane pole).
-        if (Array.isArray(draft.entries) && draft.entries.length > 0) {
-          setEntries(draft.entries.map((e: Partial<EntryRow>, i: number) =>
-            newEntryRow(e.key ?? String(i), e)
-          ));
-        }
+        if (Array.isArray(draft.entries) && draft.entries.length > 0) setEntries(draft.entries);
       }
     } catch {
       // ignore parse errors
@@ -292,8 +256,7 @@ function TreningPage() {
           setLastResults(prev => ({
             ...prev,
             [key]: e ? {
-              sets: e.sets, reps: e.reps, weight: e.weight, durationSec: e.durationSec ?? null,
-              rpe: e.rpe ?? null,
+              sets: e.sets, reps: e.reps, weight: e.weight, rpe: e.rpe ?? null,
               date: e.session?.date || '',
               setsData: Array.isArray(e.setsData) ? e.setsData : [],
             } : null,
@@ -334,22 +297,21 @@ function TreningPage() {
     }
     const last = sessions[0];
     setEntries(last.entries.map((e: {
-      exerciseId: string; sets: number; reps: number; weight: number; durationSec?: number | null;
+      exerciseId: string; sets: number; reps: number; weight: number;
       rpe?: number | null; comment?: string | null; setsData?: SetData[]
     }, i: number) => {
       const sd: SetData[] = Array.isArray(e.setsData) && e.setsData.length > 0 ? e.setsData : [];
-      return newEntryRow(String(Date.now() + i), { exerciseId: e.exerciseId, sets: e.sets, reps: e.reps,
+      return { key: String(Date.now() + i), exerciseId: e.exerciseId, sets: e.sets, reps: e.reps,
         weight: e.weight, rpe: e.rpe || undefined, comment: e.comment || undefined, setsData: sd,
-        customSets: sd.length > 0,
-        timed: Boolean(e.durationSec && e.durationSec > 0),
-        durationMin: e.durationSec ? Math.round(e.durationSec / 60) : 0 });
+        customSets: sd.length > 0, bodyweight: false };
     }));
     setToast({ message: 'Skopiowano ostatni trening', type: 'success' });
   };
 
   const loadTemplate = (tpl: Template) => {
-    setEntries(tpl.entries.map((e, i) => newEntryRow(String(Date.now() + i), {
-      exerciseId: e.exerciseId, sets: e.sets, reps: e.reps, weight: e.weight,
+    setEntries(tpl.entries.map((e, i) => ({
+      key: String(Date.now() + i), exerciseId: e.exerciseId, sets: e.sets, reps: e.reps,
+      weight: e.weight, customSets: false, setsData: [], bodyweight: false,
     })));
     setShowTemplates(false);
     setToast({ message: `Załadowano szablon "${tpl.name}"`, type: 'success' });
@@ -401,21 +363,14 @@ function TreningPage() {
     }
   };
 
-  const addEntry = () => setEntries(prev => [...prev, newEntryRow(String(Date.now()))]);
+  const addEntry = () => setEntries(prev => [...prev, {
+    key: String(Date.now()), exerciseId: '', sets: 3, reps: 10, weight: 0, customSets: false, setsData: [], bodyweight: false,
+  }]);
 
   const removeEntry = (key: string) => setEntries(prev => prev.filter(e => e.key !== key));
 
   const updateEntry = (key: string, field: keyof NewEntryForm, value: string | number) =>
-    setEntries(prev => prev.map(e => {
-      if (e.key !== key) return e;
-      // Wybór ćwiczenia ustawia domyślny tryb pomiaru. Bieżnia od razu prosi
-      // o minuty, sztanga o serie — bez klikania w przełącznik za każdym razem.
-      if (field === 'exerciseId') {
-        const name = exercises.find(x => x.id === value)?.name ?? '';
-        return { ...e, exerciseId: String(value), timed: TIMED_BY_DEFAULT.test(name) };
-      }
-      return { ...e, [field]: value };
-    }));
+    setEntries(prev => prev.map(e => e.key !== key ? e : { ...e, [field]: value }));
 
   const toggleCustomSets = (key: string, custom: boolean) => {
     setEntries(prev => prev.map(e => {
@@ -500,8 +455,8 @@ function TreningPage() {
         setExercises(prev => prev.some(p => p.id === ex.id) ? prev : [...prev, ex].sort((a, b) => a.name.localeCompare(b.name)));
         setEntries(prev => {
           const lastEmpty = [...prev].reverse().find(e => !e.exerciseId);
-          if (lastEmpty) return prev.map(e => e.key === lastEmpty.key ? { ...e, exerciseId: ex.id, timed: TIMED_BY_DEFAULT.test(ex.name) } : e);
-          return [...prev, newEntryRow(String(Date.now()), { exerciseId: ex.id, timed: TIMED_BY_DEFAULT.test(ex.name) })];
+          if (lastEmpty) return prev.map(e => e.key === lastEmpty.key ? { ...e, exerciseId: ex.id } : e);
+          return [...prev, { key: String(Date.now()), exerciseId: ex.id, sets: 3, reps: 10, weight: 0, customSets: false, setsData: [], bodyweight: false }];
         });
         setToast({ message: `"${ex.name}" już istnieje — wybrano je w formularzu`, type: 'success' });
         setNewExName(''); setShowNewEx(false);
@@ -518,9 +473,9 @@ function TreningPage() {
       setEntries(prev => {
         const lastEmpty = [...prev].reverse().find(e => !e.exerciseId);
         if (lastEmpty) {
-          return prev.map(e => e.key === lastEmpty.key ? { ...e, exerciseId: ex.id, timed: TIMED_BY_DEFAULT.test(ex.name) } : e);
+          return prev.map(e => e.key === lastEmpty.key ? { ...e, exerciseId: ex.id } : e);
         }
-        return [...prev, newEntryRow(String(Date.now()), { exerciseId: ex.id, timed: TIMED_BY_DEFAULT.test(ex.name) })];
+        return [...prev, { key: String(Date.now()), exerciseId: ex.id, sets: 3, reps: 10, weight: 0, customSets: false, setsData: [], bodyweight: false }];
       });
       setToast({ message: `Dodano "${ex.name}" i wybrano w formularzu`, type: 'success' });
       setNewExName(''); setShowNewEx(false);
@@ -534,12 +489,6 @@ function TreningPage() {
     if (!date) { setToast({ message: 'Wybierz datę', type: 'error' }); return false; }
     for (const entry of entries) {
       if (!entry.exerciseId) { setToast({ message: 'Wybierz ćwiczenie', type: 'error' }); return false; }
-      if (entry.timed) {
-        if (!entry.durationMin || entry.durationMin <= 0) {
-          setToast({ message: 'Podaj czas w minutach', type: 'error' }); return false;
-        }
-        continue; // przy pomiarze czasem serie i ciężar nie obowiązują
-      }
       if (entry.customSets && (!entry.setsData || entry.setsData.length === 0)) {
         setToast({ message: 'Dodaj co najmniej jedną serię', type: 'error' }); return false;
       }
@@ -551,23 +500,12 @@ function TreningPage() {
   };
 
   const buildEntryPayload = (entry: EntryRow) => {
-    if (entry.timed) {
-      return {
-        exerciseId: entry.exerciseId,
-        sets: 1, reps: 1, weight: 0,
-        durationSec: Math.round(entry.durationMin * 60),
-        rpe: entry.rpe,
-        comment: entry.comment,
-        setsData: [],
-      };
-    }
     const sd = entry.setsData && entry.setsData.length > 0 ? entry.setsData : [];
     return {
       exerciseId: entry.exerciseId,
       sets: entry.customSets ? (sd.length || entry.sets) : entry.sets,
       reps: entry.reps,
       weight: entry.weight,
-      durationSec: null,
       rpe: entry.rpe,
       comment: entry.comment,
       setsData: sd,
@@ -699,7 +637,8 @@ function TreningPage() {
 
   const loadAiPlan = () => {
     if (!aiPlan) return;
-    const newEntries: EntryRow[] = aiPlan.exercises.map((ex, i) => newEntryRow(String(Date.now() + i), {
+    const newEntries: EntryRow[] = aiPlan.exercises.map((ex, i) => ({
+      key: String(Date.now() + i),
       exerciseId: ex.exerciseId,
       sets: ex.setsData.length,
       reps: ex.setsData[0]?.reps || 10,
@@ -917,22 +856,7 @@ function TreningPage() {
                 </div>
               );
             })()}
-            <div className="flex gap-4 items-center flex-wrap">
-              {/* Na czas — dla bieżni, stepmilla, ergometru. Przy tym trybie
-                  serie i ciężar znikają, bo nie ma czego w nie wpisać. */}
-              <div className="flex gap-2 items-center">
-                <label className="text-xs text-gray-500">Na czas</label>
-                <button type="button"
-                  onClick={() => setEntries(prev => prev.map(e =>
-                    e.key === entry.key
-                      ? { ...e, timed: !e.timed, customSets: false, bodyweight: false }
-                      : e
-                  ))}
-                  className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${entry.timed ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-200 hover:bg-gray-300'}`}>
-                  <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${entry.timed ? 'translate-x-5' : 'translate-x-1'}`} />
-                </button>
-              </div>
-              {!entry.timed && (
+            <div className="flex gap-4 items-center">
               <div className="flex gap-2 items-center">
                 <label className="text-xs text-gray-500">Rozpisz serie osobno</label>
                 <button type="button" onClick={() => toggleCustomSets(entry.key, !entry.customSets)}
@@ -940,8 +864,6 @@ function TreningPage() {
                   <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${entry.customSets ? 'translate-x-5' : 'translate-x-1'}`} />
                 </button>
               </div>
-              )}
-              {!entry.timed && (
               <div className="flex gap-2 items-center">
                 <label className="text-xs text-gray-500">Własna masa</label>
                 <button type="button"
@@ -952,35 +874,8 @@ function TreningPage() {
                   <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${entry.bodyweight ? 'translate-x-5' : 'translate-x-1'}`} />
                 </button>
               </div>
-              )}
             </div>
-            {entry.timed ? (
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Czas (min)</label>
-                <input
-                  type="number" min="0" step="1" inputMode="numeric"
-                  value={entry.durationMin === 0 ? '' : entry.durationMin}
-                  placeholder="np. 20"
-                  onChange={e => setEntries(prev => prev.map(x =>
-                    x.key === entry.key ? { ...x, durationMin: parseInt(e.target.value, 10) || 0 } : x
-                  ))}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-base text-gray-900 text-center" />
-                <div className="flex gap-2 mt-2">
-                  {[10, 15, 20, 30].map(m => (
-                    <button key={m} type="button"
-                      onClick={() => setEntries(prev => prev.map(x =>
-                        x.key === entry.key ? { ...x, durationMin: m } : x
-                      ))}
-                      className="flex-1 py-1.5 rounded-lg bg-gray-100 text-sm text-gray-700">
-                      {m}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  Kalorie policzą się z czasu i rodzaju maszyny, a nie z liczby serii.
-                </p>
-              </div>
-            ) : !entry.customSets ? (
+            {!entry.customSets ? (
               <>
               <div className={`grid gap-2 ${entry.bodyweight ? 'grid-cols-2' : 'grid-cols-3'}`}>
                 {[['Serie', 'sets'], ['Powt.', 'reps'], ...(!entry.bodyweight ? [['Ciężar kg', 'weight']] : [])].map(([label, field]) => (

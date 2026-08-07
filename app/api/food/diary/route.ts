@@ -67,7 +67,13 @@ export async function GET(request: Request) {
       const [sessions, runs, activities] = await Promise.all([
         prisma.workoutSession.findMany({
           where: { userId, date: { gte: date, lt: dayEnd } },
-          include: { entries: { select: { sets: true, setsData: true } } },
+          // durationSec + nazwa ćwiczenia są potrzebne, żeby cardio na czas
+          // policzyło się wzorem MET, a nie jako jedna seria siłowa.
+          include: {
+            entries: {
+              select: { sets: true, setsData: true, durationSec: true, exercise: { select: { name: true } } },
+            },
+          },
         }),
         prisma.runSession.findMany({ where: { userId, date: { gte: date, lt: dayEnd } } }),
         prisma.otherActivity.findMany({ where: { userId, date: { gte: date, lt: dayEnd } } }),

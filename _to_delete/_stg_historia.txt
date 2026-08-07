@@ -896,12 +896,7 @@ function HistoriaPage() {
                                 )}
                               </Link>
                               <div className="text-sm text-gray-700 text-right shrink-0 max-w-[55%] leading-snug">
-                                {/* Ćwiczenie mierzone czasem — „1x1 @ 0kg" nie
-                                    znaczyłoby tu nic poza tym, że ktoś nie miał
-                                    gdzie wpisać minut. */}
-                                {entry.durationSec && entry.durationSec > 0 ? (
-                                  <span className="whitespace-nowrap"><strong>{Math.round(entry.durationSec / 60)} min</strong></span>
-                                ) : Array.isArray(entry.setsData) && entry.setsData.length > 0 ? (
+                                {Array.isArray(entry.setsData) && entry.setsData.length > 0 ? (
                                   <span className="inline-flex flex-wrap justify-end gap-x-0.5">
                                     {(entry.setsData as { reps: number; weight: number }[]).map((s, i) => (
                                       <span key={i} className="whitespace-nowrap">

@@ -69,7 +69,15 @@ export async function GET(request: Request) {
       }),
       prisma.workoutSession.findMany({
         where: { userId, date: { gte: start, lt: endOfRange } },
-        select: { date: true, kcal: true, entries: { select: { sets: true, setsData: true } } },
+        // durationSec + nazwa ćwiczenia — cardio na czas liczy się wzorem MET,
+        // nie jako jedna seria siłowa (20 min na schodach to nie 20 kcal).
+        select: {
+          date: true,
+          kcal: true,
+          entries: {
+            select: { sets: true, setsData: true, durationSec: true, exercise: { select: { name: true } } },
+          },
+        },
       }),
       prisma.runSession.findMany({
         where: { userId, date: { gte: start, lt: endOfRange } },
