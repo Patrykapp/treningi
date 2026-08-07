@@ -6,8 +6,10 @@ import { getAuthUserId } from '@/lib/auth';
  * Katalog produktów w naszej bazie — pierwsza warstwa wyszukiwania.
  * Dopiero gdy tu nic nie ma, front pyta Open Food Facts (/api/food/search).
  *
- * Kolejność wyników: najczęściej używane na górze. Po dwóch tygodniach
- * codziennego wpisywania to załatwia większość wyszukiwań jednym kliknięciem.
+ * Kolejność wyników: najpierw to, co użytkownik jada O TEJ PORZE dnia
+ * (parametr `meal`), potem ulubione i ogólnie najczęściej używane.
+ * Sortowanie globalne dawało rano te same podpowiedzi co wieczorem, mimo że
+ * dane o porach posiłków leżą w `MealEntry` i nic nie kosztują.
  */
 
 function num(v: unknown, fallback = 0): number {
@@ -26,6 +28,7 @@ export async function GET(request: Request) {
     // dishes=1 → tylko dania złożone (mają przepis): biblioteka gotowych posiłków
     const onlyDishes = searchParams.get('dishes') === '1';
     const onlyFavorites = searchParams.get('favorites') === '1';
+    const meal = searchParams.get('meal') || '';
 
     if (barcode) {
       const p = await prisma.foodProduct.findUnique({ where: { barcode } });
@@ -44,14 +47,54 @@ export async function GET(request: Request) {
     if (onlyDishes) filters.push({ recipe: { not: null } });
     if (onlyFavorites) filters.push({ isFavorite: true });
 
+    // Ranking „co zwykle jadam na ten posiłek" — z ostatnich 90 dni.
+    let mealRank: string[] = [];
+    if (meal) {
+      const since = new Date(Date.now() - 90 * 24 * 3600 * 1000);
+      const grouped = await prisma.mealEntry.groupBy({
+        by: ['productId'],
+        where: { userId, meal, date: { gte: since }, productId: { not: null } },
+        _count: { productId: true },
+        orderBy: { _count: { productId: 'desc' } },
+        take: 12,
+      });
+      mealRank = grouped.map((g) => g.productId).filter((x): x is string => Boolean(x));
+    }
+
     const products = await prisma.foodProduct.findMany({
       where: filters.length > 0 ? { AND: filters } : undefined,
-      // Ulubione zawsze na górze — to one skracają codzienne wpisywanie.
+      // Ulubione wysoko — to one skracają codzienne wpisywanie.
       orderBy: [{ isFavorite: 'desc' }, { usageCount: 'desc' }, { updatedAt: 'desc' }],
-      take: q || onlyDishes || onlyFavorites ? 40 : 20,
+      take: q || onlyDishes || onlyFavorites ? 40 : 30,
     });
 
-    return NextResponse.json(products);
+    if (mealRank.length === 0) {
+      return NextResponse.json(products.slice(0, q || onlyDishes || onlyFavorites ? 40 : 20));
+    }
+
+    // Pozycje typowe dla tej pory dnia idą na górę, w kolejności popularności.
+    const position = new Map(mealRank.map((id, i) => [id, i]));
+    const inRank = products.filter((p) => position.has(p.id)).sort((a, b) => position.get(a.id)! - position.get(b.id)!);
+    const rest = products.filter((p) => !position.has(p.id));
+
+    // Bez frazy dobieramy jeszcze produkty z rankingu, których nie było
+    // w pierwszych 30 — inaczej ulubione wypchnęłyby je poza listę.
+    let missing: typeof products = [];
+    if (!q) {
+      const have = new Set(products.map((p) => p.id));
+      const missingIds = mealRank.filter((id) => !have.has(id));
+      if (missingIds.length > 0) {
+        const extra = await prisma.foodProduct.findMany({ where: { id: { in: missingIds } } });
+        missing = extra.sort((a, b) => position.get(a.id)! - position.get(b.id)!);
+      }
+    }
+
+    const merged = [...inRank, ...missing, ...rest];
+    // Kolejność `merged` jest już właściwa — dedup zachowuje pierwsze wystąpienie.
+    const seen = new Set<string>();
+    const out = merged.filter((p) => (seen.has(p.id) ? false : (seen.add(p.id), true)));
+
+    return NextResponse.json(out.slice(0, q || onlyDishes || onlyFavorites ? 40 : 20));
   } catch (e) {
     console.error('GET /api/food/products', e);
     return NextResponse.json({ error: 'Błąd serwera' }, { status: 500 });

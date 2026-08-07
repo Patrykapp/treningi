@@ -99,12 +99,14 @@ const dec = (s: string) => parseFloat(s.replace(',', '.'));
 
 export function FoodPicker({
   isOpen,
+  mealKey,
   mealLabel,
   onClose,
   onPick,
   onPickMeal,
 }: {
   isOpen: boolean;
+  mealKey: string | null;
   mealLabel: string;
   onClose: () => void;
   onPick: (c: Candidate, grams: number) => Promise<void>;
@@ -130,6 +132,8 @@ export function FoodPicker({
   const [catalog, setCatalog] = useState<CatalogRow[]>([]);
   const [off, setOff] = useState<OffHit[]>([]);
   const [searching, setSearching] = useState(false);
+  // Filtr listy: wszystko / tylko ulubione / tylko zapisane dania.
+  const [filter, setFilter] = useState<'all' | 'fav' | 'dishes'>('all');
 
   // skaner
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -198,13 +202,19 @@ export function FoodPicker({
     const t = setTimeout(async () => {
       setSearching(true);
       try {
-        const catRes = await fetch(`/api/food/products?q=${encodeURIComponent(term)}`);
+        const params = new URLSearchParams({ q: term });
+        if (mealKey) params.set('meal', mealKey);
+        if (filter === 'fav') params.set('favorites', '1');
+        if (filter === 'dishes') params.set('dishes', '1');
+        const catRes = await fetch(`/api/food/products?${params.toString()}`);
         const cat: CatalogRow[] = catRes.ok ? await catRes.json() : [];
         setCatalog(cat);
 
         // Open Food Facts pytamy tylko wtedy, gdy katalog nie wystarcza —
         // oszczędza limit API i nie zaśmieca listy duplikatami.
-        if (term.length >= 3 && cat.length < 8) {
+        // Open Food Facts tylko przy swobodnym szukaniu — filtry dotyczą
+        // wyłącznie naszego katalogu.
+        if (filter === 'all' && term.length >= 3 && cat.length < 8) {
           const offRes = await fetch(`/api/food/search?q=${encodeURIComponent(term)}`);
           const hits: OffHit[] = offRes.ok ? await offRes.json() : [];
           const known = new Set(cat.map((c) => c.barcode).filter(Boolean));
@@ -217,7 +227,7 @@ export function FoodPicker({
       }
     }, term ? 400 : 0);
     return () => clearTimeout(t);
-  }, [q, tab, isOpen]);
+  }, [q, tab, isOpen, mealKey, filter]);
 
   // --- skaner ---
   const lookupBarcode = useCallback(async (code: string) => {
@@ -465,6 +475,23 @@ export function FoodPicker({
     setSaving(true);
     try {
       await onPick(picked, grams);
+      // Okno zostaje otwarte — jeden posiłek to zwykle kilka pozycji, a
+      // zamykanie po każdej zmuszało do otwierania go od nowa.
+      setPicked(null);
+      setQ('');
+      setNote(`Dodano: ${picked.name}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /** Dodanie od razu, bez ekranu gramatury — dla pozycji z typową porcją. */
+  const quickAdd = async (c: Candidate) => {
+    const g = c.servingG && c.servingG > 0 ? Math.round(c.servingG) : 100;
+    setSaving(true);
+    try {
+      await onPick(c, g);
+      setNote(`Dodano: ${c.name} (${g} ${c.unit})`);
     } finally {
       setSaving(false);
     }
@@ -490,6 +517,9 @@ export function FoodPicker({
         carbs: Math.round(composedTotals.carbs * 10) / 10,
         fat: Math.round(composedTotals.fat * 10) / 10,
       });
+      setComposed(null);
+      setDescribeText('');
+      setNote('Dodano do dziennika.');
     } finally {
       setSaving(false);
     }
@@ -589,6 +619,24 @@ export function FoodPicker({
                   autoFocus
                 />
               </div>
+
+              <div className="flex gap-2">
+                {([
+                  ['all', 'Wszystko'],
+                  ['fav', '★ Ulubione'],
+                  ['dishes', 'Moje dania'],
+                ] as const).map(([v, label]) => (
+                  <button
+                    key={v}
+                    onClick={() => setFilter(v)}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-medium ${
+                      filter === v ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
               {searching && <p className="text-sm text-gray-500">Szukam…</p>}
 
               {catalog.length > 0 && (
@@ -604,6 +652,7 @@ export function FoodPicker({
                             <span className="block truncate">{c.name}</span>
                             <span className="block text-xs text-gray-500">
                               {c.brand || (c.recipe ? 'twoje danie' : '—')}
+                              {c.servingG ? ` · porcja ${Math.round(c.servingG)} ${c.unit === 'ml' ? 'ml' : 'g'}` : ''}
                             </span>
                           </span>
                           <span className="text-sm text-gray-600 shrink-0">
@@ -620,6 +669,17 @@ export function FoodPicker({
                             fill={c.isFavorite ? 'currentColor' : 'none'}
                           />
                         </button>
+                        {/* Dodanie typowej porcji bez wchodzenia w szczegóły */}
+                        {c.servingG ? (
+                          <button
+                            onClick={() => quickAdd(fromCatalog(c))}
+                            disabled={saving}
+                            className="px-2 py-1 shrink-0 rounded-lg bg-green-50 text-green-700 text-xs font-medium border border-green-200 disabled:opacity-50"
+                            title={`Dodaj ${Math.round(c.servingG)} ${c.unit === 'ml' ? 'ml' : 'g'}`}
+                          >
+                            +{Math.round(c.servingG)}
+                          </button>
+                        ) : null}
                       </li>
                     ))}
                   </ul>
@@ -660,7 +720,15 @@ export function FoodPicker({
                 </div>
               )}
 
-              {!searching && q.trim().length >= 3 && catalog.length === 0 && off.length === 0 && (
+              {!searching && filter !== 'all' && catalog.length === 0 && (
+                <p className="text-sm text-gray-500">
+                  {filter === 'fav'
+                    ? 'Nie masz jeszcze ulubionych. Kliknij gwiazdkę przy produkcie, żeby trzymać go na górze listy.'
+                    : 'Nie masz jeszcze zapisanych dań. Powstają z generatora jadłospisu, z zakładki „Opisz" i z importu przepisu.'}
+                </p>
+              )}
+
+              {!searching && filter === 'all' && q.trim().length >= 3 && catalog.length === 0 && off.length === 0 && (
                 <div className="text-sm text-gray-600 space-y-2">
                   <p>Nic nie znalazłem — pieczywa na wagę i warzyw w otwartych bazach po prostu nie ma.</p>
                   <button

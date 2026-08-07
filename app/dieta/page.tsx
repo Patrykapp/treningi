@@ -18,7 +18,7 @@ import { AiMealPlan } from '@/components/ui/AiMealPlan';
 import { ShoppingList } from '@/components/ui/ShoppingList';
 import { MEALS, ACTIVITY_LEVELS, GOAL_TYPES } from '@/lib/nutrition';
 import { formatDate } from '@/lib/utils';
-import { ChevronLeft, ChevronRight, Plus, Trash2, Settings2, Flame, CalendarDays, Sparkles, ChefHat, CopyPlus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Settings2, Flame, CalendarDays, Sparkles, ChefHat, CopyPlus } from 'lucide-react';
 
 type Entry = {
   id: string; meal: string; name: string; grams: number; unit?: string;
@@ -133,8 +133,8 @@ export default function DietaPage() {
       }),
     });
     if (res.ok) {
-      setPickerMeal(null);
-      setToast({ msg: 'Dodano', type: 'success' });
+      // Okno zostaje otwarte — FoodPicker sam wraca do listy, żeby dało się
+      // dorzucić kolejny składnik bez otwierania wszystkiego od nowa.
       void load(date);
     } else {
       setToast({ msg: 'Nie udało się zapisać', type: 'error' });
@@ -150,8 +150,6 @@ export default function DietaPage() {
       body: JSON.stringify({ date, replace: false, meals: [{ ...m, meal: pickerMeal }] }),
     });
     if (res.ok) {
-      setPickerMeal(null);
-      setToast({ msg: 'Dodano', type: 'success' });
       void load(date);
     } else {
       setToast({ msg: 'Nie udało się zapisać', type: 'error' });
@@ -263,10 +261,21 @@ export default function DietaPage() {
         <button onClick={() => setDate(shiftDay(date, -1))} className="p-2 rounded-lg hover:bg-gray-100" aria-label="Poprzedni dzień">
           <ChevronLeft className="w-5 h-5" />
         </button>
-        <div className="text-center">
-          <p className="font-bold">{date === todayISO() ? 'Dzisiaj' : formatDate(date)}</p>
+        <div className="text-center relative">
+          {/* Przezroczysty input na dacie — kliknięcie w napis otwiera kalendarz.
+              Samymi strzałkami cofnięcie się o dwa tygodnie to 14 kliknięć. */}
+          <label className="block cursor-pointer">
+            <p className="font-bold">{date === todayISO() ? 'Dzisiaj' : formatDate(date)}</p>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => e.target.value && setDate(e.target.value)}
+              className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+              aria-label="Wybierz datę"
+            />
+          </label>
           {date !== todayISO() && (
-            <button onClick={() => setDate(todayISO())} className="text-xs text-blue-600 underline">
+            <button onClick={() => setDate(todayISO())} className="text-xs text-blue-600 underline relative z-10">
               wróć do dzisiaj
             </button>
           )}
@@ -406,9 +415,10 @@ export default function DietaPage() {
                           </button>
                         )}
                         <span className="text-sm font-medium">{Math.round(e.kcal)}</span>
-                        <button onClick={() => setDeleteId(e.id)} className="p-2 text-gray-400 hover:text-red-500" aria-label="Usuń">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {/* Kosz zdjęty z wiersza — sąsiadował z obszarem edycji
+                            i na telefonie łatwo było trafić w niewłaściwy.
+                            Usuwanie jest w oknie edycji. */}
+                        <ChevronRight className="w-4 h-4 text-gray-300" />
                       </div>
                     </div>
                     {openRecipe === e.id && e.product?.recipe && (
@@ -457,6 +467,7 @@ export default function DietaPage() {
 
       <FoodPicker
         isOpen={pickerMeal !== null}
+        mealKey={pickerMeal}
         mealLabel={MEALS.find((m) => m.key === pickerMeal)?.label ?? ''}
         onClose={() => setPickerMeal(null)}
         onPick={addFood}
