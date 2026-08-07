@@ -140,6 +140,13 @@ ${menu}`;
         protein: r1(p.protein100 * f),
         carbs: r1(p.carbs100 * f),
         fat: r1(p.fat100 * f),
+        // Wartości bazowe — front przelicza gramaturę wprost z nich, zamiast
+        // skalować poprzedni wynik. Skalowanie przez iloraz przestaje działać,
+        // gdy użytkownik wyczyści pole do zera.
+        kcal100: p.kcal100,
+        protein100: p.protein100,
+        carbs100: p.carbs100,
+        fat100: p.fat100,
       });
     }
 

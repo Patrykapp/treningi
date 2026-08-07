@@ -57,6 +57,9 @@ type CatalogRow = {
 
 type ParsedIngredient = {
   name: string; grams: number; kcal: number; protein: number; carbs: number; fat: number;
+  // Wartości na 100 g/ml — dzięki nim przeliczenie jest bezstratne i działa
+  // także po wyczyszczeniu pola do zera.
+  kcal100: number; protein100: number; carbs100: number; fat100: number;
 };
 type ParsedMeal = { title: string; ingredients: ParsedIngredient[]; unmatched: string[] };
 
@@ -373,17 +376,19 @@ export function FoodPicker({
       if (!prev) return prev;
       const ing = [...prev.ingredients];
       const old = ing[idx];
-      if (!old || old.grams <= 0) return prev;
-      if (grams <= 0) return { ...prev, ingredients: ing.map((x, k2) => (k2 === idx ? { ...x, grams: 0, kcal: 0, protein: 0, carbs: 0, fat: 0 } : x)) };
-      const k = grams / old.grams;
-      if (!Number.isFinite(k)) return prev;
+      if (!old) return prev;
+      // Liczymy zawsze od wartości na 100 — nigdy od poprzedniego wyniku.
+      // Wcześniej po wyczyszczeniu pola gramatura zostawała na zerze i każda
+      // kolejna zmiana była odrzucana, więc pole zostawało puste na zawsze.
+      const g = Number.isFinite(grams) && grams > 0 ? grams : 0;
+      const f = g / 100;
       ing[idx] = {
         ...old,
-        grams,
-        kcal: Math.round(old.kcal * k),
-        protein: Math.round(old.protein * k * 10) / 10,
-        carbs: Math.round(old.carbs * k * 10) / 10,
-        fat: Math.round(old.fat * k * 10) / 10,
+        grams: g,
+        kcal: Math.round(old.kcal100 * f),
+        protein: Math.round(old.protein100 * f * 10) / 10,
+        carbs: Math.round(old.carbs100 * f * 10) / 10,
+        fat: Math.round(old.fat100 * f * 10) / 10,
       };
       return { ...prev, ingredients: ing };
     });
