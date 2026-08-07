@@ -18,7 +18,7 @@ import { AiMealPlan } from '@/components/ui/AiMealPlan';
 import { ShoppingList } from '@/components/ui/ShoppingList';
 import { MEALS, ACTIVITY_LEVELS, GOAL_TYPES } from '@/lib/nutrition';
 import { formatDate } from '@/lib/utils';
-import { ChevronLeft, ChevronRight, Plus, Settings2, Flame, CalendarDays, Sparkles, ChefHat, CopyPlus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Settings2, Flame, CalendarDays, Sparkles, ChefHat, CopyPlus, GlassWater } from 'lucide-react';
 
 type Entry = {
   id: string; meal: string; name: string; grams: number; unit?: string;
@@ -35,10 +35,12 @@ type Profile = {
   heightCm: number | null; birthYear: number | null; sex: string | null;
   activityLevel: string; goalType: string; customKcal: number | null;
   proteinPct: number; carbsPct: number; fatPct: number; addWorkoutKcal: boolean;
+  waterGoalMl: number;
 };
 
 type DayData = {
   date: string;
+  water: { ml: number; goalMl: number };
   entries: Entry[];
   totals: { kcal: number; protein: number; carbs: number; fat: number };
   targets: Targets;
@@ -85,6 +87,9 @@ export default function DietaPage() {
 
   const [view, setView] = useState<'day' | 'week' | 'shopping'>('day');
   const [copying, setCopying] = useState(false);
+  // Woda trzymana lokalnie, żeby klikanie było natychmiastowe — serwer
+  // dostaje przyrost w tle i jest źródłem prawdy po przeładowaniu dnia.
+  const [waterMl, setWaterMl] = useState<number | null>(null);
   const [aiOpen, setAiOpen] = useState(false);
   const [openRecipe, setOpenRecipe] = useState<string | null>(null);
   const [pickerMeal, setPickerMeal] = useState<string | null>(null);
@@ -101,7 +106,9 @@ export default function DietaPage() {
     try {
       const res = await fetch(`/api/food/diary?date=${iso}`);
       if (!res.ok) throw new Error();
-      setData(await res.json());
+      const body: DayData = await res.json();
+      setData(body);
+      setWaterMl(body.water?.ml ?? 0);
     } catch {
       setToast({ msg: 'Nie udało się wczytać dziennika', type: 'error' });
     } finally {
@@ -154,6 +161,24 @@ export default function DietaPage() {
     } else {
       setToast({ msg: 'Nie udało się zapisać', type: 'error' });
     }
+  };
+
+  const addWater = async (delta: number) => {
+    const goal = data?.water?.goalMl ?? 2500;
+    setWaterMl((prev) => Math.max(0, Math.min(10000, (prev ?? 0) + delta)));
+    const res = await fetch('/api/food/water', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date, delta }),
+    });
+    if (res.ok) {
+      const b = await res.json();
+      setWaterMl(b.ml);
+    } else {
+      setToast({ msg: 'Nie udało się zapisać wody', type: 'error' });
+      void load(date);
+    }
+    void goal;
   };
 
   const copyFromYesterday = async () => {
@@ -361,6 +386,47 @@ export default function DietaPage() {
           </>
         )}
       </section>
+
+      {/* Woda */}
+      {data && (
+        <section className="bg-white rounded-2xl p-4 shadow-sm">
+          <div className="flex items-baseline justify-between mb-2">
+            <h2 className="font-semibold flex items-center gap-2">
+              <GlassWater className="w-4 h-4 text-sky-500" /> Woda
+            </h2>
+            <span className="text-sm text-gray-500">
+              {((waterMl ?? 0) / 1000).toFixed(1)} / {(data.water.goalMl / 1000).toFixed(1)} l
+            </span>
+          </div>
+
+          <div className="h-2 rounded-full bg-gray-200 overflow-hidden mb-3">
+            <div
+              className="h-full rounded-full bg-sky-500 transition-all"
+              style={{ width: `${Math.min(100, ((waterMl ?? 0) / Math.max(1, data.water.goalMl)) * 100)}%` }}
+            />
+          </div>
+
+          <div className="flex gap-2">
+            {[250, 330, 500].map((ml) => (
+              <button
+                key={ml}
+                onClick={() => addWater(ml)}
+                className="flex-1 py-2 rounded-lg bg-sky-50 text-sky-700 text-sm font-medium border border-sky-200"
+              >
+                +{ml} ml
+              </button>
+            ))}
+            <button
+              onClick={() => addWater(-250)}
+              disabled={(waterMl ?? 0) <= 0}
+              className="px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-600 disabled:opacity-40"
+              aria-label="Cofnij szklankę"
+            >
+              −
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* Generator jadłospisu i kopiowanie */}
       <div className="flex gap-2">
@@ -628,6 +694,19 @@ export default function DietaPage() {
                 className="w-4 h-4"
               />
               Doliczaj kalorie spalone na treningu do dziennego budżetu
+            </label>
+
+            <label className="text-sm block">
+              <span className="block text-gray-600 mb-1">Dzienny cel nawodnienia (ml)</span>
+              <input
+                value={form.waterGoalMl ?? 2500}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/\D/g, '').slice(0, 4);
+                  setForm({ ...form, waterGoalMl: v === '' ? 0 : parseInt(v, 10) });
+                }}
+                inputMode="numeric"
+                className={inputCls}
+              />
             </label>
 
             <label className="text-sm block">

@@ -44,7 +44,7 @@ export async function GET(request: Request) {
     const date = dayStart(searchParams.get('date'));
     const dayEnd = new Date(date.getTime() + 24 * 3600 * 1000);
 
-    const [entries, profileRow, weights] = await Promise.all([
+    const [entries, profileRow, weights, water] = await Promise.all([
       prisma.mealEntry.findMany({
         where: { userId, date },
         orderBy: { createdAt: 'asc' },
@@ -54,6 +54,7 @@ export async function GET(request: Request) {
       }),
       prisma.nutritionProfile.findUnique({ where: { userId } }),
       prisma.bodyWeight.findMany({ where: { userId }, orderBy: { date: 'desc' }, take: 1 }),
+      prisma.waterLog.findUnique({ where: { userId_date: { userId, date } } }),
     ]);
 
     const profile = profileRow ?? { ...DEFAULT_PROFILE, userId };
@@ -95,6 +96,7 @@ export async function GET(request: Request) {
       targets,
       workoutKcal: Math.round(workoutKcal),
       weightKg,
+      water: { ml: water?.ml ?? 0, goalMl: (profile as { waterGoalMl?: number }).waterGoalMl ?? 2500 },
       profile,
     });
   } catch (e) {

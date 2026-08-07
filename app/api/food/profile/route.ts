@@ -21,6 +21,7 @@ const DEFAULTS = {
   carbsPct: 40,
   fatPct: 30,
   addWorkoutKcal: false,
+  waterGoalMl: 2500,
 };
 
 function intOrNull(v: unknown, min: number, max: number): number | null {
@@ -82,6 +83,7 @@ export async function PUT(request: Request) {
       carbsPct: intOrNull(b?.carbsPct, 5, 80) ?? 40,
       fatPct: intOrNull(b?.fatPct, 5, 70) ?? 30,
       addWorkoutKcal: Boolean(b?.addWorkoutKcal),
+      waterGoalMl: intOrNull(b?.waterGoalMl, 500, 8000) ?? 2500,
     };
 
     const profile = await prisma.nutritionProfile.upsert({

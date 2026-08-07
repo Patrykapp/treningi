@@ -1,21 +1,32 @@
 'use client';
 
 /**
- * Podsumowanie zakresu dni: słupki kalorii na tle celu, średnie, licznik
- * trafionych dni i lista zakupów zsumowana z całego zakresu.
+ * Podsumowanie zakresu: kalorie na tle celu i waga na tle bilansu.
  *
- * Ta sama komponenta obsługuje spojrzenie wstecz („jak mi poszło") i w przód
- * („co kupić na zaplanowane dni") — różni je tylko wybrany zakres.
+ * Dlaczego DWA wykresy, a nie jeden z dwiema osiami: kalorie i kilogramy mają
+ * zupełnie inne skale, a wykres z dwiema osiami pozwala dowolnie „ustawić"
+ * korelację przesuwając jedną z nich. Dwa wykresy dzielące oś czasu pokazują
+ * to samo, nie kłamiąc.
+ *
+ * Pojedynczy dzień wagi nic nie znaczy (woda potrafi ruszyć wagę o kilogram),
+ * dlatego linią prowadzącą jest średnia z siedmiu dni, a same pomiary są tylko
+ * punktami w tle.
  */
 
-import { useCallback, useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, ShoppingCart, Copy, Check } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis,
+  CartesianGrid, Tooltip, ReferenceLine,
+} from 'recharts';
+import { ChevronLeft, ChevronRight, ShoppingCart, Copy, Check, TrendingDown, TrendingUp, Minus } from 'lucide-react';
 
-type Day = { date: string; kcal: number; protein: number; carbs: number; fat: number; logged: boolean };
+type Day = {
+  date: string; kcal: number; protein: number; carbs: number; fat: number; logged: boolean;
+  weight: number | null; weightAvg: number | null; kcalAvg: number | null;
+};
 type WeekData = {
-  start: string;
-  end: string;
-  days: Day[];
+  start: string; end: string; days: Day[];
+  weightTrend: number | null;
   avg: { kcal: number; protein: number; carbs: number; fat: number };
   targets: { kcal: number; protein: number; carbs: number; fat: number };
   daysLogged: number;
@@ -24,6 +35,11 @@ type WeekData = {
 };
 
 const DOW = ['nd', 'pn', 'wt', 'śr', 'cz', 'pt', 'so'];
+
+// Paleta ze zwalidowanego zestawu (sprawdzona pod kątem daltonizmu i kontrastu
+// osobno dla trybu jasnego i ciemnego — to nie jest odwrócenie tych samych barw).
+const LIGHT = { bar: '#2a78d6', avg: '#eb6834', weight: '#1baf7a', grid: '#e1e0d9', ink: '#898781', dot: '#a8a69f' };
+const DARK  = { bar: '#3987e5', avg: '#d95926', weight: '#199e70', grid: '#2c2c2a', ink: '#898781', dot: '#6b6a66' };
 
 function iso(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -34,17 +50,36 @@ function shift(isoDate: string, days: number): string {
   return iso(d);
 }
 
+/** Tryb ciemny siedzi na klasie `dark` w <html> — obserwujemy ją, bo kolory
+ *  wykresu idą inline i same się nie przełączą. */
+function useIsDark(): boolean {
+  const [dark, setDark] = useState(false);
+  useEffect(() => {
+    const read = () => setDark(document.documentElement.classList.contains('dark'));
+    read();
+    const obs = new MutationObserver(read);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => obs.disconnect();
+  }, []);
+  return dark;
+}
+
 export function WeekSummary({ anchorDate }: { anchorDate: string }) {
   const [end, setEnd] = useState(anchorDate);
+  const [span, setSpan] = useState<7 | 30>(7);
   const [data, setData] = useState<WeekData | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [showShopping, setShowShopping] = useState(false);
+  const [showTable, setShowTable] = useState(false);
+  const dark = useIsDark();
+  const C = dark ? DARK : LIGHT;
 
-  const load = useCallback(async (e: string) => {
+  const load = useCallback(async (e: string, s: number) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/food/week?end=${e}`);
+      const start = shift(e, -(s - 1));
+      const res = await fetch(`/api/food/week?start=${start}&end=${e}`);
       setData(res.ok ? await res.json() : null);
     } finally {
       setLoading(false);
@@ -52,8 +87,18 @@ export function WeekSummary({ anchorDate }: { anchorDate: string }) {
   }, []);
 
   useEffect(() => {
-    void load(end);
-  }, [end, load]);
+    void load(end, span);
+  }, [end, span, load]);
+
+  const chart = useMemo(
+    () =>
+      (data?.days ?? []).map((d) => ({
+        ...d,
+        etykieta: span === 7 ? DOW[new Date(`${d.date}T12:00:00`).getDay()] : d.date.slice(8),
+        kcalPokaz: d.logged ? d.kcal : null,
+      })),
+    [data, span]
+  );
 
   const copyShopping = async () => {
     if (!data) return;
@@ -62,67 +107,190 @@ export function WeekSummary({ anchorDate }: { anchorDate: string }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      /* przeglądarka nie pozwoliła — trudno */
+      /* przeglądarka nie pozwoliła */
     }
   };
 
   if (loading && !data) return <p className="text-sm text-gray-400">Wczytuję…</p>;
   if (!data) return <p className="text-sm text-red-600">Nie udało się wczytać podsumowania.</p>;
 
-  const target = data.targets.kcal || 1;
-  const max = Math.max(target, ...data.days.map((d) => d.kcal)) * 1.1;
-  const today = iso(new Date());
+  const hasWeight = data.days.some((d) => d.weightAvg !== null);
+  const trend = data.weightTrend;
+  const TrendIcon = trend === null || Math.abs(trend) < 0.2 ? Minus : trend < 0 ? TrendingDown : TrendingUp;
 
   return (
     <div className="space-y-4">
-      {/* Zakres */}
-      <div className="flex items-center justify-between">
-        <button onClick={() => setEnd(shift(end, -7))} className="p-2 rounded-lg hover:bg-gray-100" aria-label="Wcześniejszy tydzień">
+      {/* Filtry w jednym rzędzie nad wykresami */}
+      <div className="flex items-center gap-2">
+        <button onClick={() => setEnd(shift(end, -span))} className="p-2 rounded-lg hover:bg-gray-100" aria-label="Wcześniej">
           <ChevronLeft className="w-5 h-5" />
         </button>
-        <p className="text-sm font-medium">
+        <p className="flex-1 text-center text-sm font-medium">
           {data.start.slice(8)}.{data.start.slice(5, 7)} – {data.end.slice(8)}.{data.end.slice(5, 7)}
         </p>
-        <button onClick={() => setEnd(shift(end, 7))} className="p-2 rounded-lg hover:bg-gray-100" aria-label="Późniejszy tydzień">
+        <button onClick={() => setEnd(shift(end, span))} className="p-2 rounded-lg hover:bg-gray-100" aria-label="Później">
           <ChevronRight className="w-5 h-5" />
         </button>
+        <div className="flex gap-1">
+          {([7, 30] as const).map((s) => (
+            <button
+              key={s}
+              onClick={() => setSpan(s)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
+                span === s ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
+              }`}
+            >
+              {s} dni
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Słupki */}
+      {/* ── Wykres 1: kalorie ─────────────────────────────────────────── */}
       <section className="bg-white rounded-2xl p-4 shadow-sm">
-        <div className="flex items-end justify-between gap-1 h-36">
-          {data.days.map((d) => {
-            const h = Math.max(2, (d.kcal / max) * 100);
-            const over = data.targets.kcal > 0 && d.kcal > data.targets.kcal * 1.1;
-            const near = data.targets.kcal > 0 && Math.abs(d.kcal - data.targets.kcal) <= data.targets.kcal * 0.1;
-            const dow = DOW[new Date(`${d.date}T12:00:00`).getDay()];
-            return (
-              <div key={d.date} className="flex-1 flex flex-col items-center justify-end h-full gap-1">
-                <span className="text-[10px] text-gray-500">{d.logged ? d.kcal : ''}</span>
-                <div
-                  className={`w-full rounded-t transition-all ${
-                    !d.logged ? 'bg-gray-200' : over ? 'bg-red-400' : near ? 'bg-green-500' : 'bg-blue-400'
-                  }`}
-                  style={{ height: `${h}%` }}
-                  title={`${d.date}: ${d.kcal} kcal`}
-                />
-                <span className={`text-[11px] ${d.date === today ? 'font-bold text-blue-600' : 'text-gray-500'}`}>{dow}</span>
-              </div>
-            );
-          })}
+        <div className="flex items-baseline justify-between mb-1">
+          <h3 className="font-semibold text-sm">Kalorie</h3>
+          <span className="text-xs text-gray-500">średnio {data.avg.kcal} kcal / dzień</span>
         </div>
-        {/* Linia celu jako podpis — rysowanie jej w słupkach byłoby mylące przy pustych dniach */}
-        <p className="text-xs text-gray-500 mt-2 text-center">
-          Cel dzienny: {data.targets.kcal} kcal · zielony słupek = w granicy ±10%
-        </p>
+
+        <div className="flex gap-3 text-[11px] text-gray-500 mb-2">
+          <span className="inline-flex items-center gap-1">
+            <span className="w-3 h-2 rounded-sm" style={{ background: C.bar }} /> dzień
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span className="w-3 h-0.5 rounded" style={{ background: C.avg }} /> średnia 7 dni
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span className="w-3 h-0 border-t-2 border-dashed" style={{ borderColor: C.ink }} /> cel
+          </span>
+        </div>
+
+        <ResponsiveContainer width="100%" height={170}>
+          <ComposedChart data={chart} margin={{ top: 4, right: 4, left: -18, bottom: 0 }} barCategoryGap="18%">
+            <CartesianGrid stroke={C.grid} vertical={false} />
+            <XAxis
+              dataKey="etykieta"
+              tick={{ fontSize: 11, fill: C.ink }}
+              axisLine={false}
+              tickLine={false}
+              interval={span === 7 ? 0 : 4}
+            />
+            <YAxis tick={{ fontSize: 11, fill: C.ink }} axisLine={false} tickLine={false} width={44} />
+            <Tooltip
+              contentStyle={{
+                background: dark ? '#1a1a19' : '#ffffff',
+                border: `1px solid ${C.grid}`,
+                borderRadius: 12,
+                fontSize: 12,
+              }}
+              labelFormatter={(_: unknown, p: { payload?: { date?: string } }[] | undefined) => p?.[0]?.payload?.date ?? ''}
+              formatter={(v: number, n: string) => [
+                `${Math.round(v)} kcal`,
+                n === 'kcalPokaz' ? 'zjedzone' : 'średnia 7 dni',
+              ]}
+            />
+            {data.targets.kcal > 0 && (
+              <ReferenceLine y={data.targets.kcal} stroke={C.ink} strokeDasharray="4 4" strokeWidth={1} />
+            )}
+            <Bar dataKey="kcalPokaz" fill={C.bar} radius={[4, 4, 0, 0]} maxBarSize={26} />
+            <Line
+              type="monotone"
+              dataKey="kcalAvg"
+              stroke={C.avg}
+              strokeWidth={2}
+              dot={false}
+              connectNulls
+              isAnimationActive={false}
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
       </section>
 
-      {/* Liczby */}
+      {/* ── Wykres 2: waga ────────────────────────────────────────────── */}
+      <section className="bg-white rounded-2xl p-4 shadow-sm">
+        <div className="flex items-baseline justify-between mb-1">
+          <h3 className="font-semibold text-sm">Waga</h3>
+          {trend !== null && (
+            <span className={`text-xs inline-flex items-center gap-1 ${trend < -0.2 ? 'text-green-600' : trend > 0.2 ? 'text-amber-600' : 'text-gray-500'}`}>
+              <TrendIcon className="w-3.5 h-3.5" />
+              {trend > 0 ? '+' : ''}{trend} kg w tym okresie
+            </span>
+          )}
+        </div>
+
+        {hasWeight ? (
+          <>
+            <div className="flex gap-3 text-[11px] text-gray-500 mb-2">
+              <span className="inline-flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full" style={{ background: C.dot }} /> pomiar
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="w-3 h-0.5 rounded" style={{ background: C.weight }} /> średnia 7 dni
+              </span>
+            </div>
+
+            <ResponsiveContainer width="100%" height={150}>
+              <ComposedChart data={chart} margin={{ top: 4, right: 4, left: -18, bottom: 0 }}>
+                <CartesianGrid stroke={C.grid} vertical={false} />
+                <XAxis
+                  dataKey="etykieta"
+                  tick={{ fontSize: 11, fill: C.ink }}
+                  axisLine={false}
+                  tickLine={false}
+                  interval={span === 7 ? 0 : 4}
+                />
+                <YAxis
+                  tick={{ fontSize: 11, fill: C.ink }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={44}
+                  domain={['dataMin - 1', 'dataMax + 1']}
+                  tickFormatter={(v: number) => v.toFixed(1)}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: dark ? '#1a1a19' : '#ffffff',
+                    border: `1px solid ${C.grid}`,
+                    borderRadius: 12,
+                    fontSize: 12,
+                  }}
+                  labelFormatter={(_: unknown, p: { payload?: { date?: string } }[] | undefined) => p?.[0]?.payload?.date ?? ''}
+                  formatter={(v: number, n: string) => [`${v} kg`, n === 'weight' ? 'pomiar' : 'średnia 7 dni']}
+                />
+                <Line dataKey="weight" stroke="none" dot={{ r: 4, fill: C.dot }} isAnimationActive={false} />
+                <Line
+                  type="monotone"
+                  dataKey="weightAvg"
+                  stroke={C.weight}
+                  strokeWidth={2}
+                  dot={false}
+                  connectNulls
+                  isAnimationActive={false}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+
+            <p className="text-xs text-gray-500 mt-2">
+              Porównuj linię wagi z kaloriami wyżej — to jedyny sposób, żeby sprawdzić, czy przyjęty cel
+              faktycznie działa. Reaguj dopiero po dwóch tygodniach.
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-gray-500">
+            Brak pomiarów wagi w tym okresie. Wpisuj się regularnie w module Waga — bez tego nie da się
+            ocenić, czy cel kaloryczny jest dobrany.
+          </p>
+        )}
+      </section>
+
+      {/* ── Liczby ────────────────────────────────────────────────────── */}
       <section className="bg-white rounded-2xl p-4 shadow-sm">
         <div className="grid grid-cols-2 gap-3 mb-3">
           <div>
             <p className="text-2xl font-bold">{data.avg.kcal}</p>
-            <p className="text-xs text-gray-500">średnio kcal / dzień{data.daysLogged > 0 ? ` (z ${data.daysLogged} dni)` : ''}</p>
+            <p className="text-xs text-gray-500">
+              średnio kcal / dzień{data.daysLogged > 0 ? ` (z ${data.daysLogged} dni)` : ''}
+            </p>
           </div>
           <div>
             <p className="text-2xl font-bold">
@@ -144,12 +312,37 @@ export function WeekSummary({ anchorDate }: { anchorDate: string }) {
             </div>
           ))}
         </div>
-        {data.daysLogged === 0 && (
-          <p className="text-sm text-gray-500 mt-3">Brak wpisów w tym zakresie.</p>
+
+        <button onClick={() => setShowTable((s) => !s)} className="text-xs text-blue-600 underline mt-3">
+          {showTable ? 'ukryj tabelę' : 'pokaż dane jako tabelę'}
+        </button>
+        {showTable && (
+          <div className="mt-2 overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="text-gray-500">
+                <tr>
+                  <th className="text-left font-medium py-1">Dzień</th>
+                  <th className="text-right font-medium">kcal</th>
+                  <th className="text-right font-medium">śr. 7 dni</th>
+                  <th className="text-right font-medium">waga</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.days.map((d) => (
+                  <tr key={d.date} className="border-t border-gray-100">
+                    <td className="py-1">{d.date.slice(5)}</td>
+                    <td className="text-right">{d.logged ? d.kcal : '—'}</td>
+                    <td className="text-right">{d.kcalAvg ?? '—'}</td>
+                    <td className="text-right">{d.weight ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 
-      {/* Lista zakupów z zakresu */}
+      {/* ── Produkty z zakresu ────────────────────────────────────────── */}
       {data.shopping.length > 0 && (
         <section className="bg-white rounded-2xl shadow-sm">
           <button onClick={() => setShowShopping((s) => !s)} className="w-full flex items-center justify-between p-4 font-medium">
@@ -160,9 +353,6 @@ export function WeekSummary({ anchorDate }: { anchorDate: string }) {
           </button>
           {showShopping && (
             <div className="px-4 pb-4 space-y-2">
-              <p className="text-xs text-gray-500">
-                Ustaw zakres na nadchodzące dni, a dostaniesz gotową listę zakupów.
-              </p>
               <ul className="text-sm divide-y divide-gray-100">
                 {data.shopping.map((s) => (
                   <li key={s.name} className="py-1 flex justify-between gap-2">

@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { runCalories, sessionCalories } from '@/lib/calories';
 import { ActivityHeatmap } from '@/components/ui/ActivityHeatmap';
 import { SkeletonCard } from '@/components/ui/Skeleton';
+import { DietReminder } from '@/components/ui/DietReminder';
 import {
   Plus, Flag, BarChart3, PersonStanding, Bike, Scale, Sparkles,
   Crown, Flame, Zap, ChevronRight, Dumbbell, TrendingUp, Ruler, Target,
@@ -562,7 +563,7 @@ export default function DashboardPage() {
                 </button>
               </div>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {comparison.map(c => {
                 const isLeader = leader.some(l => l.id === c.id) && leader.length === 1;
                 return (
@@ -729,6 +730,8 @@ export default function DashboardPage() {
             })()}
           </>
         )}
+
+        {isLoggedIn && <DietReminder />}
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {[

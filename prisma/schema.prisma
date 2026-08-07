@@ -31,6 +31,7 @@ model User {
   mealEntries     MealEntry[]
   foodProducts    FoodProduct[]
   shoppingItems   ShoppingItem[]
+  waterLogs       WaterLog[]
   nutritionProfile NutritionProfile?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
@@ -319,6 +320,7 @@ model NutritionProfile {
   carbsPct       Int      @default(40)
   fatPct         Int      @default(30)
   addWorkoutKcal Boolean  @default(false) // czy doliczać kalorie spalone na treningu
+  waterGoalMl    Int      @default(2500)  // dzienny cel nawodnienia
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
@@ -337,4 +339,18 @@ model ShoppingItem {
   createdAt DateTime @default(now())
 
   @@index([userId, checked])
+}
+
+/// Nawodnienie — jeden wiersz na dzień, dopisywany przyrostowo.
+/// Osobny model zamiast pola w dzienniku, bo woda nie ma makroskładników
+/// i nie powinna mieszać się z posiłkami w podsumowaniach.
+model WaterLog {
+  id     String   @id @default(cuid())
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date   DateTime // północ UTC, tak jak w dzienniku
+  ml     Int      @default(0)
+
+  @@unique([userId, date])
+  @@index([userId, date])
 }
