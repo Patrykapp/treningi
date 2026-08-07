@@ -21,7 +21,19 @@ import { GROQ_MODEL, AI_EXTRA, aiMaxTokens, aiContent } from '@/lib/ai';
  * Zwraca propozycję produktu — zapis robi front przez POST /api/food/products.
  */
 
-const UA = 'OzpartsWorkoutApp/1.0 (patryk@ozparts.eu)';
+/**
+ * Nagłówki jak z przeglądarki. Polskie serwisy kulinarne żyją z reklam
+ * i nieznanym klientom potrafią oddać zupełnie inną stronę: ścianę zgód
+ * albo pustkę do dorenderowania w JavaScripcie. Wtedy przepisu w HTML-u
+ * po prostu nie ma i parser nie ma czego szukać. To nie jest obchodzenie
+ * żadnej blokady — strona jest publiczna, a pobranie ręczne, jedno na raz.
+ */
+const HEADERS = {
+  'User-Agent':
+    'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Mobile Safari/537.36',
+  Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'Accept-Language': 'pl-PL,pl;q=0.9',
+};
 const MAX_HTML = 900_000; // większych stron nie ma sensu parsować
 
 const r1 = (x: number) => Math.round(x * 10) / 10;
@@ -83,8 +95,88 @@ type Extracted = {
   nutritionText: string;
 };
 
-/** Najpierw JSON-LD (najpewniejszy), potem mikrodane. */
+/** Sam tekst strony — bez znaczników, bez skryptów i styli. */
+function pageText(html: string): string {
+  return stripTags(
+    html.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ')
+  );
+}
+
+/**
+ * Odczyt z samego TEKSTU strony — ostatnia deska ratunku, gdy nie ma ani
+ * JSON-LD, ani mikrodanych.
+ *
+ * Blogi kulinarne przebudowują szablony i dane strukturalne bywają wtedy
+ * gubione, ale tabela wartości odżywczych zostaje na stronie tam, gdzie była,
+ * bo czyta ją człowiek. Etykiety są w polskich przepisach powtarzalne
+ * („Wartość energetyczna", „Białko", „Tłuszcze", „Węglowodany"), więc da się je
+ * odczytać nie zgadując niczego: bierzemy pierwszą liczbę po każdej etykiecie,
+ * w oknie tuż za nagłówkiem tabeli.
+ */
+function fromText(html: string): Extracted {
+  const out: Extracted = {
+    name: null, yieldText: null, ingredients: [], instructions: null,
+    nutrition: { kcal: null, protein: null, carbs: null, fat: null }, nutritionText: '',
+  };
+
+  // Tytuł: og:title jest czystszy niż <h1>, bo bez dodatków szablonu.
+  const og = /<meta[^>]+property=["']og:title["'][^>]*content=["']([^"']+)["']/i.exec(html)
+    ?? /<meta[^>]+content=["']([^"']+)["'][^>]*property=["']og:title["']/i.exec(html);
+  const h1 = /<h1[^>]*>([\s\S]*?)<\/h1>/i.exec(html);
+  out.name = og ? decodeEntities(og[1]).trim() : h1 ? stripTags(h1[1]) : null;
+  if (out.name) out.name = out.name.split(/\s+[-–|]\s+/)[0].trim() || out.name;
+
+  const text = pageText(html);
+
+  // Wydajność — „4 porcje", „Liczba porcji: 4", „ok. 1200 g"
+  const y = /(?:liczba\s+porcji|wydajno[śs][cć]|porcje?)\s*:?\s*([^.;]{0,50})/i.exec(text);
+  // Ucinamy na nagłówku następnej sekcji — bez tego do etykiety porcji wpada
+  // początek tabeli wartości odżywczych i wygląda to jak śmieć.
+  if (y) out.yieldText = y[0].split(/warto[śs][cć]|sk[łl]adnik/i)[0].slice(0, 60).trim();
+
+  // Tabela wartości odżywczych — okno zaczynające się od jej nagłówka.
+  const i = text.search(/warto[śs][cć](?:i|)\s*(?:energetyczn|od[żz]ywcz)/i);
+  if (i < 0) return out;
+  const win = text.slice(i, i + 600);
+  // Samo „w 100 g" jest liczbą stojącą tuż za etykietą i bez usunięcia go
+  // z tekstu roboczego „Białko w 100 g: 12" odczytałoby się jako 100.
+  // Oryginalne okno zostaje w nutritionText — to po nim poznajemy, że tabela
+  // dotyczy 100 g.
+  const clean = win.replace(/(?:w|na)\s*100\s*(?:g|ml|gram\w*)/gi, ' ');
+
+  // Pierwsza liczba PO etykiecie. „Tłuszcze 15 g, w tym nasycone 6 g" → 15.
+  const after = (re: RegExp): number | null => {
+    const m = re.exec(clean);
+    return m ? num(m[1]) : null;
+  };
+  out.nutrition = {
+    kcal: after(/(?:warto[śs][cć]\s+energetyczn\w*|kaloryczno[śs][cć]|energia)\D{0,12}([\d.,]+)/i)
+      ?? num(/([\d.,]+)\s*kcal/i.exec(clean)?.[1] ?? null),
+    protein: after(/bia[łl]ko\D{0,12}([\d.,]+)/i),
+    carbs: after(/w[ęe]glowodan\w*\D{0,12}([\d.,]+)/i),
+    fat: after(/t[łl]uszcz\w*\D{0,12}([\d.,]+)/i),
+  };
+  out.nutritionText = win.slice(0, 400);
+  return out;
+}
+
+/** Najpierw JSON-LD (najpewniejszy), potem mikrodane, na końcu goły tekst. */
 function extract(html: string): Extracted {
+  const structured = extractStructured(html);
+  // Tekst uzupełnia tylko to, czego dane strukturalne nie dały — nie nadpisuje.
+  const t = fromText(html);
+  const hasNutrition = structured.nutrition.kcal !== null;
+  return {
+    name: structured.name ?? t.name,
+    yieldText: structured.yieldText ?? t.yieldText,
+    ingredients: structured.ingredients.length > 0 ? structured.ingredients : t.ingredients,
+    instructions: structured.instructions ?? t.instructions,
+    nutrition: hasNutrition ? structured.nutrition : t.nutrition,
+    nutritionText: hasNutrition ? structured.nutritionText : t.nutritionText,
+  };
+}
+
+function extractStructured(html: string): Extracted {
   const empty: Extracted = {
     name: null, yieldText: null, ingredients: [], instructions: null,
     nutrition: { kcal: null, protein: null, carbs: null, fat: null }, nutritionText: '',
@@ -194,8 +286,33 @@ function parseYield(text: string | null): { servings: number | null; totalWeight
 
 /** Czy strona sama pisze, że tabela dotyczy 100 g (nagłówek bywa poza blokiem). */
 function per100InPage(html: string): boolean {
-  const text = stripTags(html.slice(0, 400_000));
-  return /wartoś(?:ci|ć)\s+odżywcz\w*[^.]{0,80}?(?:w|na)\s*100\s*(?:g|ml)/i.test(text);
+  return /warto[śs][cć]\w*\s+(?:od[żz]ywcz|energetyczn)\w*[^.]{0,80}?(?:w|na)\s*100\s*(?:g|ml)/i.test(pageText(html));
+}
+
+type AiItem = Record<string, unknown>;
+
+/**
+ * Wyłuskanie listy składników z odpowiedzi modelu.
+ *
+ * Prompt prosi o `{"skladniki":[…]}`, ale model bywa uczynny i odsyła
+ * `{"składniki":…}` z polskimi znakami, `{"ingredients":…}`, albo od razu samą
+ * tablicę. Wcześniej liczyło się tylko dosłowne `skladniki`, więc każda z tych
+ * odpowiedzi kończyła się komunikatem „nie udało się dopasować składników" —
+ * mimo że model odpowiedział poprawnie.
+ *
+ * Bierzemy pierwszą tablicę obiektów, jaka jest w odpowiedzi. To bezpieczne:
+ * liczby i tak przechodzą walidację, a `id` musi trafić w zamkniętą listę.
+ */
+function pickItems(parsed: unknown): AiItem[] {
+  const isList = (v: unknown): v is AiItem[] =>
+    Array.isArray(v) && v.length > 0 && v.every((x) => x !== null && typeof x === 'object');
+
+  if (isList(parsed)) return parsed;
+  if (!parsed || typeof parsed !== 'object') return [];
+  for (const v of Object.values(parsed as Record<string, unknown>)) {
+    if (isList(v)) return v;
+  }
+  return [];
 }
 
 /** Blokada adresów wewnętrznych — endpoint pobiera dowolny URL od użytkownika. */
@@ -232,7 +349,7 @@ export async function POST(request: Request) {
     let html: string;
     try {
       const res = await fetch(url.toString(), {
-        headers: { 'User-Agent': UA, Accept: 'text/html' },
+        headers: HEADERS,
         signal: AbortSignal.timeout(15000),
         redirect: 'follow',
       });
@@ -243,11 +360,18 @@ export async function POST(request: Request) {
     }
 
     const rec = extract(html);
-    if (!rec.name && rec.ingredients.length === 0) {
+    if (!rec.name && rec.ingredients.length === 0 && rec.nutrition.kcal === null) {
+      // Diagnostyka w komunikacie: bez niej każdy nieudany import wygląda tak
+      // samo i nie wiadomo, czy zawiodło pobranie, czy odczyt.
+      const has = (re: RegExp) => (re.test(html) ? 'tak' : 'nie');
       return NextResponse.json(
         {
           error: 'Na tej stronie nie znalazłem przepisu w formacie, który umiem odczytać.',
-          stage: 'odczyt strony',
+          stage:
+            `odczyt strony · ${Math.round(html.length / 1024)} kB · ` +
+            `ld+json: ${has(/application\/ld\+json/i)} · ` +
+            `mikrodane: ${has(/schema\.org\/Recipe/i)} · ` +
+            `tabela w tekście: ${has(/warto[śs][cć]\w*\s+(?:od[żz]ywcz|energetyczn)/i)}`,
         },
         { status: 422 }
       );
@@ -356,17 +480,19 @@ ${menu}`;
     });
     if (!aiRes.ok) return NextResponse.json({ error: 'AI nie odpowiedziało przy przeliczaniu składników.' }, { status: 502 });
 
-    let parsed: { skladniki?: { id?: number; gramy?: number }[] };
+    let parsed: unknown;
     try {
       parsed = JSON.parse(aiContent(await aiRes.json()) || '{}');
     } catch {
-      return NextResponse.json({ error: 'AI zwróciło niepoprawny format.' }, { status: 502 });
+      return NextResponse.json({ error: 'AI zwróciło niepoprawny format.', stage: 'odpowiedź AI' }, { status: 502 });
     }
 
+    const items = pickItems(parsed);
+
     let kcal = 0, protein = 0, carbs = 0, fat = 0, weight = 0;
-    for (const s of parsed.skladniki ?? []) {
-      const idx = Math.trunc(Number(s.id));
-      const g = Number(s.gramy);
+    for (const s of items) {
+      const idx = Math.trunc(Number(s.id ?? s.nr ?? s.index ?? s.numer));
+      const g = Number(s.gramy ?? s.grams ?? s.g ?? s.ilosc ?? s.ilość);
       if (!Number.isInteger(idx) || idx < 0 || idx >= catalog.length) continue;
       if (!Number.isFinite(g) || g <= 0 || g > 5000) continue;
       const p = catalog[idx];
@@ -378,7 +504,14 @@ ${menu}`;
       weight += g;
     }
     if (weight <= 0) {
-      return NextResponse.json({ error: 'Nie udało się dopasować składników do bazy.' }, { status: 422 });
+      return NextResponse.json(
+        {
+          error:
+            'Nie udało się dopasować składników do bazy. Przepisz wartości z przepisu ręcznie albo dodaj brakujące produkty do katalogu.',
+          stage: `mapowanie składników · pozycji od AI: ${items.length} · składników w przepisie: ${rec.ingredients.length}`,
+        },
+        { status: 422 }
+      );
     }
 
     // Masa gotowego dania bywa mniejsza od sumy składników (odparowanie przy
