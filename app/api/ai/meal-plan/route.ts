@@ -106,6 +106,7 @@ type Catalog = {
   id: string; name: string; brand: string | null;
   kcal100: number; protein100: number; carbs100: number; fat100: number;
   servingG: number | null; source: string;
+  category: string | null; usageCount: number;
 };
 
 const r1 = (x: number) => Math.round(x * 10) / 10;
@@ -164,6 +165,7 @@ export async function POST(request: Request) {
     const select = {
       id: true, name: true, brand: true, kcal100: true, protein100: true,
       carbs100: true, fat100: true, servingG: true, source: true,
+      category: true, usageCount: true,
     };
 
     const [profileRow, weights, seedRows, ownRows] = await Promise.all([
@@ -191,18 +193,73 @@ export async function POST(request: Request) {
     const weightKg = weights.length > 0 ? latestWeight(weights) : null;
     const targets = computeTargets(profile, weightKg, new Date());
 
-    // Numerowana lista dla modelu — numery zamiast nazw eliminują literówki
-    // i produkty wzięte z powietrza.
-    const menu = catalog
-      .map(
-        (p, i) =>
-          `${i} ${p.brand ? p.brand + ' ' : ''}${p.name} [${Math.round(p.kcal100)}kcal B${r1(p.protein100)} W${r1(p.carbs100)} T${r1(p.fat100)}]`
-      )
-      .join('\n');
-
     const validMeals = new Set<string>(MEALS.map((m) => m.key));
 
-    const systemPrompt = `Jesteś dietetykiem układającym jadłospis dla zapracowanej osoby w Polsce.
+    /**
+     * Pula produktów wysyłana do modelu.
+     *
+     * Cały katalog (ponad 250 pozycji) to około 5000 tokenów w samym prompcie.
+     * Groq liczy do limitu na minutę SUMĘ promptu i zarezerwowanego `max_tokens`,
+     * a darmowy plan dla gpt-oss-120b daje 8000 — całe zapytanie po prostu się
+     * nie mieściło i wracało jako HTTP 413. Do ułożenia czterech posiłków
+     * wystarcza kilkadziesiąt produktów, byle z każdego działu.
+     *
+     * Dobór: najpierw to, co użytkownik faktycznie jada, potem karuzela po
+     * działach sklepu — dzięki temu w puli zawsze jest i mięso, i nabiał,
+     * i warzywa, zamiast stu rodzajów pieczywa z początku alfabetu.
+     */
+    function pickPool(all: Catalog[], limit: number): Catalog[] {
+      const chosen: Catalog[] = [];
+      const seen = new Set<string>();
+      const add = (p: Catalog) => {
+        if (seen.has(p.id) || chosen.length >= limit) return;
+        seen.add(p.id);
+        chosen.push(p);
+      };
+
+      // 1. produkty z historii — te, które w tym domu naprawdę się jada
+      [...all]
+        .filter((p) => p.usageCount > 0)
+        .sort((a, b) => b.usageCount - a.usageCount)
+        .slice(0, Math.floor(limit * 0.25))
+        .forEach(add);
+
+      // 2. karuzela po działach, w każdym najpierw popularne
+      const byCategory = new Map<string, Catalog[]>();
+      for (const p of all) {
+        const key = p.category ?? 'Inne';
+        const list = byCategory.get(key);
+        if (list) list.push(p);
+        else byCategory.set(key, [p]);
+      }
+      const queues = [...byCategory.values()].map((list) =>
+        [...list].sort((a, b) => b.usageCount - a.usageCount || a.name.localeCompare(b.name, 'pl'))
+      );
+      for (let round = 0; chosen.length < limit && round < 60; round++) {
+        let addedInRound = false;
+        for (const q of queues) {
+          const p = q[round];
+          if (!p) continue;
+          add(p);
+          addedInRound = true;
+          if (chosen.length >= limit) break;
+        }
+        if (!addedInRound) break;
+      }
+      return chosen;
+    }
+
+    // Numerowana lista dla modelu — numery zamiast nazw eliminują literówki
+    // i produkty wzięte z powietrza.
+    const menuOf = (pool: Catalog[]) =>
+      pool
+        .map(
+          (p, i) =>
+            `${i} ${p.brand ? p.brand + ' ' : ''}${p.name} ${Math.round(p.kcal100)}k B${r1(p.protein100)} W${r1(p.carbs100)} T${r1(p.fat100)}`
+        )
+        .join('\n');
+
+    const promptFor = (pool: Catalog[]) => `Jesteś dietetykiem układającym jadłospis dla zapracowanej osoby w Polsce.
 
 Dostajesz ZAMKNIĘTĄ LISTĘ produktów. Każdy ma numer i wartości na 100 g.
 Wolno ci używać WYŁĄCZNIE produktów z tej listy, podając ich numer i gramaturę w gramach.
@@ -224,8 +281,8 @@ PROSTOTA:
 FORMAT — tylko JSON, dokładnie 4 posiłki (SNIADANIE, OBIAD, KOLACJA, PRZEKASKA):
 {"posilki":[{"posilek":"SNIADANIE","nazwa":"Kanapki z szynką i pomidorem","przepis":"Chleb posmaruj masłem. Ułóż szynkę i plastry pomidora.","skladniki":[{"id":3,"gramy":70},{"id":41,"gramy":10}]}]}
 
-LISTA PRODUKTÓW:
-${menu}`;
+LISTA PRODUKTÓW (numer, nazwa, wartości na 100 g: kcal, Białko, Węglowodany, Tłuszcz):
+${menuOf(pool)}`;
 
     const baseMessage = [
       preferences ? `Preferencje i wykluczenia użytkownika: ${preferences}.` : '',
@@ -238,8 +295,11 @@ ${menu}`;
     // tak samo („AI nie ułożyło poprawnego planu") i nie ma z czego wnioskować.
     let lastReason = '';
 
-    /** Jedno wywołanie modelu → posiłki złożone wyłącznie z produktów z bazy. */
-    async function attempt(extra: string): Promise<PlannedMeal[] | null> {
+    /**
+     * Jedno wywołanie modelu → posiłki złożone wyłącznie z produktów z bazy.
+     * `pool` to lista wysłana w prompcie; numery od modelu indeksują właśnie ją.
+     */
+    async function attempt(extra: string, pool: Catalog[], answerTokens: number): Promise<PlannedMeal[] | null> {
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}`, 'Content-Type': 'application/json' },
@@ -247,10 +307,10 @@ ${menu}`;
           model: GROQ_MODEL,
           ...AI_EXTRA,
           messages: [
-            { role: 'system', content: systemPrompt },
+            { role: 'system', content: promptFor(pool) },
             { role: 'user', content: extra ? `${baseMessage}\n\n${extra}` : baseMessage },
           ],
-          max_tokens: aiMaxTokens(3200),
+          max_tokens: aiMaxTokens(answerTokens),
           temperature: 0.5,
           response_format: { type: 'json_object' },
         }),
@@ -259,7 +319,9 @@ ${menu}`;
       if (!res.ok) {
         const text = await res.text();
         console.error('Groq meal-plan', res.status, text);
-        lastReason = `model odpowiedział błędem HTTP ${res.status}`;
+        lastReason = res.status === 413
+          ? `zapytanie za duże dla limitu Groqa (HTTP 413, lista ${pool.length} produktów)`
+          : `model odpowiedział błędem HTTP ${res.status}`;
         return null;
       }
 
@@ -296,9 +358,9 @@ ${menu}`;
           const idx = Math.trunc(Number(pickField(s, ['id', 'nr', 'numer', 'index', 'idx'])));
           const grams = num(pickField(s, ['gramy', 'gram', 'grams', 'g', 'ilosc', 'ilość']));
           // Numer spoza listy = zmyślony produkt. Pomijamy.
-          if (!Number.isInteger(idx) || idx < 0 || idx >= catalog.length || grams <= 0 || grams > 1500) continue;
+          if (!Number.isInteger(idx) || idx < 0 || idx >= pool.length || grams <= 0 || grams > 1500) continue;
 
-          const p = catalog[idx];
+          const p = pool[idx];
           if (ingredients.some((i) => i.productId === p.id)) continue; // bez duplikatów w posiłku
           ingredients.push({
             productId: p.id,
@@ -389,11 +451,20 @@ ${menu}`;
       return totals;
     }
 
-    let meals = await attempt('');
+    // Dwa podejścia. Drugie jest mniejsze pod każdym względem: krótsza lista
+    // produktów i ciaśniejszy limit odpowiedzi. Ratuje zarówno przekroczony
+    // limit zapytania, jak i zwykłe kaprysy modelu przy długiej odpowiedzi.
+    const POOL_MAIN = 110;
+    const POOL_FALLBACK = 70;
+    let pool = pickPool(catalog, POOL_MAIN);
+    let meals = await attempt('', pool, 1800);
     if (!meals) {
-      // Jedna cicha powtórka: model bywa kapryśny przy dłuższych odpowiedziach,
-      // a drugie podejście z tym samym promptem zwykle wychodzi.
-      meals = await attempt('Odpowiedz wyłącznie poprawnym JSON-em w podanym formacie. Nie dopisuj nic poza nim.');
+      pool = pickPool(catalog, POOL_FALLBACK);
+      meals = await attempt(
+        'Odpowiedz wyłącznie poprawnym JSON-em w podanym formacie. Przepisy skróć do dwóch zdań.',
+        pool,
+        1400
+      );
     }
     if (!meals) {
       return NextResponse.json(
@@ -414,7 +485,9 @@ ${menu}`;
       const second = await attempt(
         `Poprzednia próba dała ${totals.protein} g białka przy celu ${targets.protein} g — ${tooLow ? 'za mało' : 'za dużo'}. ` +
           `Dobierz produkty ${tooLow ? 'bogatsze' : 'uboższe'} w białko ` +
-          `(np. twaróg, skyr, pierś z kurczaka, ryby, odżywka białkowa). Zachowaj prostotę i polskie zwyczaje posiłków.`
+          `(np. twaróg, skyr, pierś z kurczaka, ryby, odżywka białkowa). Zachowaj prostotę i polskie zwyczaje posiłków.`,
+        pool,
+        1800
       );
       if (second) {
         const secondTotals = fitToTarget(second);
@@ -443,7 +516,7 @@ ${menu}`;
       shopping,
       accuracy: Math.max(0, Math.round((1 - missOf(totals.kcal, targets.kcal)) * 100)),
       retried,
-      catalogSize: catalog.length,
+      catalogSize: pool.length,
       // Wszystkie wartości pochodzą z bazy — nic nie jest szacunkiem modelu.
       matched: count,
       totalIngredients: count,
