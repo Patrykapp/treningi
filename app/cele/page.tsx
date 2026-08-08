@@ -479,7 +479,7 @@ function CelePage() {
                   <div className="space-y-3">
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">Dystans (km)</label>
-                      <input type="number" min="0" step="0.1" value={formTarget} onChange={e => setFormTarget(e.target.value)}
+                      <input type="number" min="0" step="any" value={formTarget} onChange={e => setFormTarget(e.target.value)}
                         className="w-full border border-gray-200 rounded-xl px-3 py-3 text-center text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
                     </div>
                     <div>
@@ -501,7 +501,7 @@ function CelePage() {
                     <input
                       type="number"
                       min="0"
-                      step={effectiveType === 'EXERCISE_REPS' ? '1' : '0.1'}
+                      step={effectiveType === 'EXERCISE_REPS' ? '1' : 'any'}
                       value={formTarget}
                       onChange={e => setFormTarget(e.target.value)}
                       className="w-full border border-gray-200 rounded-xl px-3 py-3 text-center text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"

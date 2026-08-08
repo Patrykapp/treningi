@@ -463,7 +463,7 @@ export default function BieganiePage() {
               <input
                 type="number"
                 min="0"
-                step="0.01"
+                step="any"
                 placeholder="np. 3.15"
                 value={distance}
                 onChange={e => setDistance(e.target.value)}

@@ -978,7 +978,7 @@ function TreningPage() {
                   <div key={field}>
                     <label className="block text-xs text-gray-500 mb-1">{label}</label>
                     <input
-                      type="number" min="0" step={field === 'weight' ? '0.5' : '1'}
+                      type="number" min="0" step={field === 'weight' ? 'any' : '1'}
                       inputMode={field === 'weight' ? 'decimal' : 'numeric'}
                       value={(entry[field as keyof NewEntryForm] as number) === 0 ? '' : (entry[field as keyof NewEntryForm] as number)}
                       placeholder="0"
@@ -1030,7 +1030,7 @@ function TreningPage() {
                         <button type="button"
                           onClick={() => updateSet(entry.key, si, 'weight', Math.max(0, Math.round((s.weight - 2.5) * 10) / 10))}
                           className="w-10 h-8 rounded-lg bg-gray-100 text-xs font-bold text-gray-600 flex items-center justify-center shrink-0 transition-colors hover:bg-gray-200 active:scale-[0.97] active:bg-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">−2.5</button>
-                        <input type="number" min="0" step="0.5" inputMode="decimal"
+                        <input type="number" min="0" step="any" inputMode="decimal"
                           value={s.weight === 0 ? '' : s.weight} placeholder="0"
                           onChange={e => updateSet(entry.key, si, 'weight', parseFloat(e.target.value) || 0)}
                           className="w-14 border border-gray-200 rounded-lg px-1 py-1.5 text-sm text-center font-medium" />
@@ -1130,7 +1130,7 @@ function TreningPage() {
               <div className="flex items-center gap-2 mt-2">
                 <span className="text-sm text-gray-500 flex items-center gap-1"><Flame className="w-4 h-4 text-orange-500" strokeWidth={2} /> Kcal ręcznie:</span>
                 <input
-                  type="number" min="0" step="10" inputMode="numeric"
+                  type="number" min="0" step="1" inputMode="numeric"
                   value={manualKcal}
                   onChange={e => setManualKcal(e.target.value === '' ? '' : Number(e.target.value))}
                   placeholder="np. 350"

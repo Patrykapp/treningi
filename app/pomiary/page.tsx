@@ -252,7 +252,7 @@ export default function PomiaryPage() {
                     type="number"
                     min="0"
                     max="300"
-                    step="0.1"
+                    step="any"
                     value={formValues[f.key]}
                     onChange={e => setFormValues(prev => ({ ...prev, [f.key]: e.target.value }))}
                     placeholder="opcjonalnie"
@@ -276,7 +276,7 @@ export default function PomiaryPage() {
                   />
                   <input
                     type="number"
-                    step="0.1"
+                    step="any"
                     value={row.value}
                     onChange={e => setFormCustom(prev => prev.map((r, idx) => idx === i ? { ...r, value: e.target.value } : r))}
                     placeholder="cm"

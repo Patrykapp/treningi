@@ -374,7 +374,9 @@ export default function AktywnosPage() {
                   placeholder="0"
                   className="w-20 border border-gray-200 rounded-xl px-3 py-2.5 text-base text-center" />
                 <span className="text-sm text-gray-500">h</span>
-                <input type="number" min="0" max="59" inputMode="numeric"
+                {/* Minuty mogą przekroczyć 59 — „114 min" to naturalny zapis i sumuje
+                    się poprawnie z godzinami. */}
+                <input type="number" min="0" max="600" inputMode="numeric"
                   value={durationM} onChange={e => setDurationM(e.target.value === '' ? '' : Number(e.target.value))}
                   placeholder="0"
                   className="w-20 border border-gray-200 rounded-xl px-3 py-2.5 text-base text-center" />
@@ -389,7 +391,9 @@ export default function AktywnosPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Dystans km <span className="text-gray-400">(opcjonalnie)</span></label>
-                <input type="number" min="0" step="0.1" inputMode="decimal"
+                {/* step="any" — przy step="0.1" przeglądarka nie pozwala wysłać
+                    formularza z wartością w rodzaju 1,54 i każe zaokrąglać. */}
+                <input type="number" min="0" step="any" inputMode="decimal"
                   value={distanceKm} onChange={e => setDistanceKm(e.target.value === '' ? '' : Number(e.target.value))}
                   placeholder="np. 25"
                   className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-base text-center" />

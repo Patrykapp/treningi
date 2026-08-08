@@ -656,7 +656,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                 {!formBodyweight && (
                   <div>
                     <label className="text-xs text-gray-500 block mb-1">Ciężar kg</label>
-                    <input type="number" inputMode="decimal" step={0.5}
+                    <input type="number" inputMode="decimal" step="any"
                       value={formWeight === 0 ? '' : formWeight} placeholder="0"
                       onChange={e => { setFormPrefilled(false); setFormWeight(Number(e.target.value) || 0); }} min={0}
                       className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-base text-center font-semibold mb-2" />
@@ -714,7 +714,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                     {!formBodyweight && (
                       <>
                         <span className="text-xs text-gray-300 shrink-0">×</span>
-                        <input type="number" inputMode="decimal" step={0.5}
+                        <input type="number" inputMode="decimal" step="any"
                           value={s.weight === 0 ? '' : s.weight} placeholder="kg"
                           onChange={e => updateSet(i, 'weight', e.target.value === '' ? 0 : Number(e.target.value))} min={0}
                           className="flex-1 border border-gray-200 rounded-lg py-1.5 text-sm text-center font-semibold h-9 min-w-0" />
@@ -901,7 +901,7 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
               <div className="grid grid-cols-2 gap-3 mt-3">
                 <div><label className="text-xs text-gray-500 block mb-1">Ciężar (kg)</label>
                   <input type="number" value={calcWeight === 0 ? '' : calcWeight} placeholder="0"
-                    onChange={e => setCalcWeight(e.target.value === '' ? 0 : Number(e.target.value))} min={0} step={0.5}
+                    onChange={e => setCalcWeight(e.target.value === '' ? 0 : Number(e.target.value))} min={0} step="any"
                     className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-center" /></div>
                 <div><label className="text-xs text-gray-500 block mb-1">Powtorzenia</label>
                   <input type="number" value={calcReps === 0 ? '' : calcReps} placeholder="0"
