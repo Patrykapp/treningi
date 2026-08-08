@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getAuthUserId } from '@/lib/auth';
 import { canWriteForTargets } from '@/lib/access';
@@ -49,9 +50,15 @@ type EntryInput = {
   rpe?: number; comment?: string; meta?: unknown; setsData?: { reps: number; weight: number }[];
 };
 
-/** Dane techniczne wpisu — tylko obiekt, nigdy tekst czy liczba. */
-function metaOrNull(v: unknown) {
-  return v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : undefined;
+/**
+ * Dane techniczne wpisu — tylko obiekt, nigdy tekst czy liczba.
+ *
+ * Typ zwracany musi być Prisma.InputJsonValue, a nie Record<string, unknown>:
+ * kolumna Json przyjmuje wyłącznie wartości dające się zserializować, a
+ * `unknown` tego nie gwarantuje i build się nie kompiluje.
+ */
+function metaOrNull(v: unknown): Prisma.InputJsonValue | undefined {
+  return v && typeof v === 'object' && !Array.isArray(v) ? (v as Prisma.InputJsonObject) : undefined;
 }
 
 /** Czas w sekundach, z sensownym zakresem: od 10 s do 6 godzin. */
