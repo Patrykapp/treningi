@@ -23,8 +23,63 @@ import { GROQ_MODEL, AI_EXTRA, aiMaxTokens, aiContent } from '@/lib/ai';
  * zestawień i napisania przepisu.
  */
 
-type AiIngredient = { id?: number | string; gramy?: number };
-type AiMeal = { posilek?: string; nazwa?: string; przepis?: string; skladniki?: AiIngredient[] };
+type Rec = Record<string, unknown>;
+
+/**
+ * Nazwa posiłku od modelu → nasz klucz.
+ *
+ * Model potrafi odpisać „ŚNIADANIE" albo „przekąska" — z polskimi znakami,
+ * choć w prompcie stoi „SNIADANIE". Samo `toUpperCase()` tego nie zrówna,
+ * więc posiłek wypadał z planu, a przy trzech odrzuconych cały plan lądował
+ * w koszu z komunikatem „AI nie ułożyło poprawnego planu".
+ */
+function mealKey(raw: unknown): string {
+  const bare = String(raw ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // ś → s, ą → a
+    .replace(/ł/gi, 'l')              // ł nie rozkłada się w NFD
+    .toUpperCase()
+    .trim();
+  const ALIASES: Record<string, string> = {
+    SNIADANIE: 'SNIADANIE',
+    'PIERWSZE SNIADANIE': 'SNIADANIE',
+    BREAKFAST: 'SNIADANIE',
+    OBIAD: 'OBIAD',
+    LUNCH: 'OBIAD',
+    DINNER: 'OBIAD',
+    KOLACJA: 'KOLACJA',
+    SUPPER: 'KOLACJA',
+    PRZEKASKA: 'PRZEKASKA',
+    PRZEKASKI: 'PRZEKASKA',
+    'DRUGIE SNIADANIE': 'PRZEKASKA',
+    PODWIECZOREK: 'PRZEKASKA',
+    SNACK: 'PRZEKASKA',
+  };
+  return ALIASES[bare] ?? bare;
+}
+
+/**
+ * Pierwsza tablica pod jednym z podanych kluczy — a jak żaden nie pasuje,
+ * pierwsza tablica w ogóle. Model bywa uczynny i odsyła „posiłki" z ogonkami
+ * albo „ingredients" po angielsku; sztywne czytanie jednej nazwy kończyło się
+ * pustym planem mimo poprawnej odpowiedzi.
+ */
+function pickList(node: unknown, keys: string[]): Rec[] {
+  const isList = (v: unknown): v is Rec[] =>
+    Array.isArray(v) && v.length > 0 && v.every((x) => x !== null && typeof x === 'object');
+  if (isList(node)) return node;
+  if (!node || typeof node !== 'object') return [];
+  const rec = node as Rec;
+  for (const k of keys) if (isList(rec[k])) return rec[k] as Rec[];
+  for (const v of Object.values(rec)) if (isList(v)) return v;
+  return [];
+}
+
+/** Pierwsza niepusta wartość spośród możliwych nazw pola. */
+function pickField(o: Rec, keys: string[]): unknown {
+  for (const k of keys) if (o[k] !== undefined && o[k] !== null && o[k] !== '') return o[k];
+  return undefined;
+}
 
 export type PlannedIngredient = {
   productId: string;
@@ -179,6 +234,10 @@ ${menu}`;
       .filter(Boolean)
       .join('\n');
 
+    // Powód niepowodzenia wraca do interfejsu — bez tego każda usterka wygląda
+    // tak samo („AI nie ułożyło poprawnego planu") i nie ma z czego wnioskować.
+    let lastReason = '';
+
     /** Jedno wywołanie modelu → posiłki złożone wyłącznie z produktów z bazy. */
     async function attempt(extra: string): Promise<PlannedMeal[] | null> {
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -191,35 +250,51 @@ ${menu}`;
             { role: 'system', content: systemPrompt },
             { role: 'user', content: extra ? `${baseMessage}\n\n${extra}` : baseMessage },
           ],
-          max_tokens: aiMaxTokens(2500),
+          max_tokens: aiMaxTokens(3200),
           temperature: 0.5,
           response_format: { type: 'json_object' },
         }),
         signal: AbortSignal.timeout(45000),
       });
       if (!res.ok) {
-        console.error('Groq meal-plan', res.status, await res.text());
+        const text = await res.text();
+        console.error('Groq meal-plan', res.status, text);
+        lastReason = `model odpowiedział błędem HTTP ${res.status}`;
         return null;
       }
 
-      let parsed: { posilki?: AiMeal[] };
+      const json = await res.json();
+      const finish = (json as { choices?: { finish_reason?: string }[] })?.choices?.[0]?.finish_reason;
+      const content = aiContent(json);
+
+      if (!content) {
+        lastReason = finish === 'length' ? 'odpowiedź urwała się na limicie tokenów' : 'model odesłał pustą treść';
+        return null;
+      }
+
+      let parsed: unknown;
       try {
-        parsed = JSON.parse(aiContent(await res.json()) || '{}');
+        parsed = JSON.parse(content);
       } catch {
+        // Urwany JSON to najczęściej wyczerpany limit tokenów, nie zła składnia.
+        lastReason = finish === 'length'
+          ? 'odpowiedź urwała się w połowie (limit tokenów)'
+          : 'model odesłał coś, co nie jest JSON-em';
         return null;
       }
 
       const meals: PlannedMeal[] = [];
       const usedMeals = new Set<string>();
+      const rawMeals = pickList(parsed, ['posilki', 'posiłki', 'meals', 'plan', 'jadlospis', 'jadłospis']);
 
-      for (const m of parsed.posilki ?? []) {
-        const key = String(m.posilek || '').toUpperCase();
+      for (const m of rawMeals) {
+        const key = mealKey(pickField(m, ['posilek', 'posiłek', 'meal', 'typ', 'pora']));
         if (!validMeals.has(key) || usedMeals.has(key)) continue;
 
         const ingredients: PlannedIngredient[] = [];
-        for (const s of m.skladniki ?? []) {
-          const idx = Math.trunc(Number(s.id));
-          const grams = num(s.gramy);
+        for (const s of pickList(m, ['skladniki', 'składniki', 'ingredients', 'produkty'])) {
+          const idx = Math.trunc(Number(pickField(s, ['id', 'nr', 'numer', 'index', 'idx'])));
+          const grams = num(pickField(s, ['gramy', 'gram', 'grams', 'g', 'ilosc', 'ilość']));
           // Numer spoza listy = zmyślony produkt. Pomijamy.
           if (!Number.isInteger(idx) || idx < 0 || idx >= catalog.length || grams <= 0 || grams > 1500) continue;
 
@@ -237,14 +312,18 @@ ${menu}`;
         usedMeals.add(key);
         meals.push({
           meal: key,
-          title: String(m.nazwa || 'Posiłek').slice(0, 120),
-          recipe: String(m.przepis || '').slice(0, 1200),
+          title: String(pickField(m, ['nazwa', 'name', 'title', 'tytul', 'tytuł']) ?? 'Posiłek').slice(0, 120),
+          recipe: String(pickField(m, ['przepis', 'recipe', 'instrukcja', 'opis', 'sposob', 'sposób']) ?? '').slice(0, 1200),
           ingredients,
           kcal: 0, protein: 0, carbs: 0, fat: 0,
         });
       }
 
-      return meals.length >= 3 ? meals : null;
+      if (meals.length >= 3) return meals;
+      lastReason = rawMeals.length === 0
+        ? 'w odpowiedzi nie było listy posiłków'
+        : `rozpoznałem ${meals.length} z ${rawMeals.length} posiłków (za mało)`;
+      return null;
     }
 
     const byId = new Map(catalog.map((p) => [p.id, p]));
@@ -312,7 +391,15 @@ ${menu}`;
 
     let meals = await attempt('');
     if (!meals) {
-      return NextResponse.json({ error: 'AI nie ułożyło poprawnego planu. Spróbuj ponownie.' }, { status: 502 });
+      // Jedna cicha powtórka: model bywa kapryśny przy dłuższych odpowiedziach,
+      // a drugie podejście z tym samym promptem zwykle wychodzi.
+      meals = await attempt('Odpowiedz wyłącznie poprawnym JSON-em w podanym formacie. Nie dopisuj nic poza nim.');
+    }
+    if (!meals) {
+      return NextResponse.json(
+        { error: 'AI nie ułożyło poprawnego planu. Spróbuj ponownie.', stage: lastReason || 'nieznany powód' },
+        { status: 502 }
+      );
     }
     let totals = fitToTarget(meals);
 

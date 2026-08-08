@@ -91,7 +91,8 @@ export function AiMealPlan({
       });
       const body = await res.json();
       if (!res.ok) {
-        setError(body?.error || 'Nie udało się wygenerować planu.');
+        // Powód doklejamy do komunikatu — inaczej każda usterka wygląda tak samo.
+        setError((body?.error || 'Nie udało się wygenerować planu.') + (body?.stage ? ` (${body.stage})` : ''));
         return;
       }
       setPlan(body);
