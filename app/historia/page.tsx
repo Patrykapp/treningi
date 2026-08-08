@@ -72,6 +72,12 @@ function restLabelMs(sec: number): string {
 }
 function challengeRestSeconds(session: WorkoutSession): number | null {
   for (const e of session.entries) {
+    // Nowe wpisy: kolumna `meta`. Starsze: JSON wciśnięty w komentarz.
+    const m = e.meta;
+    if (m && typeof m === 'object' && !Array.isArray(m)) {
+      const rest = (m as { challenge?: boolean; restSeconds?: number });
+      if (rest.challenge && typeof rest.restSeconds === 'number') return rest.restSeconds;
+    }
     try {
       const p = JSON.parse(e.comment || '');
       if (p?.challenge && typeof p.restSeconds === 'number') return p.restSeconds;

@@ -1,5 +1,7 @@
 'use client';
 
+import { formatRest } from '@/lib/utils';
+
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
@@ -278,7 +280,11 @@ export default function ChallengePage() {
           reps: Math.round(totalReps / results.length),
           weight: 0,
           setsData,
-          comment: JSON.stringify({ challenge: true, totalReps, restSeconds, durations: results.map(r => r.duration) }),
+          // Komentarz jest dla człowieka i tak wygląda w historii ćwiczenia.
+          // Dane techniczne (czasy serii, przerwa) idą do `meta` — wcześniej
+          // jechały tędy jako JSON i wyświetlały się jako surowy tekst.
+          comment: `Challenge · ${totalReps} powt. łącznie · przerwa ${formatRest(restSeconds)}`,
+          meta: { challenge: true, totalReps, restSeconds, durations: results.map(r => r.duration) },
         }],
       }),
     });

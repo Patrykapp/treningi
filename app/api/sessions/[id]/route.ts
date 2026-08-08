@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuthUserId } from '@/lib/auth';
 
+/** Dane techniczne wpisu — tylko obiekt, nigdy tekst czy liczba. */
+function metaOrNull(v: unknown) {
+  return v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : undefined;
+}
+
 /** Czas w sekundach, z sensownym zakresem: od 10 s do 6 godzin. */
 function durationOrNull(v: unknown): number | null {
   const n = Math.round(Number(v));
@@ -47,7 +52,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         date: new Date(date),
         notes: notes || null,
         entries: {
-          create: entries.map((e: { exerciseId: string; sets: number; reps: number; weight: number; durationSec?: number | null; rpe?: number; comment?: string; setsData?: { reps: number; weight: number }[] }) => {
+          create: entries.map((e: { exerciseId: string; sets: number; reps: number; weight: number; durationSec?: number | null; rpe?: number; comment?: string; meta?: unknown; setsData?: { reps: number; weight: number }[] }) => {
             const durationSec = durationOrNull(e.durationSec);
             const sd = durationSec ? [] : e.setsData && e.setsData.length > 0 ? e.setsData : [];
             return {
@@ -58,6 +63,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
               durationSec,
               rpe: e.rpe ? Number(e.rpe) : null,
               comment: e.comment || null,
+              meta: metaOrNull(e.meta),
               setsData: sd,
             };
           }),
@@ -110,6 +116,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         durationSec: entryDuration,
         rpe: entry.rpe ? Number(entry.rpe) : null,
         comment: entry.comment || null,
+        meta: metaOrNull(entry.meta),
         setsData: sd,
       },
       include: { exercise: true },

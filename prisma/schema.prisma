@@ -96,6 +96,10 @@ model WorkoutEntry {
   durationSec Int?
   rpe        Float?
   comment    String?
+  // Dane techniczne funkcji, które nie mają własnych kolumn (np. challenge:
+  // czasy poszczególnych serii i długość przerwy). Wcześniej jechały w polu
+  // `comment` jako JSON i wyświetlały się użytkownikowi jako surowy tekst.
+  meta       Json?
   setsData   Json           @default("[]")
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt

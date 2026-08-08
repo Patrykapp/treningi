@@ -54,6 +54,7 @@ export interface NewEntryForm {
   durationSec?: number | null;
   rpe?: number;
   comment?: string;
+  meta?: unknown;
   setsData: SetData[];
 }
 
@@ -68,6 +69,7 @@ export interface WorkoutEntry {
   durationSec?: number | null;
   rpe?: number | null;
   comment?: string | null;
+  meta?: unknown; // dane techniczne (np. challenge) — nie do pokazywania wprost
   setsData: SetData[];
   createdAt: string;
   updatedAt: string;

@@ -46,8 +46,13 @@ export async function GET(request: Request) {
 type EntryInput = {
   exerciseId: string; sets: number; reps: number; weight: number;
   durationSec?: number | null;
-  rpe?: number; comment?: string; setsData?: { reps: number; weight: number }[];
+  rpe?: number; comment?: string; meta?: unknown; setsData?: { reps: number; weight: number }[];
 };
+
+/** Dane techniczne wpisu — tylko obiekt, nigdy tekst czy liczba. */
+function metaOrNull(v: unknown) {
+  return v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : undefined;
+}
 
 /** Czas w sekundach, z sensownym zakresem: od 10 s do 6 godzin. */
 function durationOrNull(v: unknown): number | null {
@@ -69,6 +74,7 @@ function mapEntry(e: EntryInput) {
     durationSec,
     rpe: e.rpe ? Number(e.rpe) : null,
     comment: e.comment || null,
+    meta: metaOrNull(e.meta),
     setsData: sd,
   };
 }

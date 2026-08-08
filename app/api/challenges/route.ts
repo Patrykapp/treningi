@@ -5,6 +5,23 @@ import { getAuthUserId } from '@/lib/auth';
 // Zwraca wszystkie wpisy-challenge (session.notes zaczyna się od "Challenge:"),
 // z rozpakowanymi danymi (serie, czasy, łączne powtórzenia). Sortowane rosnąco
 // po dacie, żeby na froncie łatwo liczyć przerwy i porównania między próbami.
+/**
+ * Dane challenge'u: najpierw kolumna `meta`, a dla wpisów sprzed jej dodania
+ * — JSON, który lądował w polu komentarza.
+ */
+function readChallengeMeta(meta: unknown, comment: string | null): Record<string, unknown> | null {
+  if (meta && typeof meta === 'object' && !Array.isArray(meta)) {
+    const m = meta as Record<string, unknown>;
+    if (m.challenge) return m;
+  }
+  try {
+    const p = JSON.parse(comment || '');
+    return p?.challenge ? (p as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(request: Request) {
   try {
     const authUserId = await getAuthUserId();
@@ -32,13 +49,12 @@ export async function GET(request: Request) {
       const reps = setsData.map(s => s?.reps ?? 0);
       let durations: number[] | null = null;
       let restSeconds: number | null = null;
-      try {
-        const p = JSON.parse(e.comment || '');
-        if (p?.challenge) {
-          if (Array.isArray(p.durations)) durations = p.durations;
-          if (typeof p.restSeconds === 'number') restSeconds = p.restSeconds;
-        }
-      } catch { /* stary format bez JSON */ }
+      // Nowe wpisy trzymają to w `meta`; starsze mają JSON wciśnięty w komentarz.
+      const meta = readChallengeMeta(e.meta, e.comment);
+      if (meta) {
+        if (Array.isArray(meta.durations)) durations = meta.durations as number[];
+        if (typeof meta.restSeconds === 'number') restSeconds = meta.restSeconds;
+      }
       return {
         sessionId: e.session.id,
         date: e.session.date,

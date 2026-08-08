@@ -4,7 +4,7 @@ import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Exercise, SetData } from '@/types';
-import { formatDate, formatDateInput } from '@/lib/utils';
+import { formatDate, formatDateInput, formatEntryComment } from '@/lib/utils';
 import { isTimedExerciseName } from '@/lib/calories';
 import { Toast } from '@/components/ui/Toast';
 import { ExerciseAnimation } from '@/components/ui/ExerciseAnimation';
@@ -1065,7 +1065,9 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                           : `${entry.sets}×${entry.reps} @ ${entry.weight}kg`}
                       {entry.rpe && ` · RPE ${entry.rpe}`}
                     </div>
-                    {entry.comment && <div className="text-xs text-gray-400 italic mt-0.5">{entry.comment}</div>}
+                    {formatEntryComment(entry.comment) && (
+                      <div className="text-xs text-gray-400 italic mt-0.5">{formatEntryComment(entry.comment)}</div>
+                    )}
                   </div>
                 );
               })}

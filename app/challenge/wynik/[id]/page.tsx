@@ -80,16 +80,24 @@ export default function ChallengeWynikPage({ params }: { params: Promise<{ id: s
 
         const setsData: { reps: number; weight: number }[] = Array.isArray(entry.setsData) ? entry.setsData : [];
 
-        // Try to parse durations + rest interval from comment JSON
+        // Czasy serii i przerwa: najpierw kolumna `meta`, a dla starszych
+        // wpisów JSON, który kiedyś lądował w polu komentarza.
         let durations: number[] | null = null;
         let restSeconds: number | null = null;
-        try {
-          const parsed = JSON.parse(entry.comment || '');
-          if (parsed?.challenge) {
-            if (Array.isArray(parsed.durations)) durations = parsed.durations;
-            if (typeof parsed.restSeconds === 'number') restSeconds = parsed.restSeconds;
-          }
-        } catch { /* old format — no durations/rest */ }
+        let parsed: { challenge?: boolean; durations?: number[]; restSeconds?: number } | null = null;
+        const m = entry.meta;
+        if (m && typeof m === 'object' && !Array.isArray(m) && (m as { challenge?: boolean }).challenge) {
+          parsed = m as { challenge?: boolean; durations?: number[]; restSeconds?: number };
+        } else {
+          try {
+            const fromComment = JSON.parse(entry.comment || '');
+            if (fromComment?.challenge) parsed = fromComment;
+          } catch { /* stary format bez JSON */ }
+        }
+        if (parsed) {
+          if (Array.isArray(parsed.durations)) durations = parsed.durations;
+          if (typeof parsed.restSeconds === 'number') restSeconds = parsed.restSeconds;
+        }
 
         const sets: SetResult[] = setsData.map((s, i) => ({
           reps: s.reps,
