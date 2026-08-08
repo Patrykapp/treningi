@@ -255,7 +255,7 @@ export async function POST(request: Request) {
       pool
         .map(
           (p, i) =>
-            `${i} ${p.brand ? p.brand + ' ' : ''}${p.name} ${Math.round(p.kcal100)}k B${r1(p.protein100)} W${r1(p.carbs100)} T${r1(p.fat100)}`
+            `${i} ${p.brand ? p.brand + ' ' : ''}${p.name} ${Math.round(p.kcal100)}k B${r1(p.protein100)} W${r1(p.carbs100)} T${r1(p.fat100)}${p.servingG ? ` p${Math.round(p.servingG)}` : ''}`
         )
         .join('\n');
 
@@ -278,10 +278,19 @@ PROSTOTA:
 - Maksymalnie ${maxMinutes} minut przygotowania na posiłek.
 - Powtarzalność jest zaletą. Lepiej nudno i wykonalnie niż oryginalnie i nierealnie.
 
+GRAMATURY — najczęstszy błąd, uważaj:
+- Trzymaj się typowej porcji „p" z listy. Wolno ją przekroczyć najwyżej dwukrotnie.
+- Produkty suche i surowe waży się PRZED obróbką: kasza, ryż i makaron to 60-90 g na osobę
+  (nie 200 g — to porcja dla czterech osób), mięso 120-200 g.
+- Za mało kalorii w dniu nadrabiaj DODATKOWYM składnikiem albo większym posiłkiem,
+  nigdy pęczniejącą porcją jednej rzeczy.
+- Rozkład dnia mniej więcej: śniadanie 25%, obiad 35%, kolacja 25%, przekąska 15%.
+
 FORMAT — tylko JSON, dokładnie 4 posiłki (SNIADANIE, OBIAD, KOLACJA, PRZEKASKA):
 {"posilki":[{"posilek":"SNIADANIE","nazwa":"Kanapki z szynką i pomidorem","przepis":"Chleb posmaruj masłem. Ułóż szynkę i plastry pomidora.","skladniki":[{"id":3,"gramy":70},{"id":41,"gramy":10}]}]}
 
-LISTA PRODUKTÓW (numer, nazwa, wartości na 100 g: kcal, Białko, Węglowodany, Tłuszcz):
+LISTA PRODUKTÓW (numer, nazwa, wartości na 100 g: kcal, Białko, Węglowodany, Tłuszcz;
+p = typowa porcja w gramach):
 ${menuOf(pool)}`;
 
     const baseMessage = [
@@ -416,35 +425,77 @@ ${menuOf(pool)}`;
     }
 
     /**
+     * Górna granica gramatury jednej pozycji.
+     *
+     * Typowa porcja z bazy razy dwa — to jest ta liczba, której brakowało:
+     * bez niej dociąganie dnia do celu wpisywało 200 g suchej kaszy (692 kcal),
+     * czyli porcję dla czterech osób, bo arytmetycznie wszystko się zgadzało.
+     * Gdy produkt nie ma zapisanej porcji, ograniczamy go kalorycznie.
+     */
+    function capOf(i: PlannedIngredient): number {
+      const p = byId.get(i.productId);
+      if (!p) return i.grams;
+      if (p.servingG && p.servingG > 0) return Math.max(30, p.servingG * 2);
+      return p.kcal100 > 0 ? Math.max(50, (500 / p.kcal100) * 100) : 400;
+    }
+
+    /**
      * Dociągnięcie dnia do celu kalorycznego: najpierw proporcjonalne
-     * przeskalowanie wszystkich gramatur, potem domiar resztkowy na
-     * najbardziej kalorycznym składniku — końcówka schodzi wtedy niemal do
-     * zera bez rozjeżdżania proporcji między posiłkami.
+     * przeskalowanie wszystkich gramatur, potem domiar resztkowy rozłożony na
+     * WSZYSTKIE pozycje, które mają jeszcze zapas do swojej górnej granicy.
+     *
+     * Wcześniej resztę dokładaliśmy do jednego, najbardziej kalorycznego
+     * składnika — i to on puchł do absurdu. Rozkładanie po trochu na wszystkie
+     * daje ten sam wynik kaloryczny przy porcjach, które da się zjeść.
+     * Jeśli wszystko dobije do granic, dzień zostaje poniżej celu — to uczciwsze
+     * niż talerz, którego nikt nie skończy.
      */
     function fitToTarget(meals: PlannedMeal[]) {
       let totals = recompute(meals);
       if (totals.kcal <= 0 || targets.kcal <= 0) return totals;
 
-      // Skrajne odchylenie oznacza zupełnie nietrafione porcje — bez
-      // ograniczenia skalowanie dałoby absurdy w rodzaju 900 g ryżu.
-      const clamped = Math.min(1.8, Math.max(0.5, targets.kcal / totals.kcal));
+      // Górna granica dla KAŻDEJ pozycji z osobna: ani ponad podwojoną typową
+      // porcję, ani ponad półtora raza tyle, ile zaproponował model. Sam sufit
+      // z bazy nie wystarczał — domiar resztkowy i tak dobijał wszystko do
+      // maksimum i z 120 g cukinii robiło się 400 g. Gdy dzień mimo to wychodzi
+      // za lekki, lepiej zostawić niedobór: zobaczy go kontrola niżej
+      // i poprosi model o DOŁOŻENIE jedzenia zamiast pompowania porcji.
+      const ceiling = new Map<PlannedIngredient, number>();
       for (const m of meals) {
-        for (const i of m.ingredients) i.grams = tidyGrams(i.grams * clamped);
+        for (const i of m.ingredients) ceiling.set(i, Math.min(capOf(i), i.grams * 1.5));
+      }
+      const limitOf = (i: PlannedIngredient) => ceiling.get(i) ?? capOf(i);
+
+      // W GÓRĘ skalujemy najwyżej o jedną trzecią. Jeśli model zaplanował dzień
+      // znacznie za lekki, to jest brak jedzenia w planie, a nie kwestia
+      // gramatur — mnożnik 1,8 zamieniał to na porcje dla czterech osób.
+      // Taki przypadek naprawia dopiero powtórka z informacją zwrotną niżej.
+      // W dół wolno śmielej: mniejsza porcja zawsze da się zjeść.
+      const clamped = Math.min(1.35, Math.max(0.5, targets.kcal / totals.kcal));
+      for (const m of meals) {
+        for (const i of m.ingredients) i.grams = tidyGrams(Math.min(limitOf(i), i.grams * clamped));
       }
       totals = recompute(meals);
 
-      const diff = targets.kcal - totals.kcal;
-      if (Math.abs(diff) > targets.kcal * 0.02) {
-        let biggest: PlannedIngredient | null = null;
-        for (const m of meals) {
-          for (const i of m.ingredients) if (!biggest || i.kcal > biggest.kcal) biggest = i;
-        }
-        const p = biggest ? byId.get(biggest.productId) : null;
-        if (biggest && p && p.kcal100 > 0) {
-          const next = tidyGrams(Math.max(5, biggest.grams + (diff / p.kcal100) * 100));
-          // Porcja nie może urosnąć ponad dwukrotnie — lepiej zostawić małą
-          // rozbieżność niż wpisać 400 g masła orzechowego.
-          if (next <= biggest.grams * 2 + 50) biggest.grams = next;
+      const all = () => meals.flatMap((m) => m.ingredients);
+      for (let pass = 0; pass < 4; pass++) {
+        const diff = targets.kcal - totals.kcal;
+        if (Math.abs(diff) <= targets.kcal * 0.02) break;
+
+        // Do zwiększania biorą się tylko pozycje z zapasem, do zmniejszania —
+        // te, które nie zeszły jeszcze do symbolicznej resztki.
+        const adjustable = all().filter((i) => {
+          const p = byId.get(i.productId);
+          if (!p || p.kcal100 <= 0) return false;
+          return diff > 0 ? i.grams < limitOf(i) - 1 : i.grams > 15;
+        });
+        if (adjustable.length === 0) break;
+
+        const share = diff / adjustable.length;
+        for (const i of adjustable) {
+          const p = byId.get(i.productId)!;
+          const next = i.grams + (share / p.kcal100) * 100;
+          i.grams = tidyGrams(Math.min(limitOf(i), Math.max(10, next)));
         }
         totals = recompute(meals);
       }
@@ -474,24 +525,42 @@ ${menuOf(pool)}`;
     }
     let totals = fitToTarget(meals);
 
-    // Skalowanie ratuje kalorie, ale nie rozkład makro. Jeśli białko wyraźnie
-    // nie trafia, problem jest w doborze produktów — dajemy drugą szansę.
+    // Skalowanie ratuje kalorie tylko w wąskim zakresie i nie ratuje rozkładu
+    // makro. Jeśli dzień wychodzi wyraźnie za lekki albo białko nie trafia,
+    // problem jest w DOBORZE produktów — a to potrafi naprawić tylko model.
     let retried = false;
     const missOf = (v: number, t: number) => (t > 0 ? Math.abs(v - t) / t : 0);
     const proteinMiss = missOf(totals.protein, targets.protein);
-    if (proteinMiss > 0.25) {
+    const kcalMiss = missOf(totals.kcal, targets.kcal);
+    // Wspólna miara jakości planu — po niej wybieramy lepszą z dwóch prób.
+    const scoreOf = (t: { kcal: number; protein: number }) =>
+      missOf(t.kcal, targets.kcal) * 2 + missOf(t.protein, targets.protein);
+
+    if (proteinMiss > 0.25 || kcalMiss > 0.1) {
       retried = true;
-      const tooLow = totals.protein < targets.protein;
-      const second = await attempt(
-        `Poprzednia próba dała ${totals.protein} g białka przy celu ${targets.protein} g — ${tooLow ? 'za mało' : 'za dużo'}. ` +
-          `Dobierz produkty ${tooLow ? 'bogatsze' : 'uboższe'} w białko ` +
-          `(np. twaróg, skyr, pierś z kurczaka, ryby, odżywka białkowa). Zachowaj prostotę i polskie zwyczaje posiłków.`,
-        pool,
-        1800
-      );
+      const notes: string[] = [];
+      if (kcalMiss > 0.1) {
+        const light = totals.kcal < targets.kcal;
+        notes.push(
+          `Poprzedni plan dał ${totals.kcal} kcal przy celu ${targets.kcal} kcal — ${light ? 'za mało' : 'za dużo'}. ` +
+            (light
+              ? 'Dołóż składniki albo dodatkowe pozycje do posiłków; NIE zwiększaj porcji kaszy, ryżu ani makaronu ponad 90 g na osobę.'
+              : 'Zmniejsz liczbę składników albo wybierz lżejsze produkty.')
+        );
+      }
+      if (proteinMiss > 0.25) {
+        const tooLow = totals.protein < targets.protein;
+        notes.push(
+          `Białko wyszło ${totals.protein} g przy celu ${targets.protein} g — ${tooLow ? 'za mało' : 'za dużo'}. ` +
+            `Dobierz produkty ${tooLow ? 'bogatsze' : 'uboższe'} w białko (twaróg, skyr, pierś z kurczaka, ryby, odżywka białkowa).`
+        );
+      }
+      notes.push('Zachowaj prostotę i polskie zwyczaje posiłków.');
+
+      const second = await attempt(notes.join(' '), pool, 1800);
       if (second) {
         const secondTotals = fitToTarget(second);
-        if (missOf(secondTotals.protein, targets.protein) < proteinMiss) {
+        if (scoreOf(secondTotals) < scoreOf(totals)) {
           meals = second;
           totals = secondTotals;
         }
