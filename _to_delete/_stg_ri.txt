@@ -103,28 +103,6 @@ function pageText(html: string): string {
 }
 
 /**
- * Tytuł bez nazwy serwisu i bez ogona w rodzaju „przepis | Ania Gotuje".
- * Z członów rozdzielonych myślnikiem albo pionową kreską wybieramy ten, który
- * NIE jest nazwą serwisu — a przy remisie najdłuższy, bo nazwa dania jest
- * zwykle dłuższa niż nazwa strony.
- */
-function cleanTitle(raw: string | null, siteName?: string | null): string | null {
-  const text = (raw ?? '').replace(/\s+/g, ' ').trim();
-  if (!text) return null;
-  const site = (siteName ?? '').trim().toLowerCase();
-  const parts = text.split(/\s+[-–—|]\s+/).map((x) => x.trim()).filter(Boolean);
-  if (parts.length <= 1) return text.slice(0, 120);
-  const candidates = parts.filter((x) => {
-    const low = x.toLowerCase();
-    if (site && low === site) return false;
-    // Same słowa serwisowe też odpadają: „przepis", „przepisy", „blog kulinarny".
-    return !/^(przepis\w*|blog\w*|kuchnia|gotowanie)$/i.test(low);
-  });
-  const pool = candidates.length > 0 ? candidates : parts;
-  return pool.reduce((a, b) => (b.length > a.length ? b : a)).slice(0, 120);
-}
-
-/**
  * Odczyt z samego TEKSTU strony — ostatnia deska ratunku, gdy nie ma ani
  * JSON-LD, ani mikrodanych.
  *
@@ -141,15 +119,12 @@ function fromText(html: string): Extracted {
     nutrition: { kcal: null, protein: null, carbs: null, fat: null }, nutritionText: '',
   };
 
-  // Tytuł. Pierwszeństwo ma <h1>, bo to nazwa PRZEPISU. og:title bywa złożony
-  // z nazwy serwisu i przepisu („Ania Gotuje - Szare kluski"), a ślepe branie
-  // pierwszego członu dawało w formularzu „Ania Gotuje" zamiast dania.
-  const h1 = /<h1[^>]*>([\s\S]*?)<\/h1>/i.exec(html);
+  // Tytuł: og:title jest czystszy niż <h1>, bo bez dodatków szablonu.
   const og = /<meta[^>]+property=["']og:title["'][^>]*content=["']([^"']+)["']/i.exec(html)
     ?? /<meta[^>]+content=["']([^"']+)["'][^>]*property=["']og:title["']/i.exec(html);
-  const siteName = /<meta[^>]+property=["']og:site_name["'][^>]*content=["']([^"']+)["']/i.exec(html)?.[1];
-  out.name = cleanTitle(h1 ? stripTags(h1[1]) : null, siteName)
-    ?? cleanTitle(og ? decodeEntities(og[1]).trim() : null, siteName);
+  const h1 = /<h1[^>]*>([\s\S]*?)<\/h1>/i.exec(html);
+  out.name = og ? decodeEntities(og[1]).trim() : h1 ? stripTags(h1[1]) : null;
+  if (out.name) out.name = out.name.split(/\s+[-–|]\s+/)[0].trim() || out.name;
 
   const text = pageText(html);
 
@@ -159,41 +134,29 @@ function fromText(html: string): Extracted {
   // początek tabeli wartości odżywczych i wygląda to jak śmieć.
   if (y) out.yieldText = y[0].split(/warto[śs][cć]|sk[łl]adnik/i)[0].slice(0, 60).trim();
 
-  // Tabela wartości odżywczych. Nagłówek „Wartości odżywcze" potrafi wystąpić
-  // na stronie kilka razy (menu, spis treści, dopiero potem tabela), więc
-  // przechodzimy WSZYSTKIE wystąpienia i bierzemy pierwsze, w którym faktycznie
-  // są liczby. Wcześniejsza wersja patrzyła tylko na pierwsze trafienie
-  // i przy takim układzie strony uznawała, że tabeli nie ma — a potem liczyła
-  // wartości ze składników, choć autor podał je wprost.
-  const heading = /warto[śs][cć](?:i|)\s*(?:energetyczn|od[żz]ywcz)/gi;
-  let m: RegExpExecArray | null;
-  while ((m = heading.exec(text)) !== null) {
-    const win = text.slice(m.index, m.index + 600);
-    // Samo „w 100 g" jest liczbą stojącą tuż za etykietą i bez usunięcia go
-    // z tekstu roboczego „Białko w 100 g: 12" odczytałoby się jako 100.
-    // Oryginalne okno zostaje w nutritionText — to po nim poznajemy, że tabela
-    // dotyczy 100 g.
-    const clean = win.replace(/(?:w|na)\s*100\s*(?:g|ml|gram\w*)/gi, ' ');
+  // Tabela wartości odżywczych — okno zaczynające się od jej nagłówka.
+  const i = text.search(/warto[śs][cć](?:i|)\s*(?:energetyczn|od[żz]ywcz)/i);
+  if (i < 0) return out;
+  const win = text.slice(i, i + 600);
+  // Samo „w 100 g" jest liczbą stojącą tuż za etykietą i bez usunięcia go
+  // z tekstu roboczego „Białko w 100 g: 12" odczytałoby się jako 100.
+  // Oryginalne okno zostaje w nutritionText — to po nim poznajemy, że tabela
+  // dotyczy 100 g.
+  const clean = win.replace(/(?:w|na)\s*100\s*(?:g|ml|gram\w*)/gi, ' ');
 
-    // Pierwsza liczba PO etykiecie. „Tłuszcze 15 g, w tym nasycone 6 g" → 15.
-    const after = (re: RegExp): number | null => {
-      const mm = re.exec(clean);
-      return mm ? num(mm[1]) : null;
-    };
-    const kcal =
-      after(/(?:warto[śs][cć]\s+energetyczn\w*|kaloryczno[śs][cć]|energia)\D{0,12}([\d.,]+)/i)
-      ?? num(/([\d.,]+)\s*kcal/i.exec(clean)?.[1] ?? null);
-    if (!kcal) continue; // nagłówek bez liczb — to nie ta sekcja
-
-    out.nutrition = {
-      kcal,
-      protein: after(/bia[łl]ko\D{0,12}([\d.,]+)/i),
-      carbs: after(/w[ęe]glowodan\w*\D{0,12}([\d.,]+)/i),
-      fat: after(/t[łl]uszcz\w*\D{0,12}([\d.,]+)/i),
-    };
-    out.nutritionText = win.slice(0, 400);
-    break;
-  }
+  // Pierwsza liczba PO etykiecie. „Tłuszcze 15 g, w tym nasycone 6 g" → 15.
+  const after = (re: RegExp): number | null => {
+    const m = re.exec(clean);
+    return m ? num(m[1]) : null;
+  };
+  out.nutrition = {
+    kcal: after(/(?:warto[śs][cć]\s+energetyczn\w*|kaloryczno[śs][cć]|energia)\D{0,12}([\d.,]+)/i)
+      ?? num(/([\d.,]+)\s*kcal/i.exec(clean)?.[1] ?? null),
+    protein: after(/bia[łl]ko\D{0,12}([\d.,]+)/i),
+    carbs: after(/w[ęe]glowodan\w*\D{0,12}([\d.,]+)/i),
+    fat: after(/t[łl]uszcz\w*\D{0,12}([\d.,]+)/i),
+  };
+  out.nutritionText = win.slice(0, 400);
   return out;
 }
 
@@ -526,10 +489,6 @@ ${menu}`;
 
     const items = pickItems(parsed);
 
-    // Co dokładnie policzyliśmy — wraca do interfejsu, żeby dało się to
-    // sprawdzić okiem. Przy liczeniu ze składników to jedyny sposób, by zauważyć
-    // złe dopasowanie; sama liczba na końcu niczego nie zdradza.
-    const used: { name: string; grams: number }[] = [];
     let kcal = 0, protein = 0, carbs = 0, fat = 0, weight = 0;
     for (const s of items) {
       const idx = Math.trunc(Number(s.id ?? s.nr ?? s.index ?? s.numer));
@@ -543,7 +502,6 @@ ${menu}`;
       carbs += p.carbs100 * f;
       fat += p.fat100 * f;
       weight += g;
-      used.push({ name: p.name, grams: Math.round(g) });
     }
     if (weight <= 0) {
       return NextResponse.json(
@@ -589,18 +547,10 @@ ${menu}`;
       servingG: servings ? Math.round(finalWeight / servings) : null,
       totalWeight: Math.round(finalWeight),
       ingredients: rec.ingredients,
-      used,
       recipe: rec.instructions?.slice(0, 2000) ?? null,
-      note:
-        (declaredIsSane
-          ? `Policzone ze składników, podzielone przez podaną masę ${Math.round(finalWeight)} g.`
-          : `Policzone ze składników. Masa całości oszacowana na ${Math.round(weight)} g — jeśli danie się piecze i odparowuje, realna kaloryczność na 100 g będzie wyższa.`) +
-        // Typowa pułapka: przepis podaje wydajność samego dania („1 kg klusek"),
-        // ale lista składników obejmuje też okrasę albo sos do podania. Wtedy
-        // dzielimy kalorie całości przez masę samego dania i wynik jest zawyżony.
-        (declaredIsSane && weight > finalWeight * 1.25
-          ? ` UWAGA: składniki ważą razem ${Math.round(weight)} g, a wydajność podano jako ${Math.round(finalWeight)} g — w przepisie są prawdopodobnie dodatki do podania (okrasa, sos), które zawyżają wynik. Sprawdź wartości przed zapisaniem.`
-          : ''),
+      note: declaredIsSane
+        ? `Policzone ze składników, podzielone przez podaną masę ${Math.round(finalWeight)} g.`
+        : `Policzone ze składników. Masa całości oszacowana na ${Math.round(weight)} g — jeśli danie się piecze i odparowuje, realna kaloryczność na 100 g będzie wyższa.`,
     });
   } catch (e) {
     console.error('POST /api/food/recipe-import', e);

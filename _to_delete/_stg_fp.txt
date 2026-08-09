@@ -199,9 +199,6 @@ export function FoodPicker({
   const [recipeUrl, setRecipeUrl] = useState('');
   const [importing, setImporting] = useState(false);
   const [importInfo, setImportInfo] = useState('');
-  // Co import faktycznie policzył — przy wyliczaniu ze składników to jedyny
-  // sposób, żeby zobaczyć złe dopasowanie zanim się je zapisze.
-  const [importUsed, setImportUsed] = useState<{ name: string; grams: number }[]>([]);
 
   // ręczny wpis
   const [form, setForm] = useState({ name: '', brand: '', kcal: '', protein: '', carbs: '', fat: '', serving: '', barcode: '' });
@@ -228,7 +225,6 @@ export function FoodPicker({
       setComposed(null);
       setRecipeUrl('');
       setImportInfo('');
-      setImportUsed([]);
       setEditOpen(false);
       setForm({ name: '', brand: '', kcal: '', protein: '', carbs: '', fat: '', serving: '', barcode: '' });
       setFormUnit('g');
@@ -509,7 +505,6 @@ export function FoodPicker({
     if (!url) return;
     setImporting(true);
     setImportInfo('');
-    setImportUsed([]);
     setNote('');
     try {
       const res = await fetch('/api/food/recipe-import', {
@@ -535,7 +530,6 @@ export function FoodPicker({
         barcode: '',
       });
       setImportInfo(`${b.note ?? ''} Źródło: ${b.source}.${b.servingLabel ? ` Wydajność: ${b.servingLabel}.` : ''}`);
-      setImportUsed(Array.isArray(b.used) ? b.used : []);
     } catch {
       setNote('Brak połączenia z serwerem.');
     } finally {
@@ -718,10 +712,10 @@ export function FoodPicker({
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {([
-                  ['kcal', `Kalorie (kcal / 100 ${picked.unit})`],
-                  ['protein', `Białko (g / 100 ${picked.unit})`],
-                  ['carbs', `Węglowodany (g / 100 ${picked.unit})`],
-                  ['fat', `Tłuszcz (g / 100 ${picked.unit})`],
+                  ['kcal', `kcal / 100 ${picked.unit}`],
+                  ['protein', 'Białko'],
+                  ['carbs', 'Węglowodany'],
+                  ['fat', 'Tłuszcz'],
                   ['serving', `Typowa porcja (${picked.unit})`],
                 ] as const).map(([k, label]) => (
                   <label key={k} className="text-xs">
@@ -1180,19 +1174,6 @@ export function FoodPicker({
                   </button>
                 </div>
                 {importInfo && <p className="text-xs text-blue-800">{importInfo}</p>}
-                {importUsed.length > 0 && (
-                  <details className="text-xs text-blue-800">
-                    <summary className="cursor-pointer">Z czego to policzyłem ({importUsed.length})</summary>
-                    <ul className="mt-1 space-y-0.5">
-                      {importUsed.map((u, i) => (
-                        <li key={`${u.name}-${i}`} className="flex justify-between gap-2">
-                          <span className="min-w-0 truncate">{u.name}</span>
-                          <span className="shrink-0 text-blue-600">{u.grams} g</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                )}
                 <p className="text-xs text-gray-500">
                   Czytam tabelę wartości odżywczych z przepisu. Jeśli autor jej nie podał, liczę ze składników.
                 </p>
@@ -1217,30 +1198,23 @@ export function FoodPicker({
               </div>
               <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nazwa (np. Bułka kajzerka)" className={inputCls} autoFocus />
               <input value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} placeholder="Marka / sklep (opcjonalnie)" className={inputCls} />
-              {/* Etykiety NAD polami, nie w podpowiedzi. Placeholder znika po
-                  wpisaniu wartości i po imporcie przepisu zostawały cztery gołe
-                  liczby, o których nie sposób powiedzieć, która jest którym
-                  makroskładnikiem. */}
               <div className="grid grid-cols-2 gap-2">
                 {([
-                  ['kcal', 'Kalorie', `kcal / 100 ${formUnit} *`],
-                  ['protein', 'Białko', `g / 100 ${formUnit}`],
-                  ['carbs', 'Węglowodany', `g / 100 ${formUnit}`],
-                  ['fat', 'Tłuszcz', `g / 100 ${formUnit}`],
-                  ['serving', 'Typowa porcja', formUnit],
-                  ['barcode', 'Kod kreskowy', 'opcjonalnie'],
-                ] as const).map(([k, label, hint]) => (
-                  <label key={k} className="text-sm block">
-                    <span className="block text-xs text-gray-600 mb-1">
-                      {label} <span className="text-gray-400">{hint}</span>
-                    </span>
-                    <input
-                      value={form[k]}
-                      onChange={(e) => setForm({ ...form, [k]: e.target.value })}
-                      inputMode={k === 'barcode' ? 'numeric' : 'decimal'}
-                      className={inputCls}
-                    />
-                  </label>
+                  ['kcal', `kcal / 100 ${formUnit} *`],
+                  ['protein', `Białko / 100 ${formUnit}`],
+                  ['carbs', `Węglowodany / 100 ${formUnit}`],
+                  ['fat', `Tłuszcz / 100 ${formUnit}`],
+                  ['serving', `Typowa porcja w ${formUnit}`],
+                  ['barcode', 'Kod kreskowy (opcj.)'],
+                ] as const).map(([k, label]) => (
+                  <input
+                    key={k}
+                    value={form[k]}
+                    onChange={(e) => setForm({ ...form, [k]: e.target.value })}
+                    inputMode={k === 'barcode' ? 'numeric' : 'decimal'}
+                    placeholder={label}
+                    className={inputCls}
+                  />
                 ))}
               </div>
               <button
