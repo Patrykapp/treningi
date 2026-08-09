@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { getAuthUserId } from '@/lib/auth';
 
 /**
  * Reguła izolacji kont bocznych (isolated):
@@ -27,4 +28,47 @@ export async function canWriteForTargets(authUserId: string, targetIds: string[]
     if (isolatedMap.get(id)) return false; // nikt nie pisze do konta bocznego
   }
   return true;
+}
+
+/**
+ * Kto jest administratorem.
+ *
+ * Nie ma osobnej kolumny — administratorem jest NAJSTARSZE konto główne
+ * (nieizolowane), czyli dokładnie to samo konto, na które loguje wspólny
+ * ADMIN_CODE w `/api/auth`. Trzymamy się tej jednej reguły w całej aplikacji,
+ * żeby nie powstały dwie różne definicje administratora.
+ *
+ * Gdyby kiedyś trzeba było wskazać inne konto, wystarczy ustawić zmienną
+ * środowiskową ADMIN_USER_ID — ma pierwszeństwo.
+ */
+export async function getAdminUserId(): Promise<string | null> {
+  const fromEnv = process.env.ADMIN_USER_ID?.trim();
+  if (fromEnv) return fromEnv;
+  const first = await prisma.user.findFirst({
+    where: { isolated: false },
+    orderBy: { createdAt: 'asc' },
+    select: { id: true },
+  });
+  return first?.id ?? null;
+}
+
+export async function isAdminUser(userId: string | null | undefined): Promise<boolean> {
+  if (!userId) return false;
+  return (await getAdminUserId()) === userId;
+}
+
+/**
+ * Strażnik tras administracyjnych. Zwraca id administratora albo gotową
+ * odpowiedź błędu — sprawdzenie MUSI być po stronie serwera, bo ukrycie
+ * przycisku w interfejsie niczego nie zabezpiecza.
+ */
+export async function requireAdmin(): Promise<
+  { ok: true; userId: string } | { ok: false; status: number; error: string }
+> {
+  const userId = await getAuthUserId();
+  if (!userId) return { ok: false, status: 401, error: 'Nieautoryzowany' };
+  if (!(await isAdminUser(userId))) {
+    return { ok: false, status: 403, error: 'Tylko administrator może zarządzać kontami' };
+  }
+  return { ok: true, userId };
 }

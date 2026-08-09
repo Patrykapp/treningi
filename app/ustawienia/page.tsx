@@ -9,7 +9,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { activeSession } from '@/hooks/useActiveSession';
 import Papa from 'papaparse';
-import { X, Pencil, Trash2, Link2, Download, Upload, LogOut, ChevronRight, Bell } from 'lucide-react';
+import { X, Pencil, Trash2, Link2, Download, Upload, LogOut, ChevronRight, Bell, UserPlus, ShieldCheck, Copy, Check, RefreshCw } from 'lucide-react';
 
 function useDarkMode() {
   const [dark, setDark] = useState(false);
@@ -54,6 +54,17 @@ function useReminderSettings() {
 
 interface UserOption { id: string; name: string; }
 
+/** Konto w sekcji administratora — z kodem dostępu i liczbą treningów. */
+interface ManagedUser {
+  id: string; name: string; accessCode: string | null;
+  isolated: boolean; isAdmin: boolean; sessions: number;
+}
+
+/** Losowy pięciocyfrowy kod. Bez zer wiodących, żeby dało się go dyktować. */
+function randomCode(): string {
+  return String(Math.floor(10000 + Math.random() * 90000));
+}
+
 export default function UstawieniaPage() {
   const router = useRouter();
   const { dark, toggle: toggleDark } = useDarkMode();
@@ -78,6 +89,15 @@ export default function UstawieniaPage() {
   const [mergeTo, setMergeTo] = useState('');
   const [merging, setMerging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Zarządzanie kontami — widoczne wyłącznie dla administratora. O tym, kto nim
+  // jest, decyduje serwer; tutaj tylko chowamy sekcję.
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [accounts, setAccounts] = useState<ManagedUser[]>([]);
+  const [newUserName, setNewUserName] = useState('');
+  const [newUserCode, setNewUserCode] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [createdUser, setCreatedUser] = useState<{ name: string; code: string } | null>(null);
+  const [codeCopied, setCodeCopied] = useState(false);
 
   useEffect(() => {
     fetch('/api/exercises').then(r => r.json()).then(data => {
@@ -90,7 +110,53 @@ export default function UstawieniaPage() {
     }).catch(() => {});
   }, [authUserId]);
 
+  // Sekcja kont. Serwer sam decyduje, czy odpowiedzieć listą, czy odmówić —
+  // ukrycie przycisku niczego by nie zabezpieczyło.
+  const loadAccounts = () => {
+    fetch('/api/users/manage')
+      .then(r => (r.ok ? r.json() : { isAdmin: false, users: [] }))
+      .then((d: { isAdmin?: boolean; users?: ManagedUser[] }) => {
+        setIsAdmin(Boolean(d?.isAdmin));
+        setAccounts(Array.isArray(d?.users) ? d.users : []);
+      })
+      .catch(() => {});
+  };
+  useEffect(loadAccounts, []);
+  useEffect(() => { if (isAdmin && !newUserCode) setNewUserCode(randomCode()); }, [isAdmin, newUserCode]);
+
   const showToast = (message: string, type: 'success' | 'error' = 'success') => setToast({ message, type });
+
+  const createUser = async () => {
+    const name = newUserName.trim();
+    if (name.length < 2) { showToast('Podaj imię', 'error'); return; }
+    setCreating(true);
+    try {
+      const res = await fetch('/api/users', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, accessCode: newUserCode }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) { showToast(body?.error || 'Nie udało się dodać konta', 'error'); return; }
+      setCreatedUser({ name, code: newUserCode });
+      setNewUserName('');
+      setNewUserCode(randomCode());
+      setCodeCopied(false);
+      loadAccounts();
+      showToast(`Konto „${name}" utworzone`);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const copyCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 2000);
+    } catch {
+      showToast('Przeglądarka nie pozwoliła skopiować', 'error');
+    }
+  };
 
   const addExercise = async () => {
     if (!newExName.trim()) return;
@@ -233,6 +299,99 @@ export default function UstawieniaPage() {
                   <span className="text-xs text-blue-600 flex items-center gap-1">Zobacz profil <ChevronRight className="w-4 h-4" strokeWidth={2} /></span>
                 </Link>
               ))}
+            </div>
+          </section>
+        )}
+
+        {/* Konta — tylko administrator. Nowe konto powstaje jako boczne:
+            bez rywalizacji na pulpicie i bez zapisu ćwiczeń za innych, dokładnie
+            tak jak konto Maćka. */}
+        {isAdmin && (
+          <section className="bg-white rounded-2xl p-4 shadow-sm">
+            <h2 className="font-bold text-gray-800 mb-1 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-blue-600" strokeWidth={2} /> Konta
+            </h2>
+            <p className="text-xs text-gray-500 mb-3">
+              Widoczne tylko dla ciebie. Nowe konto loguje się swoim kodem i działa „z boku":
+              bez porównań na pulpicie, bez zapisywania ćwiczeń za innych. Historię i wykresy widać wzajemnie.
+            </p>
+
+            <div className="space-y-2 mb-4">
+              {accounts.map(u => (
+                <div key={u.id} className="flex items-center justify-between gap-2 py-2 px-3 rounded-xl bg-gray-50">
+                  <span className="min-w-0">
+                    <span className="text-sm font-medium text-gray-800">{u.name}</span>
+                    {u.isAdmin && <span className="ml-2 text-[11px] bg-blue-100 text-blue-700 rounded px-1.5 py-0.5">administrator</span>}
+                    {u.isolated && <span className="ml-2 text-[11px] bg-gray-200 text-gray-600 rounded px-1.5 py-0.5">konto boczne</span>}
+                    <span className="block text-xs text-gray-500">
+                      {u.sessions} {u.sessions === 1 ? 'trening' : 'treningów'}
+                      {u.accessCode ? ` · kod ${u.accessCode}` : ' · logowanie hasłem'}
+                    </span>
+                  </span>
+                  {u.accessCode && (
+                    <button
+                      onClick={() => copyCode(u.accessCode!)}
+                      className="p-2 text-gray-400 hover:text-blue-600 shrink-0 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                      aria-label={`Kopiuj kod konta ${u.name}`}
+                    >
+                      <Copy className="w-4 h-4" strokeWidth={2} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {createdUser && (
+              <div className="mb-3 rounded-xl border border-green-200 bg-green-50 p-3">
+                <p className="text-sm text-green-900">
+                  Konto <strong>{createdUser.name}</strong> gotowe. Kod do logowania:
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-2xl font-black tracking-widest text-green-900">{createdUser.code}</span>
+                  <button
+                    onClick={() => copyCode(createdUser.code)}
+                    className="p-2 text-green-700 rounded-lg hover:bg-green-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    aria-label="Kopiuj kod"
+                  >
+                    {codeCopied ? <Check className="w-4 h-4" strokeWidth={2} /> : <Copy className="w-4 h-4" strokeWidth={2} />}
+                  </button>
+                </div>
+                <p className="text-xs text-green-800 mt-1">Podaj go tej osobie — wpisuje go na ekranie logowania.</p>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <input
+                value={newUserName}
+                onChange={e => setNewUserName(e.target.value)}
+                placeholder="Imię (np. Tomek)"
+                maxLength={30}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm"
+              />
+              <div className="flex gap-2">
+                <input
+                  value={newUserCode}
+                  onChange={e => setNewUserCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                  inputMode="numeric"
+                  placeholder="Kod dostępu (4-8 cyfr)"
+                  className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm tracking-widest"
+                />
+                <button
+                  onClick={() => setNewUserCode(randomCode())}
+                  className="px-3 rounded-xl border border-gray-200 text-gray-500 shrink-0 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                  aria-label="Wylosuj inny kod"
+                >
+                  <RefreshCw className="w-4 h-4" strokeWidth={2} />
+                </button>
+              </div>
+              <button
+                onClick={createUser}
+                disabled={creating || newUserName.trim().length < 2 || newUserCode.length < 4}
+                className="w-full bg-blue-600 text-white py-2.5 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-colors hover:bg-blue-700 active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+              >
+                <UserPlus className="w-4 h-4" strokeWidth={2} />
+                {creating ? 'Zakładam…' : 'Dodaj konto'}
+              </button>
             </div>
           </section>
         )}
