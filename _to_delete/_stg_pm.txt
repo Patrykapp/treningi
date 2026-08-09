@@ -15,37 +15,11 @@ import { GROQ_MODEL, AI_EXTRA, aiMaxTokens, aiContent } from '@/lib/ai';
  * POST /api/food/diary/plan (jedna pozycja w dzienniku, ze składem i przepisem).
  */
 
-type Rec = Record<string, unknown>;
-
-/** Pierwsza tablica pod jednym z kluczy, a jak żaden nie pasuje — pierwsza tablica w ogóle. */
-function pickList(node: unknown, keys: string[]): Rec[] {
-  const isList = (v: unknown): v is Rec[] =>
-    Array.isArray(v) && v.length > 0 && v.every((x) => x !== null && typeof x === 'object');
-  if (isList(node)) return node;
-  if (!node || typeof node !== 'object') return [];
-  const rec = node as Rec;
-  for (const k of keys) if (isList(rec[k])) return rec[k] as Rec[];
-  for (const v of Object.values(rec)) if (isList(v)) return v;
-  return [];
-}
-
-/** Pierwsza niepusta wartość spośród możliwych nazw pola. */
-function pickField(o: Rec, keys: string[]): unknown {
-  for (const k of keys) if (o[k] !== undefined && o[k] !== null && o[k] !== '') return o[k];
-  return undefined;
-}
-
-/** Tekst do porównywania nazw: bez ogonków, bez wielkich liter, bez ogona w nawiasie. */
-function norm(v: string): string {
-  return v
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/ł/gi, 'l')
-    .toLowerCase()
-    .replace(/\s*\(.*?\)/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
+type AiOut = {
+  nazwa?: string;
+  skladniki?: { id?: number | string; gramy?: number }[];
+  nierozpoznane?: string[];
+};
 
 const r1 = (x: number) => Math.round(x * 10) / 10;
 
@@ -104,8 +78,6 @@ ZASADY:
 3. Jeśli nie podał, przyjmij typową porcję podaną w nawiasie przy produkcie.
 4. Dobieraj najbliższy sensowny odpowiednik TEGO SAMEGO dania: „pulpety" to gotowe danie z listy,
    nie mielone mięso. „Surówka" bez doprecyzowania to surówka z marchewki. „Puree" to puree ziemniaczane.
-   Jeśli na liście jest to samo danie w wersji doprecyzowanej — użytkownik pisze „naleśniki",
-   a na liście są „Naleśniki z serem" — to JEST to samo danie, użyj go.
 5. NIGDY nie składaj dania z przypadkowych składników o podobnej nazwie. Jeśli użytkownik podał nazwę
    potrawy (np. „chlebek bananowy", „szarlotka babci"), której nie ma na liście jako CAŁOŚCI, wpisz ją
    do "nierozpoznane" i NIE zastępuj jej bananem z chlebem. Lepiej nie rozpoznać niż policzyć bzdurę.
@@ -143,21 +115,17 @@ ${menu}`;
       return NextResponse.json({ error: 'AI nie odpowiedziało. Spróbuj ponownie.' }, { status: 502 });
     }
 
-    let parsed: unknown;
+    let parsed: AiOut;
     try {
       parsed = JSON.parse(aiContent(await res.json()) || '{}');
     } catch {
       return NextResponse.json({ error: 'AI zwróciło niepoprawny format.' }, { status: 502 });
     }
-    const root = (parsed && typeof parsed === 'object' ? parsed : {}) as Rec;
 
     const ingredients = [];
-    // Model odpowiada po polsku i potrafi odesłać klucz z ogonkami
-    // („składniki" zamiast „skladniki"). Sztywne czytanie jednej nazwy dawało
-    // pustą listę i komunikat „nie rozpoznałem" mimo poprawnej odpowiedzi.
-    for (const item of pickList(root, ['skladniki', 'składniki', 'ingredients', 'produkty', 'pozycje'])) {
-      const idx = Math.trunc(Number(pickField(item, ['id', 'nr', 'numer', 'index', 'idx'])));
-      const gramsRaw = Number(pickField(item, ['gramy', 'gram', 'grams', 'g', 'ilosc', 'ilość']));
+    for (const s of parsed.skladniki ?? []) {
+      const idx = Math.trunc(Number(s.id));
+      const gramsRaw = Number(s.gramy);
       if (!Number.isInteger(idx) || idx < 0 || idx >= catalog.length) continue;
       if (!Number.isFinite(gramsRaw) || gramsRaw <= 0 || gramsRaw > 2000) continue;
 
@@ -182,59 +150,23 @@ ${menu}`;
       });
     }
 
-    // Ostatnia deska ratunku: jednowyrazowy opis, który wprost pasuje do nazwy
-    // produktu z katalogu („naleśniki" → „Naleśniki z serem"). Nie ma powodu,
-    // żeby taki przypadek zależał od modelu — to zwykłe wyszukiwanie po nazwie.
     if (ingredients.length === 0) {
-      const phrase = norm(text);
-      const hit = catalog
-        .filter((p) => {
-          const n = norm(p.name);
-          return n === phrase || n.startsWith(`${phrase} `) || n.includes(` ${phrase} `) || n.endsWith(` ${phrase}`);
-        })
-        // Przy kilku trafieniach najkrótsza nazwa jest najbliższa temu,
-        // co użytkownik napisał („Ryż gotowany" przed „Ryż biały (suchy)").
-        .sort((a, b) => a.name.length - b.name.length)[0];
-
-      if (hit) {
-        const grams = tidyGrams(hit.servingG && hit.servingG > 0 ? hit.servingG : 100);
-        const f = grams / 100;
-        ingredients.push({
-          productId: hit.id,
-          name: hit.brand ? `${hit.brand} ${hit.name}` : hit.name,
-          grams,
-          kcal: Math.round(hit.kcal100 * f),
-          protein: r1(hit.protein100 * f),
-          carbs: r1(hit.carbs100 * f),
-          fat: r1(hit.fat100 * f),
-          kcal100: hit.kcal100,
-          protein100: hit.protein100,
-          carbs100: hit.carbs100,
-          fat100: hit.fat100,
-        });
-      }
-    }
-
-    if (ingredients.length === 0) {
-      const listed = pickList(root, ['skladniki', 'składniki', 'ingredients', 'produkty', 'pozycje']).length;
       return NextResponse.json(
         {
           error:
             'Nie rozpoznałem tego dania w bazie. Jeśli to coś z przepisu, wklej link w zakładce „Nowy" — ' +
             'policzę makro z przepisu i zapamiętam danie na stałe.',
-          stage: `AI zwróciło ${listed} pozycji, żadna nie pasowała do katalogu`,
         },
         { status: 422 }
       );
     }
 
-    const rawUnmatched = pickField(root, ['nierozpoznane', 'nieznane', 'unmatched', 'unknown']);
-    const unmatched = Array.isArray(rawUnmatched)
-      ? rawUnmatched.map((x) => String(x)).filter(Boolean).slice(0, 8)
+    const unmatched = Array.isArray(parsed.nierozpoznane)
+      ? parsed.nierozpoznane.map((x) => String(x)).filter(Boolean).slice(0, 8)
       : [];
 
     return NextResponse.json({
-      title: String(pickField(root, ['nazwa', 'name', 'title', 'tytul', 'tytuł']) ?? text).slice(0, 120),
+      title: String(parsed.nazwa || text).slice(0, 120),
       ingredients,
       unmatched,
       kcal: Math.round(ingredients.reduce((s, i) => s + i.kcal, 0)),

@@ -124,6 +124,56 @@ function cleanTitle(raw: string | null, siteName?: string | null): string | null
   return pool.reduce((a, b) => (b.length > a.length ? b : a)).slice(0, 120);
 }
 
+/** Słowa z adresu przepisu: /przepis/jak-zrobic-ciasto-na-nalesniki → [jak, zrobic, ...]. */
+function slugWords(url: string): string[] {
+  try {
+    const last = new URL(url).pathname.split('/').filter(Boolean).pop() ?? '';
+    return last
+      .split('-')
+      .map((w) => w.toLowerCase())
+      .filter((w) => w.length >= 4); // krótkie spójniki nic nie wnoszą
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Wybór tytułu spośród kandydatów ze strony.
+ *
+ * Samo „pierwsze <h1>" nie wystarcza: w wielu szablonach pierwszy nagłówek to
+ * logo serwisu, a nazwa przepisu jest dopiero w kolejnym. Rozstrzyga ADRES —
+ * slug zawiera nazwę dania, więc wybieramy kandydata, który pokrywa się z nim
+ * najbardziej. Przy zerowym pokryciu zostaje pierwszy sensowny.
+ */
+function pickTitle(html: string, url: string, siteName?: string | null): string | null {
+  const raw: string[] = [];
+  for (const m of html.matchAll(/<h1[^>]*>([\s\S]*?)<\/h1>/gi)) raw.push(stripTags(m[1]));
+  const og = /<meta[^>]+property=["']og:title["'][^>]*content=["']([^"']+)["']/i.exec(html)
+    ?? /<meta[^>]+content=["']([^"']+)["'][^>]*property=["']og:title["']/i.exec(html);
+  if (og) raw.push(decodeEntities(og[1]));
+  const title = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
+  if (title) raw.push(stripTags(title[1]));
+
+  const site = (siteName ?? '').trim().toLowerCase();
+  const candidates = raw
+    .slice(0, 6)
+    .map((t) => cleanTitle(t, siteName))
+    .filter((t): t is string => Boolean(t && t.length >= 3))
+    .filter((t) => !site || t.toLowerCase() !== site);
+  if (candidates.length === 0) return null;
+
+  const words = slugWords(url);
+  const score = (t: string) => {
+    const n = t
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/ł/gi, 'l')
+      .toLowerCase();
+    return words.filter((w) => n.includes(w.slice(0, Math.max(4, w.length - 2)))).length;
+  };
+  return candidates.reduce((best, t) => (score(t) > score(best) ? t : best));
+}
+
 /**
  * Odczyt z samego TEKSTU strony — ostatnia deska ratunku, gdy nie ma ani
  * JSON-LD, ani mikrodanych.
@@ -135,21 +185,14 @@ function cleanTitle(raw: string | null, siteName?: string | null): string | null
  * odczytać nie zgadując niczego: bierzemy pierwszą liczbę po każdej etykiecie,
  * w oknie tuż za nagłówkiem tabeli.
  */
-function fromText(html: string): Extracted {
+function fromText(html: string, url: string): Extracted {
   const out: Extracted = {
     name: null, yieldText: null, ingredients: [], instructions: null,
     nutrition: { kcal: null, protein: null, carbs: null, fat: null }, nutritionText: '',
   };
 
-  // Tytuł. Pierwszeństwo ma <h1>, bo to nazwa PRZEPISU. og:title bywa złożony
-  // z nazwy serwisu i przepisu („Ania Gotuje - Szare kluski"), a ślepe branie
-  // pierwszego członu dawało w formularzu „Ania Gotuje" zamiast dania.
-  const h1 = /<h1[^>]*>([\s\S]*?)<\/h1>/i.exec(html);
-  const og = /<meta[^>]+property=["']og:title["'][^>]*content=["']([^"']+)["']/i.exec(html)
-    ?? /<meta[^>]+content=["']([^"']+)["'][^>]*property=["']og:title["']/i.exec(html);
   const siteName = /<meta[^>]+property=["']og:site_name["'][^>]*content=["']([^"']+)["']/i.exec(html)?.[1];
-  out.name = cleanTitle(h1 ? stripTags(h1[1]) : null, siteName)
-    ?? cleanTitle(og ? decodeEntities(og[1]).trim() : null, siteName);
+  out.name = pickTitle(html, url, siteName);
 
   const text = pageText(html);
 
@@ -198,13 +241,14 @@ function fromText(html: string): Extracted {
 }
 
 /** Najpierw JSON-LD (najpewniejszy), potem mikrodane, na końcu goły tekst. */
-function extract(html: string): Extracted {
+function extract(html: string, url: string): Extracted {
   const structured = extractStructured(html);
   // Tekst uzupełnia tylko to, czego dane strukturalne nie dały — nie nadpisuje.
-  const t = fromText(html);
+  const t = fromText(html, url);
   const hasNutrition = structured.nutrition.kcal !== null;
   return {
-    name: structured.name ?? t.name,
+    // Tytuł ze strony ma pierwszeństwo: w mikrodanych `name` bywa nazwą serwisu.
+    name: t.name ?? structured.name,
     yieldText: structured.yieldText ?? t.yieldText,
     ingredients: structured.ingredients.length > 0 ? structured.ingredients : t.ingredients,
     instructions: structured.instructions ?? t.instructions,
@@ -323,7 +367,10 @@ function parseYield(text: string | null): { servings: number | null; totalWeight
 
 /** Czy strona sama pisze, że tabela dotyczy 100 g (nagłówek bywa poza blokiem). */
 function per100InPage(html: string): boolean {
-  return /warto[śs][cć]\w*\s+(?:od[żz]ywcz|energetyczn)\w*[^.]{0,80}?(?:w|na)\s*100\s*(?:g|ml)/i.test(pageText(html));
+  const text = pageText(html);
+  // Nagłówek i dopisek „w 100 g" bywają oddzielone całą komórką tabeli, więc
+  // okno musi być szersze niż jedno zdanie. Dopuszczamy też „na 100 gramów".
+  return /warto[śs][cć]\w*\s+(?:od[żz]ywcz|energetyczn)\w*[\s\S]{0,200}?(?:w|na)\s*100\s*(?:g\b|ml\b|gram)/i.test(text);
 }
 
 type AiItem = Record<string, unknown>;
@@ -396,7 +443,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Nie udało się pobrać strony' }, { status: 502 });
     }
 
-    const rec = extract(html);
+    const rec = extract(html, url.toString());
     if (!rec.name && rec.ingredients.length === 0 && rec.nutrition.kcal === null) {
       // Diagnostyka w komunikacie: bez niej każdy nieudany import wygląda tak
       // samo i nie wiadomo, czy zawiodło pobranie, czy odczyt.
@@ -420,10 +467,18 @@ export async function POST(request: Request) {
     // Nagłówek „Wartości odżywcze (w 100 g)" bardzo często stoi OBOK bloku
     // z liczbami, a nie w środku — dlatego szukamy go też w treści strony.
     const per100Declared =
-      /w\s*100\s*(?:g|ml)|na\s*100\s*(?:g|ml)|100\s*g\b/i.test(rec.nutritionText) || per100InPage(html);
+      /w\s*100\s*(?:g|ml)|na\s*100\s*(?:g|ml)|100\s*(?:g|ml)\b|100\s*gram/i.test(rec.nutritionText) || per100InPage(html);
+
+    // Autor podał tabelę, ale nie napisał, czego dotyczy — i nie ma jak tego
+    // przeliczyć (brak liczby porcji albo masy całości). Polskie blogi kulinarne
+    // podają wartości na 100 g praktycznie zawsze, a liczenie ze składników ma
+    // systematyczne błędy (woda w cieście, okrasa do podania), więc przyjmujemy
+    // 100 g i mówimy o tym wprost — wartości i tak są do sprawdzenia w formularzu.
+    const assumePer100 =
+      !per100Declared && n.kcal !== null && n.kcal > 0 && n.kcal <= 900 && !(servings && totalWeight);
 
     // ── Ścieżka 1: autor podał wartości na 100 g ──────────────────────────
-    if (n.kcal && per100Declared) {
+    if (n.kcal && (per100Declared || assumePer100)) {
       // Gdy znamy i masę całości, i liczbę porcji, od razu wyliczamy porcję —
       // dzięki temu przy dodawaniu do dziennika jest gotowy przycisk „porcja".
       const portionG = servings && totalWeight ? Math.round(totalWeight / servings) : null;
@@ -439,9 +494,11 @@ export async function POST(request: Request) {
         totalWeight,
         ingredients: rec.ingredients,
         recipe: rec.instructions?.slice(0, 2000) ?? null,
-        note: portionG
-          ? `Wartości wprost z przepisu, podane na 100 g. Porcja wychodzi ${portionG} g.`
-          : 'Wartości pochodzą wprost z przepisu, podane na 100 g.',
+        note: assumePer100
+          ? 'Wartości wprost z przepisu. Autor nie napisał, czego dotyczy tabela — przyjąłem, że 100 g, bo tak podaje się je na polskich blogach. Sprawdź je przed zapisaniem.'
+          : portionG
+            ? `Wartości wprost z przepisu, podane na 100 g. Porcja wychodzi ${portionG} g.`
+            : 'Wartości pochodzą wprost z przepisu, podane na 100 g.',
       });
     }
 
