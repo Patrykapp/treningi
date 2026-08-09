@@ -18,7 +18,7 @@ import { AiMealPlan } from '@/components/ui/AiMealPlan';
 import { ShoppingList } from '@/components/ui/ShoppingList';
 import { MEALS, ACTIVITY_LEVELS, GOAL_TYPES } from '@/lib/nutrition';
 import { formatDate } from '@/lib/utils';
-import { ChevronLeft, ChevronRight, Plus, Settings2, Flame, CalendarDays, Sparkles, ChefHat, CopyPlus, GlassWater, BookmarkPlus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Settings2, Flame, CalendarDays, Sparkles, ChefHat, CopyPlus, GlassWater } from 'lucide-react';
 
 type Entry = {
   id: string; meal: string; name: string; grams: number; unit?: string;
@@ -100,11 +100,6 @@ export default function DietaPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [form, setForm] = useState<Profile | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
-  // Zapis posiłku jako własnego dania — żeby ten sam obiad wpisywać potem
-  // jednym kliknięciem zamiast składnik po składniku.
-  const [saveDishMeal, setSaveDishMeal] = useState<string | null>(null);
-  const [dishName, setDishName] = useState('');
-  const [savingDish, setSavingDish] = useState(false);
 
   const load = useCallback(async (iso: string) => {
     setLoading(true);
@@ -267,38 +262,6 @@ export default function DietaPage() {
       setToast({ msg: 'Nie udało się zapisać', type: 'error' });
     } finally {
       setSavingProfile(false);
-    }
-  };
-
-  /** Domyślna nazwa dania: składniki po przecinku, bez marek. */
-  const openSaveDish = (mealKey: string, items: Entry[]) => {
-    const label = MEALS.find((m) => m.key === mealKey)?.label ?? 'Posiłek';
-    const parts = items.slice(0, 3).map((e) => e.name.split(' ').slice(0, 2).join(' '));
-    setDishName(`${label}: ${parts.join(', ')}`.slice(0, 80));
-    setSaveDishMeal(mealKey);
-  };
-
-  const saveDish = async () => {
-    if (!saveDishMeal) return;
-    setSavingDish(true);
-    try {
-      const res = await fetch('/api/food/dishes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date, meal: saveDishMeal, name: dishName.trim() }),
-      });
-      const b = await res.json().catch(() => null);
-      if (!res.ok) {
-        setToast({ msg: b?.error || 'Nie udało się zapisać dania', type: 'error' });
-        return;
-      }
-      setSaveDishMeal(null);
-      setToast({
-        msg: `Zapisano „${b.name}" — znajdziesz je w „Moje dania" (${b.portionKcal} kcal / ${b.servingG} ${b.unit})`,
-        type: 'success',
-      });
-    } finally {
-      setSavingDish(false);
     }
   };
 
@@ -529,21 +492,9 @@ export default function DietaPage() {
         const sum = Math.round(items.reduce((s, e) => s + e.kcal, 0));
         return (
           <section key={m.key} className="bg-white rounded-2xl p-4 shadow-sm">
-            <div className="flex items-center justify-between mb-2 gap-2">
+            <div className="flex items-center justify-between mb-2">
               <h2 className="font-semibold">{m.label}</h2>
-              <div className="flex items-center gap-1">
-                {/* Zapis zestawu ma sens dopiero od dwóch pozycji — pojedynczy
-                    produkt i tak jest już w katalogu. */}
-                {items.length >= 2 && (
-                  <button
-                    onClick={() => openSaveDish(m.key, items)}
-                    className="flex items-center gap-1 text-xs text-blue-600 px-2 py-1 rounded-lg hover:bg-blue-50"
-                  >
-                    <BookmarkPlus className="w-4 h-4" /> Zapisz jako danie
-                  </button>
-                )}
-                <span className="text-sm text-gray-500">{sum} kcal</span>
-              </div>
+              <span className="text-sm text-gray-500">{sum} kcal</span>
             </div>
 
             {items.length > 0 && (
@@ -626,57 +577,6 @@ export default function DietaPage() {
         onPick={addFood}
         onPickMeal={addComposed}
       />
-
-      {/* Zapis posiłku jako danie */}
-      <Modal isOpen={saveDishMeal !== null} onClose={() => setSaveDishMeal(null)} title="Zapisz jako danie">
-        {saveDishMeal && (
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Zapiszę {(byMeal[saveDishMeal] ?? []).length} pozycji jako jedno danie o łącznej gramaturze{' '}
-              <strong>
-                {Math.round((byMeal[saveDishMeal] ?? []).reduce((s, e) => s + e.grams, 0))} g
-              </strong>{' '}
-              i {Math.round((byMeal[saveDishMeal] ?? []).reduce((s, e) => s + e.kcal, 0))} kcal. Następnym razem
-              dodasz je jednym kliknięciem z zakładki „Moje dania".
-            </p>
-
-            <ul className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3 space-y-0.5">
-              {(byMeal[saveDishMeal] ?? []).map((e) => (
-                <li key={e.id} className="flex justify-between gap-2">
-                  <span className="min-w-0 truncate">{e.name}</span>
-                  <span className="shrink-0 text-gray-500">
-                    {Math.round(e.grams)} {e.unit === 'ml' ? 'ml' : 'g'}
-                  </span>
-                </li>
-              ))}
-            </ul>
-
-            <label className="block text-sm">
-              <span className="block text-gray-600 mb-1">Nazwa dania</span>
-              <input
-                value={dishName}
-                onChange={(e) => setDishName(e.target.value.slice(0, 80))}
-                className={inputCls}
-                autoFocus
-              />
-            </label>
-
-            <p className="text-xs text-gray-500">
-              Wartości policzę z tego, co masz wpisane — nic nie jest szacowane. Ta wielkość stanie się
-              typową porcją dania, a generator jadłospisu będzie mógł je proponować na{' '}
-              {(MEALS.find((m) => m.key === saveDishMeal)?.label ?? '').toLowerCase()}.
-            </p>
-
-            <button
-              onClick={saveDish}
-              disabled={savingDish || dishName.trim().length < 2}
-              className="w-full rounded-xl bg-blue-600 text-white py-3 font-semibold disabled:opacity-50"
-            >
-              {savingDish ? 'Zapisuję…' : 'Zapisz danie'}
-            </button>
-          </div>
-        )}
-      </Modal>
 
       {/* Edycja gramatury wpisu */}
       <Modal isOpen={editEntry !== null} onClose={() => setEditEntry(null)} title="Zmień ilość">
