@@ -4,9 +4,9 @@
  * Generator dziennego jadłospisu. Pokazuje propozycję do zatwierdzenia —
  * dopiero „Zapisz" tworzy wpisy w dzienniku.
  *
- * Wszystkie wartości odżywcze pochodzą z bazy produktów — model wybiera
- * wyłącznie z zamkniętej listy i nie podaje żadnych liczb. Gramatury
- * dostraja serwer, żeby dzień trafiał w cel kaloryczny.
+ * Model wybiera GOTOWE DANIA z bazy przepisów i podaje tylko liczbę porcji.
+ * Wartości, przepisy i wielkość porcji pochodzą z bazy — gramatury dostraja
+ * serwer w widełkach pół porcji do dwóch, żeby dzień trafiał w cel kaloryczny.
  */
 
 import { useState } from 'react';
@@ -159,8 +159,9 @@ export function AiMealPlan({
         {!plan && (
           <>
             <p className="text-sm text-gray-600">
-              Ułożę cztery posiłki pod twój dzienny cel, z przepisami i listą zakupów. Wszystkie wartości
-              biorę z bazy produktów, nie z głowy modelu. Nic się nie zapisze, dopóki nie zatwierdzisz.
+              Ułożę cztery posiłki pod twój dzienny cel — z gotowych dań z bazy przepisów, razem
+              z listą zakupów. Porcje i wartości pochodzą z bazy, nie z głowy modelu. Nic się nie
+              zapisze, dopóki nie zatwierdzisz.
             </p>
 
             <div>
@@ -251,7 +252,7 @@ export function AiMealPlan({
                   {plan.retried && ' (druga próba — w pierwszej było za mało białka)'}
                 </p>
                 <p className="text-gray-400">
-                  {plan.totalIngredients} składników, wszystkie z bazy ({plan.catalogSize} produktów).
+                  {plan.totalIngredients} dań z bazy przepisów (do wyboru było {plan.catalogSize}).
                   Gramatury dobrał serwer pod twój cel.
                 </p>
               </div>

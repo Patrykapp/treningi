@@ -274,6 +274,10 @@ model FoodProduct {
   unit        String      @default("g")
   source      String      @default("OWN") // OWN | SEED | OFF
   category    String?     // dział sklepu — do grupowania listy zakupów
+  // Do których posiłków pasuje danie: SNIADANIE,OBIAD,KOLACJA,PRZEKASKA
+  // (rozdzielone przecinkiem). Wypełnia `npm run db:recipes`. Tylko pozycje
+  // z tym polem trafiają do generatora jadłospisu — puste = zwykły produkt.
+  mealSlots   String?
   isFavorite  Boolean     @default(false) // przypięte na górze wyszukiwarki
   // Ręczna poprawka wartości w aplikacji. Skrypt `db:food` omija takie wpisy,
   // żeby kolejne uruchomienie nie cofnęło korekty do wartości z katalogu.

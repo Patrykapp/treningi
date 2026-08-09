@@ -18,7 +18,8 @@
     "db:create-user": "npx ts-node --project tsconfig.scripts.json prisma/create-user.ts",
     "db:copy-missing": "npx ts-node --project tsconfig.scripts.json prisma/copy-missing-entries.ts",
     "db:setup-maciej": "npx ts-node --project tsconfig.scripts.json prisma/setup-maciej.ts",
-    "db:food": "npx ts-node --project tsconfig.scripts.json prisma/seed-food.ts"
+    "db:food": "npx ts-node --project tsconfig.scripts.json prisma/seed-food.ts",
+    "db:recipes": "npx ts-node --project tsconfig.scripts.json prisma/seed-recipes.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.0.0",
