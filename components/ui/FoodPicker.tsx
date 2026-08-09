@@ -189,6 +189,10 @@ export function FoodPicker({
   // Czy bieżący produkt przyszedł ze skanera — decyduje, czy po zapisaniu
   // wracamy do kamery (tryb seryjny), czy do listy.
   const fromScanRef = useRef(false);
+  // Czy produkt powstał w zakładce „Nowy" (import przepisu albo ręczny wpis).
+  // Takiego produktu nie dodaje się dwa razy pod rząd, a formularz zostaje
+  // wypełniony — okno wyglądało wtedy, jakby zapis się nie udał.
+  const fromFormRef = useRef(false);
   const [serial, setSerial] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
@@ -266,7 +270,7 @@ export function FoodPicker({
     setScannerReady(Boolean(Ctor));
   }, []);
 
-  const choose = useCallback((c: Candidate, viaScan = false) => {
+  const choose = useCallback((c: Candidate, origin: { viaScan?: boolean; viaForm?: boolean } = {}) => {
     const a = initialAmount(c);
     setPicked(c);
     setAmountMode(a.mode);
@@ -274,7 +278,8 @@ export function FoodPicker({
     setPiecesStr(a.pieces);
     setEditOpen(false);
     setNote('');
-    fromScanRef.current = viaScan;
+    fromScanRef.current = Boolean(origin.viaScan);
+    fromFormRef.current = Boolean(origin.viaForm);
     stopScan();
   }, [stopScan]);
 
@@ -318,7 +323,7 @@ export function FoodPicker({
     // 1) nasz katalog — natychmiast, bez ruszania zewnętrznego API
     const mine = await fetch(`/api/food/products?barcode=${code}`).then((r) => (r.ok ? r.json() : []));
     if (Array.isArray(mine) && mine.length > 0) {
-      choose(fromCatalog(mine[0]), true);
+      choose(fromCatalog(mine[0]), { viaScan: true });
       return;
     }
     // 2) Open Food Facts
@@ -368,7 +373,7 @@ export function FoodPicker({
         servingG: p.servingSizeG,
         source: 'OFF',
       },
-      true
+      { viaScan: true }
     );
   }, [choose]);
 
@@ -561,7 +566,7 @@ export function FoodPicker({
       },
       // Produkt z kodem trafił tu po nieudanym skanie — w trybie seryjnym
       // po zapisaniu wracamy do kamery, a nie do listy.
-      Boolean(form.barcode.trim())
+      { viaScan: Boolean(form.barcode.trim()), viaForm: true }
     );
   };
 
@@ -571,6 +576,7 @@ export function FoodPicker({
     try {
       await onPick(picked, grams);
       const wasScan = fromScanRef.current;
+      const wasForm = fromFormRef.current;
       // Okno zostaje otwarte — jeden posiłek to zwykle kilka pozycji, a
       // zamykanie po każdej zmuszało do otwierania go od nowa.
       setPicked(null);
@@ -582,7 +588,12 @@ export function FoodPicker({
         lastCodeRef.current = '';
         setTab('scan');
         void startScan();
+        return;
       }
+      // Produkt z zakładki „Nowy" (import przepisu, ręczny wpis) dodaje się raz.
+      // Zostawianie otwartego okna z wypełnionym formularzem wygląda tak, jakby
+      // zapis się nie powiódł — zamykamy.
+      if (wasForm) onClose();
     } finally {
       setSaving(false);
     }
