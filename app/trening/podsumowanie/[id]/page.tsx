@@ -546,7 +546,7 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
             {byMuscle[muscle].map(entry => {
               const isPR = rating?.prExerciseIds.includes(entry.exerciseId);
               return (
-                <div key={entry.id} className="px-4 py-3 border-b border-gray-50 last:border-0">
+                <div key={entry.id} className="px-4 py-3 border-b border-gray-100 last:border-0">
                   <div className="flex items-baseline justify-between gap-2">
                     <Link href={`/cwiczenie/${entry.exerciseId}`}
                       className="text-sm font-semibold text-gray-900 flex-1 rounded transition-colors hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">

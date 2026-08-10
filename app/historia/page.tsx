@@ -890,13 +890,16 @@ function HistoriaPage() {
                     {Object.entries(muscleGroups).map(([muscle, entries]) => (
                       <div key={muscle}>
                         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">{muscle}</p>
-                        <div className="space-y-1">
+                        {/* divide-y zamiast odstępów: włos linii między ćwiczeniami
+                            trzyma je osobno, gdy nazwa zawija się na dwie linijki.
+                            Nagłówek partii przerywa listę, więc pod nim linii nie ma. */}
+                        <div className="divide-y divide-gray-100">
                           {/* Nazwa ćwiczenia w osobnej linii, serie pod nią.
                               Wciśnięte obok siebie zlewały się w jeden ciąg
                               i nie dawało się odczytać, która seria jest która. */}
                           {entries.map(entry => {
                             return (
-                              <div key={entry.id} className="py-1.5">
+                              <div key={entry.id} className="py-2">
                                 <div className="flex items-baseline justify-between gap-2">
                                   <Link
                                     href={`/cwiczenie/${entry.exerciseId}`}
