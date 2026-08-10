@@ -34,3 +34,7 @@ next-env.d.ts
 # prisma
 prisma/*.db
 prisma/.exercisedb-cache.json
+
+# pliki robocze mostka do dysku — nie naleza do repo
+_to_delete/
+_stg_*

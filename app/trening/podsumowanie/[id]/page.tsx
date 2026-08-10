@@ -9,6 +9,7 @@ import { parseTcx, HR_BUCKET_SEC } from '@/lib/tcx';
 import { computeHrZones, estimateHrMax, formatZoneTime } from '@/lib/hr';
 import { useAuth } from '@/hooks/useAuth';
 import { SkeletonCard } from '@/components/ui/Skeleton';
+import { SetChips, EntryMeta } from '@/components/ui/SetChips';
 import {
   ArrowLeft,
   Trophy,
@@ -544,10 +545,9 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
             </div>
             {byMuscle[muscle].map(entry => {
               const isPR = rating?.prExerciseIds.includes(entry.exerciseId);
-              const sets = entry.setsData?.length > 0 ? entry.setsData : null;
               return (
                 <div key={entry.id} className="px-4 py-3 border-b border-gray-50 last:border-0">
-                  <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-baseline justify-between gap-2">
                     <Link href={`/cwiczenie/${entry.exerciseId}`}
                       className="text-sm font-semibold text-gray-900 flex-1 rounded transition-colors hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                       {entry.exercise.name}
@@ -557,24 +557,12 @@ export default function TreningSummaryPage({ params }: { params: Promise<{ id: s
                         </span>
                       )}
                     </Link>
-                    {entry.rpe && (
-                      <span className="text-xs text-gray-400 shrink-0">RPE {entry.rpe}</span>
-                    )}
+                    <EntryMeta entry={entry} />
                   </div>
-                  <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    {entry.durationSec && entry.durationSec > 0 ? (
-                      <span className="text-xs bg-orange-100 text-orange-800 rounded-lg px-2 py-1 font-medium">
-                        {Math.round(entry.durationSec / 60)} min
-                      </span>
-                    ) : sets ? sets.map((s, i) => (
-                      <span key={i} className="text-xs bg-gray-100 text-gray-700 rounded-lg px-2 py-1 font-medium">
-                        {s.reps}×{s.weight > 0 ? `${s.weight}kg` : 'bw'}
-                      </span>
-                    )) : (
-                      <span className="text-xs bg-gray-100 text-gray-700 rounded-lg px-2 py-1 font-medium">
-                        {entry.sets}×{entry.reps} {entry.weight > 0 ? `@ ${entry.weight}kg` : '(bw)'}
-                      </span>
-                    )}
+                  {/* Ta sama prezentacja serii co w historii — numer serii
+                      i jednoznaczne „8 × 40 kg" zamiast „8×40kg". */}
+                  <div className="mt-1.5">
+                    <SetChips entry={entry} />
                   </div>
                 </div>
               );

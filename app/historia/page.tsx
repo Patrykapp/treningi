@@ -9,6 +9,7 @@ import { parseTcx } from '@/lib/tcx';
 import { Toast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { SkeletonCard } from '@/components/ui/Skeleton';
+import { SetChips, EntryMeta } from '@/components/ui/SetChips';
 import { useAuth } from '@/hooks/useAuth';
 import { sessionCalories, runCalories, latestWeight } from '@/lib/calories';
 import {
@@ -890,39 +891,30 @@ function HistoriaPage() {
                       <div key={muscle}>
                         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">{muscle}</p>
                         <div className="space-y-1">
-                          {entries.map(entry => (
-                            <div key={entry.id} className="flex items-start justify-between gap-3 py-1">
-                              <Link
-                                href={`/cwiczenie/${entry.exerciseId}`}
-                                className="text-sm font-medium text-gray-900 flex-1 min-w-0 break-words leading-snug rounded-md transition-colors hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                              >
-                                {entry.exercise?.name}
-                                {rating?.prExerciseIds?.includes(entry.exerciseId) && (
-                                  <Trophy className="inline w-3.5 h-3.5 ml-1 text-yellow-500" strokeWidth={2} aria-label="Nowy rekord!" />
-                                )}
-                              </Link>
-                              <div className="text-sm text-gray-700 text-right shrink-0 max-w-[55%] leading-snug">
-                                {/* Ćwiczenie mierzone czasem — „1x1 @ 0kg" nie
-                                    znaczyłoby tu nic poza tym, że ktoś nie miał
-                                    gdzie wpisać minut. */}
-                                {entry.durationSec && entry.durationSec > 0 ? (
-                                  <span className="whitespace-nowrap"><strong>{Math.round(entry.durationSec / 60)} min</strong></span>
-                                ) : Array.isArray(entry.setsData) && entry.setsData.length > 0 ? (
-                                  <span className="inline-flex flex-wrap justify-end gap-x-0.5">
-                                    {(entry.setsData as { reps: number; weight: number }[]).map((s, i) => (
-                                      <span key={i} className="whitespace-nowrap">
-                                        {i > 0 && <span className="text-gray-400 mx-0.5">·</span>}
-                                        {s.reps}x<strong>{s.weight}kg</strong>
-                                      </span>
-                                    ))}
-                                  </span>
-                                ) : (
-                                  <span className="whitespace-nowrap">{entry.sets}x{entry.reps} @ <strong>{entry.weight}kg</strong></span>
-                                )}
-                                {entry.rpe && <span className="ml-1 text-xs text-gray-500 whitespace-nowrap">RPE {entry.rpe}</span>}
+                          {/* Nazwa ćwiczenia w osobnej linii, serie pod nią.
+                              Wciśnięte obok siebie zlewały się w jeden ciąg
+                              i nie dawało się odczytać, która seria jest która. */}
+                          {entries.map(entry => {
+                            return (
+                              <div key={entry.id} className="py-1.5">
+                                <div className="flex items-baseline justify-between gap-2">
+                                  <Link
+                                    href={`/cwiczenie/${entry.exerciseId}`}
+                                    className="text-sm font-medium text-gray-900 min-w-0 break-words leading-snug rounded-md transition-colors hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                                  >
+                                    {entry.exercise?.name}
+                                    {rating?.prExerciseIds?.includes(entry.exerciseId) && (
+                                      <Trophy className="inline w-3.5 h-3.5 ml-1 text-yellow-500" strokeWidth={2} aria-label="Nowy rekord!" />
+                                    )}
+                                  </Link>
+                                  <EntryMeta entry={entry} />
+                                </div>
+                                <div className="mt-1">
+                                  <SetChips entry={entry} />
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     ))}
