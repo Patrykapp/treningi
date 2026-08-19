@@ -436,6 +436,21 @@ function TreningPage() {
     }));
   };
 
+  // Dropset: kolejna seria bez przerwy, ze zmniejszonym ciężarem — nie kopia
+  // ostatniej serii jak addSet. Bez poprzedniej serii nie ma z czego "spadać",
+  // więc pierwszy wiersz zostaje zwykłą serią.
+  const addDrop = (entryKey: string) => {
+    setEntries(prev => prev.map(e => {
+      if (e.key !== entryKey) return e;
+      if (!e.setsData || e.setsData.length === 0) {
+        return { ...e, setsData: [{ reps: e.reps, weight: e.weight }] };
+      }
+      const last = e.setsData[e.setsData.length - 1];
+      const dropWeight = last.weight > 0 ? Math.max(0, Math.round((last.weight * 0.8) / 2.5) * 2.5) : 0;
+      return { ...e, setsData: [...e.setsData, { reps: last.reps, weight: dropWeight, isDrop: true }] };
+    }));
+  };
+
   const removeSet = (entryKey: string, setIdx: number) => {
     setEntries(prev => prev.map(e => {
       if (e.key !== entryKey) return e;
@@ -467,12 +482,14 @@ function TreningPage() {
     setTimeout(() => router.push('/'), 1500);
   };
 
-  // Odhacz serię — zaznaczenie startuje timer przerwy
-  const toggleSetDone = (entryKey: string, setIdx: number) => {
+  // Odhacz serię — zaznaczenie startuje timer przerwy. Dropy pomijają timer:
+  // między nimi nie ma przerwy, więc odhaczenie samego dropu nic nie odpala —
+  // timer startuje dopiero po odhaczeniu zwykłej serii (ostatniej w łańcuchu).
+  const toggleSetDone = (entryKey: string, setIdx: number, isDrop?: boolean) => {
     const k = `${entryKey}-${setIdx}`;
     setDoneSets(prev => {
       const marking = !prev[k];
-      if (marking) setRestEndsAt(Date.now() + restSecs * 1000);
+      if (marking && !isDrop) setRestEndsAt(Date.now() + restSecs * 1000);
       return { ...prev, [k]: marking };
     });
   };
@@ -998,18 +1015,25 @@ function TreningPage() {
               </>
             ) : (
               <div className="space-y-2">
-                {(entry.setsData || []).map((s, si) => (
-                  <div key={si} className="space-y-1">
+                {(entry.setsData || []).map((s, si) => {
+                  const sd = entry.setsData || [];
+                  // Numer serii licząc tylko "prawdziwe" serie — dropy dokładają
+                  // się do numeru poprzedniej, nie dostają własnego.
+                  const setNo = sd.slice(0, si + 1).filter(x => !x.isDrop).length;
+                  return (
+                  <div key={si} className={`space-y-1 ${s.isDrop ? 'ml-5 pl-2 border-l-2 border-orange-200' : ''}`}>
                     {/* Reps row */}
                     <div className="flex items-center gap-1.5">
-                      <button type="button" onClick={() => toggleSetDone(entry.key, si)}
-                        title="Odhacz serię i odpal timer przerwy"
+                      <button type="button" onClick={() => toggleSetDone(entry.key, si, s.isDrop)}
+                        title={s.isDrop ? 'Odhacz drop — bez przerwy przed kolejną serią' : 'Odhacz serię i odpal timer przerwy'}
                         className={`w-7 h-7 rounded-full border text-xs shrink-0 flex items-center justify-center transition-colors active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
                           doneSets[`${entry.key}-${si}`]
                             ? 'bg-green-500 border-green-500 text-white hover:bg-green-600'
                             : 'border-gray-300 text-gray-300 hover:border-gray-400 hover:text-gray-400'
                         }`}><Check className="w-4 h-4" strokeWidth={2.5} /></button>
-                      <span className="text-xs text-gray-400 w-4 text-center shrink-0">{si + 1}.</span>
+                      <span className={`text-xs w-4 text-center shrink-0 ${s.isDrop ? 'text-orange-400' : 'text-gray-400'}`}>
+                        {s.isDrop ? '↳' : `${setNo}.`}
+                      </span>
                       <button type="button"
                         onClick={() => updateSet(entry.key, si, 'reps', Math.max(1, s.reps - 1))}
                         className="w-8 h-8 rounded-lg bg-gray-100 font-bold text-gray-600 flex items-center justify-center shrink-0 text-lg transition-colors hover:bg-gray-200 active:scale-[0.97] active:bg-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"><Minus className="w-4 h-4" strokeWidth={2} /></button>
@@ -1041,7 +1065,8 @@ function TreningPage() {
                       </div>
                     )}
                   </div>
-                ))}
+                  );
+                })}
                 {!entry.bodyweight && (() => {
                   const best = (entry.setsData || []).reduce<number | null>((max, s) => {
                     const v = calc1RM(s.weight, s.reps);
@@ -1057,6 +1082,11 @@ function TreningPage() {
                   <button type="button" onClick={() => addSet(entry.key)}
                     className="flex-1 text-sm text-blue-600 border border-dashed border-blue-300 rounded-xl py-2 flex items-center justify-center gap-1.5 transition-colors hover:bg-blue-50 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                     <Plus className="w-4 h-4" strokeWidth={2} /> Dodaj serię
+                  </button>
+                  <button type="button" onClick={() => addDrop(entry.key)}
+                    title="Kontynuacja bez przerwy, z mniejszym ciężarem"
+                    className="flex-1 text-sm text-orange-600 border border-dashed border-orange-300 rounded-xl py-2 flex items-center justify-center gap-1.5 transition-colors hover:bg-orange-50 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                    <Plus className="w-4 h-4" strokeWidth={2} /> Dropset
                   </button>
                   {(entry.setsData || []).length > 0 && (
                     <button type="button" onClick={() => copyLastSet(entry.key)}

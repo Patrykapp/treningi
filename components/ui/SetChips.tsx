@@ -16,7 +16,7 @@
  * miejscach — dwa razy w tym projekcie te widoki zdążyły się już rozjechać.
  */
 
-export type SetLike = { reps: number; weight: number };
+export type SetLike = { reps: number; weight: number; isDrop?: boolean };
 
 export type EntryLike = {
   sets: number;
@@ -32,6 +32,21 @@ export function entrySets(entry: EntryLike): SetLike[] {
   return sd.filter((s) => s && typeof s.reps === 'number');
 }
 
+/**
+ * Grupuje serie w łańcuchy dropsetu: seria z `isDrop` doklejana jest do
+ * poprzedniej grupy (kontynuacja bez przerwy), zwykła seria zaczyna nową
+ * grupę. Bez tego dropset — trzy wiersze zapisane jeden po drugim — wygląda
+ * identycznie jak trzy osobne, odpoczęte serie.
+ */
+export function groupSets(sets: SetLike[]): SetLike[][] {
+  const groups: SetLike[][] = [];
+  for (const s of sets) {
+    if (s.isDrop && groups.length > 0) groups[groups.length - 1].push(s);
+    else groups.push([s]);
+  }
+  return groups;
+}
+
 /** Objętość (tonaż) wpisu w kilogramach. Ćwiczenia na czas jej nie mają. */
 export function entryVolume(entry: EntryLike): number {
   if (entry.durationSec && entry.durationSec > 0) return 0;
@@ -40,11 +55,15 @@ export function entryVolume(entry: EntryLike): number {
   return entry.sets * entry.reps * (entry.weight || 0);
 }
 
-/** Liczba serii wpisu (czasowe nie są seriami). */
+/**
+ * Liczba serii wpisu (czasowe nie są seriami). Dropset — kilka wierszy
+ * zrobionych bez przerwy — liczy się jako jedna seria, tak jak liczy go
+ * każdy trenujący, a nie jako tyle wierszy ile miał dropów.
+ */
 export function entrySetCount(entry: EntryLike): number {
   if (entry.durationSec && entry.durationSec > 0) return 0;
   const sd = entrySets(entry);
-  return sd.length > 0 ? sd.length : entry.sets;
+  return sd.length > 0 ? groupSets(sd).length : entry.sets;
 }
 
 /** Numer serii. Kwadracik, bo sam odgradza serie od siebie — bez niego
@@ -70,20 +89,28 @@ export function SetChips({ entry }: { entry: EntryLike }) {
   const sets = entrySets(entry);
 
   if (sets.length > 0) {
+    const groups = groupSets(sets);
     return (
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[13px] tabular-nums">
-        {sets.map((s, i) => (
-          <span key={i} className="inline-flex items-center gap-1.5 whitespace-nowrap">
+        {groups.map((g, i) => (
+          <span key={i} className="inline-flex items-center gap-1 whitespace-nowrap">
             <SetIndex n={i + 1} />
-            {s.weight > 0 ? (
-              <span className="text-gray-500">
-                {s.reps} × <span className="font-semibold text-gray-900">{s.weight}</span>
+            {g.map((s, j) => (
+              <span key={j} className="inline-flex items-center gap-1">
+                {/* Strzałka zamiast przecinka/kropki — pokazuje, że to spadek
+                    ciężaru w tej samej serii, a nie kolejna, osobna seria. */}
+                {j > 0 && <span className="text-orange-400">→</span>}
+                {s.weight > 0 ? (
+                  <span className="text-gray-500">
+                    {s.reps} × <span className="font-semibold text-gray-900">{s.weight}</span>
+                  </span>
+                ) : (
+                  <span className="text-gray-500">
+                    <span className="font-semibold text-gray-900">{s.reps}</span> powt.
+                  </span>
+                )}
               </span>
-            ) : (
-              <span className="text-gray-500">
-                <span className="font-semibold text-gray-900">{s.reps}</span> powt.
-              </span>
-            )}
+            ))}
           </span>
         ))}
       </div>

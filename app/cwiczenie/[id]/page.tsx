@@ -374,6 +374,17 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
     const last = formSetsData.length > 0 ? formSetsData[formSetsData.length - 1] : { reps: formReps, weight: formWeight };
     setFormSetsData(p => [...p, { ...last }]);
   };
+  // Dropset: kolejna seria bez przerwy, ze zmniejszonym ciężarem — nie kopia
+  // ostatniej serii jak addSet. Bez poprzedniej serii nie ma z czego "spadać".
+  const addDrop = () => {
+    if (formSetsData.length === 0) {
+      setFormSetsData([{ reps: formReps, weight: formWeight }]);
+      return;
+    }
+    const last = formSetsData[formSetsData.length - 1];
+    const dropWeight = last.weight > 0 ? Math.max(0, Math.round((last.weight * 0.8) / 2.5) * 2.5) : 0;
+    setFormSetsData(p => [...p, { reps: last.reps, weight: dropWeight, isDrop: true }]);
+  };
   const removeSet = (i: number) => setFormSetsData(p => p.filter((_, idx) => idx !== i));
   const updateSet = (i: number, f: 'reps' | 'weight', v: number) =>
     setFormSetsData(p => p.map((s, idx) => idx === i ? { ...s, [f]: v } : s));
@@ -700,9 +711,13 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                     </div>
                   </div>
                 )}
-                {formSetsData.map((s, i) => (
-                  <div key={i} className="flex items-center gap-1.5">
-                    <span className="text-xs text-gray-400 shrink-0 w-6">S{i + 1}</span>
+                {formSetsData.map((s, i) => {
+                  const setNo = formSetsData.slice(0, i + 1).filter(x => !x.isDrop).length;
+                  return (
+                  <div key={i} className={`flex items-center gap-1.5 ${s.isDrop ? 'ml-5' : ''}`}>
+                    <span className={`text-xs shrink-0 w-6 ${s.isDrop ? 'text-orange-400' : 'text-gray-400'}`}>
+                      {s.isDrop ? '↳' : `S${setNo}`}
+                    </span>
                     <button type="button" onClick={() => updateSet(i, 'reps', Math.max(1, (s.reps || 0) - 1))}
                       className="w-7 h-9 bg-gray-100 rounded-l-lg font-bold text-gray-600 shrink-0 border border-r-0 border-gray-200 transition-colors hover:bg-gray-200 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">−</button>
                     <input type="number" inputMode="numeric"
@@ -725,8 +740,13 @@ export default function CwiczeniePage({ params }: { params: Promise<{ id: string
                       <X className="w-4 h-4" strokeWidth={2} />
                     </button>
                   </div>
-                ))}
-                <button onClick={addSet} className="text-sm text-blue-600 hover:text-blue-700 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">+ Dodaj serię</button>
+                  );
+                })}
+                <div className="flex gap-3">
+                  <button onClick={addSet} className="text-sm text-blue-600 hover:text-blue-700 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">+ Dodaj serię</button>
+                  <button onClick={addDrop} title="Kontynuacja bez przerwy, z mniejszym ciężarem"
+                    className="text-sm text-orange-600 hover:text-orange-700 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">+ Dodaj dropset</button>
+                </div>
               </div>
             )}
             <div className="grid grid-cols-2 gap-2">

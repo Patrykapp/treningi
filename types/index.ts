@@ -42,6 +42,9 @@ export interface WorkoutSession {
 export interface SetData {
   reps: number;
   weight: number;
+  // true = ta seria to drop kontynuujący poprzednią bez przerwy (dropset).
+  // Pierwsza seria łańcucha zostaje bez tego pola.
+  isDrop?: boolean;
 }
 
 export interface NewEntryForm {
